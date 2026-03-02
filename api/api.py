@@ -67,18 +67,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+        if user_id is None: raise credentials_exception
+    except JWTError: raise credentials_exception
     
     client = get_db_client()
     try:
-        result = await client.execute("SELECT id, email, usar_banco_padrao FROM usuarios WHERE id = ?", [user_id])
-        if not result.rows:
-            raise credentials_exception
+        # AGORA BUSCA A ROLE (CARGO) TAMBÉM
+        result = await client.execute("SELECT id, email, usar_banco_padrao, role FROM usuarios WHERE id = ?", [user_id])
+        if not result.rows: raise credentials_exception
         user = result.rows[0]
-        return {"id": user[0], "email": user[1], "usar_banco_padrao": user[2]}
+        return {"id": user[0], "email": user[1], "usar_banco_padrao": user[2], "role": user[3] if len(user)>3 and user[3] else 'user'}
     finally:
         await client.close()
 
@@ -222,11 +220,31 @@ Deus abençoe!"""
 async def register_user(user: UserCreate, background_tasks: BackgroundTasks):
     client = get_db_client()
     try:
-        check = await client.execute("SELECT id FROM usuarios WHERE email = ?", [user.email])
-        if check.rows: raise HTTPException(status_code=400, detail="Email já cadastrado.")
+        # Verifica se o e-mail já existe
+        check = await client.execute("SELECT id, is_verified FROM usuarios WHERE email = ?", [user.email])
         
+        if check.rows:
+            user_id = check.rows[0][0]
+            is_verified = check.rows[0][1]
+            
+            if is_verified:
+                # Conta já existe e está ativa
+                raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado. Por favor, faça login.")
+            else:
+                # Conta existe mas NÃO foi verificada. Atualiza a senha e reenvia o código!
+                hashed_pwd = get_password_hash(user.password)
+                codigo_verificacao = ''.join(random.choices(string.digits, k=6))
+                
+                await client.execute(
+                    "UPDATE usuarios SET senha = ?, verification_code = ? WHERE id = ?",
+                    [hashed_pwd, codigo_verificacao, user_id]
+                )
+                
+                background_tasks.add_task(enviar_email_verificacao, user.email, codigo_verificacao)
+                return {"message": "Conta pendente encontrada. Novo código de verificação enviado!", "email": user.email}
+        
+        # Se não existe no banco, cria uma conta totalmente nova
         hashed_pwd = get_password_hash(user.password)
-        # Gera código de 6 dígitos aleatório
         codigo_verificacao = ''.join(random.choices(string.digits, k=6))
         
         res = await client.execute(
@@ -234,11 +252,11 @@ async def register_user(user: UserCreate, background_tasks: BackgroundTasks):
             [user.email, hashed_pwd, codigo_verificacao]
         )
         
-        # Envia o email em "segundo plano" para a tela do usuário não ficar travada carregando
         background_tasks.add_task(enviar_email_verificacao, user.email, codigo_verificacao)
         
         return {"message": "Usuário criado. Verifique o seu e-mail.", "email": user.email}
-    finally: await client.close()
+    finally: 
+        await client.close()
 
 class VerifyRequest(BaseModel):
     email: str
@@ -690,16 +708,17 @@ async def sortear_musica(current_user: Optional[dict] = Depends(get_optional_use
         # Se usar o Repertório Pessoal (Lógica Dinâmica)
         else:
             user_id = current_user["id"]
-            # 1. Pega todas as categorias únicas que o usuário criou
-            res_cats = await client.execute("SELECT DISTINCT categoria FROM biblioteca_busca WHERE usuario_id = ? AND categoria IS NOT NULL", [user_id])
-            categorias = [row[0] for row in res_cats.rows if row[0].strip() != ""]
+            
+            # Pega as categorias oficias através do GESTOR DE CATEGORIAS
+            res_cats = await client.execute("SELECT nome FROM categorias_repertorio WHERE usuario_id = ?", [user_id])
+            categorias = [row[0].lower() for row in res_cats.rows if row[0].strip() != ""]
             
             sorteio = {}
-            # 2. Sorteia 1 música de cada categoria do usuário
+            # Sorteia 1 música de cada categoria do usuário usando LIKE para ler as vírgulas
             for cat in categorias:
                 res_musica = await client.execute(
-                    "SELECT nome_musica, link FROM biblioteca_busca WHERE usuario_id = ? AND categoria = ? ORDER BY RANDOM() LIMIT 1", 
-                    [user_id, cat]
+                    "SELECT nome_musica, link FROM biblioteca_busca WHERE usuario_id = ? AND categoria LIKE ? ORDER BY RANDOM() LIMIT 1", 
+                    [user_id, f"%{cat}%"]
                 )
                 if res_musica.rows:
                     nome, link = res_musica.rows[0][0], res_musica.rows[0][1]
@@ -743,9 +762,105 @@ async def get_my_profile(current_user: dict = Depends(get_current_user)):
         return {
             "email": current_user["email"], 
             "usar_banco_padrao": bool(current_user["usar_banco_padrao"]),
-            "funcoes_padrao": padrao
+            "funcoes_padrao": padrao,
+            "role": current_user.get("role", "user") # RETORNA SE É ADMIN OU NÃO
         }
     except Exception as e: return {"error": str(e)}
+
+# ==========================================================
+# ROTAS DE ADMINISTRAÇÃO E ATUALIZAÇÃO DE PERFIL
+# ==========================================================
+class UpdateCredentialsRequest(BaseModel):
+    novo_email: Optional[str] = None
+    nova_senha: Optional[str] = None
+
+@app.put("/usuario/credenciais")
+async def update_my_credentials(req: UpdateCredentialsRequest, current_user: dict = Depends(get_current_user)):
+    client = get_db_client()
+    try:
+        if req.novo_email:
+            check = await client.execute("SELECT id FROM usuarios WHERE email = ? AND id != ?", [req.novo_email, current_user["id"]])
+            if check.rows: raise HTTPException(status_code=400, detail="Este e-mail já está em uso por outra conta.")
+            await client.execute("UPDATE usuarios SET email = ? WHERE id = ?", [req.novo_email, current_user["id"]])
+        if req.nova_senha:
+            hashed = get_password_hash(req.nova_senha)
+            await client.execute("UPDATE usuarios SET senha = ? WHERE id = ?", [hashed, current_user["id"]])
+        return {"message": "Credenciais atualizadas com sucesso!"}
+    finally: await client.close()
+
+def require_admin(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado. Área restrita a Administradores.")
+    return current_user
+
+@app.get("/admin/usuarios")
+async def admin_get_users(admin: dict = Depends(require_admin)):
+    client = get_db_client()
+    try:
+        res = await client.execute("SELECT id, email, role, is_verified FROM usuarios ORDER BY id")
+        users = [{"id": r[0], "email": r[1], "role": r[2] or 'user', "is_verified": bool(r[3])} for r in res.rows]
+        return {"usuarios": users}
+    finally: await client.close()
+
+class AdminUpdateUser(BaseModel):
+    email: Optional[str] = None
+    senha: Optional[str] = None
+    role: Optional[str] = None
+
+@app.put("/admin/usuarios/{user_id}")
+async def admin_update_user(user_id: int, req: AdminUpdateUser, admin: dict = Depends(require_admin)):
+    client = get_db_client()
+    try:
+        if req.email: await client.execute("UPDATE usuarios SET email = ? WHERE id = ?", [req.email, user_id])
+        if req.senha:
+            hashed = get_password_hash(req.senha)
+            await client.execute("UPDATE usuarios SET senha = ? WHERE id = ?", [hashed, user_id])
+        if req.role: await client.execute("UPDATE usuarios SET role = ? WHERE id = ?", [req.role, user_id])
+        return {"message": "Usuário atualizado pelo Administrador."}
+    finally: await client.close()
+
+@app.delete("/admin/usuarios/{user_id}")
+async def admin_delete_user(user_id: int, admin: dict = Depends(require_admin)):
+    client = get_db_client()
+    try:
+        await client.execute("DELETE FROM usuarios WHERE id = ?", [user_id])
+        return {"message": "Usuário excluído do sistema."}
+    finally: await client.close()
+
+
+# --- ADICIONAR MÚSICAS AO REPERTÓRIO GLOBAL (ADMIN) ---
+class NovaMusicaGlobalRequest(BaseModel):
+    nome_musica: str
+    tags: str
+    categoria: str # Agora vai receber uma string separada por vírgula (ex: "agitadas1, ceia")
+    link: Optional[str] = ""
+
+@app.post("/admin/musicas")
+async def admin_add_global_musica(musica: NovaMusicaGlobalRequest, admin: dict = Depends(require_admin)):
+    client = get_db_client()
+    try:
+        # 1. Adiciona na biblioteca de busca global
+        await client.execute(
+            "INSERT INTO biblioteca_busca (nome_musica, tags, categoria, link, usuario_id) VALUES (?, ?, ?, ?, NULL)",
+            [musica.nome_musica, musica.tags, musica.categoria, musica.link]
+        )
+        
+        # 2. Divide as categorias pela vírgula e grava em cada tabela específica
+        categorias_selecionadas = [c.strip().lower() for c in musica.categoria.split(',')]
+        tabelas_validas = ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis"]
+        
+        for tabela in categorias_selecionadas:
+            if tabela in tabelas_validas:
+                await client.execute(
+                    f"INSERT INTO {tabela} (conteudo, link, usuario_id) VALUES (?, ?, NULL)",
+                    [musica.nome_musica, musica.link]
+                )
+                
+        return {"message": "Música adicionada ao repertório global em múltiplas categorias!"}
+    except Exception as e:
+        return {"error": str(e)}
+    finally: 
+        await client.close()
 
 # ==========================================================
 # CRUD DE CATEGORIAS DO REPERTÓRIO

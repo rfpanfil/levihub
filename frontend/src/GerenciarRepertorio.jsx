@@ -206,7 +206,8 @@ function GerenciarRepertorio() {
   const musicasFiltradas = musicasCustom.filter(m => {
     const termo = searchTerm.toLowerCase();
     const matchesSearch = m.nome_musica.toLowerCase().includes(termo) || m.tags.toLowerCase().includes(termo) || (m.categoria && m.categoria.toLowerCase().includes(termo));
-    const matchesCat = filterCategory === '' || m.categoria === filterCategory;
+    // Nova lógica: verifica se a categoria selecionada está CONTIDA na string de categorias da música
+    const matchesCat = filterCategory === '' || (m.categoria && m.categoria.includes(filterCategory));
     return matchesSearch && matchesCat;
   });
 
@@ -264,9 +265,13 @@ function GerenciarRepertorio() {
                   <strong style={{ color: 'white', fontSize: '1.1em', display: 'block', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                     {musica.nome_musica}
                   </strong>
-                  <span style={{ fontSize: '0.7em', backgroundColor: '#4a505c', padding: '3px 8px', borderRadius: '10px', color: '#eafcff', display: 'inline-block', marginTop: '5px' }}>
-                    {musica.categoria}
-                  </span>
+                  <div style={{ display: 'flex', gap: '5px', marginTop: '5px', flexWrap: 'wrap' }}>
+                    {musica.categoria && musica.categoria.split(',').map((cat, i) => (
+                      <span key={i} style={{ fontSize: '0.7em', backgroundColor: '#4a505c', padding: '3px 8px', borderRadius: '10px', color: '#eafcff' }}>
+                        {cat.trim()}
+                      </span>
+                    ))}
+                  </div>
                   <div style={{ fontSize: '0.85em', color: '#61dafb', marginTop: '8px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                     Tags: {musica.tags}
                   </div>

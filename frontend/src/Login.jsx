@@ -6,6 +6,7 @@ function Login({ onLogin }) {
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -53,6 +54,13 @@ function Login({ onLogin }) {
     setLoading(true);
     setError('');
     setMensagemSucesso('');
+
+    // --- NOVA TRAVA DE SEGURANÇA ---
+    if (password !== confirmPassword) {
+      setError('As senhas não coincidem. Tente novamente.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -142,7 +150,7 @@ function Login({ onLogin }) {
             </button>
             
             <div style={{ textAlign: 'center', marginTop: '15px' }}>
-              <button type="button" onClick={() => { setVerifyingEmail(''); setMensagemSucesso(''); setError(''); }} style={{ background: 'none', border: 'none', color: '#9ab', cursor: 'pointer', textDecoration: 'underline' }}>
+              <button type="button" onClick={() => { setVerifyingEmail(''); setMensagemSucesso(''); setError(''); setConfirmPassword(''); setPassword(''); }} style={{ background: 'none', border: 'none', color: '#9ab', cursor: 'pointer', textDecoration: 'underline' }}>
                 Cancelar / Voltar
               </button>
             </div>
@@ -171,9 +179,25 @@ function Login({ onLogin }) {
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 
                   required 
-                  placeholder="Sua senha"
+                  placeholder={isRegistering ? "Mínimo de 6 caracteres" : "Sua senha"}
+                  minLength={isRegistering ? "6" : undefined}
                 />
               </div>
+
+              {/* --- NOVO CAMPO: CONFIRMAR SENHA (Só aparece ao Criar Conta) --- */}
+              {isRegistering && (
+                <div className="input-group">
+                  <label>Confirmar Senha</label>
+                  <input 
+                    type="password" 
+                    value={confirmPassword} 
+                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                    required 
+                    placeholder="Digite a senha novamente"
+                    minLength="6"
+                  />
+                </div>
+              )}
 
               <button type="submit" className="login-btn-main" disabled={loading}>
                 {loading ? 'Processando...' : (isRegistering ? 'Cadastrar e Receber Código' : 'Entrar')}
@@ -192,9 +216,9 @@ function Login({ onLogin }) {
 
             <div className="login-footer">
               {isRegistering ? (
-                <p>Já tem uma conta? <span onClick={() => { setIsRegistering(false); setError(''); setMensagemSucesso(''); }}>Faça Login</span></p>
+                <p>Já tem uma conta? <span onClick={() => { setIsRegistering(false); setError(''); setMensagemSucesso(''); setConfirmPassword(''); setPassword(''); }}>Faça Login</span></p>
               ) : (
-                <p>Ainda não tem conta? <span onClick={() => { setIsRegistering(true); setError(''); setMensagemSucesso(''); }}>Criar Conta</span></p>
+                <p>Ainda não tem conta? <span onClick={() => { setIsRegistering(true); setError(''); setMensagemSucesso(''); setConfirmPassword(''); setPassword(''); }}>Criar Conta</span></p>
               )}
             </div>
           </>

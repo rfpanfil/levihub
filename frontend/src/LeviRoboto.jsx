@@ -1,3 +1,4 @@
+// src/LeviRoboto.jsx
 import React, { useState, useRef, useEffect } from 'react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -15,6 +16,10 @@ function LeviRoboto() {
   const [ultimaPalavra, setUltimaPalavra] = useState(''); 
   
   const [showCommandMenu, setShowCommandMenu] = useState(false);
+
+  // --- NOVOS ESTADOS PARA O CÉREBRO ---
+  const [usarBancoPadrao, setUsarBancoPadrao] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -36,6 +41,22 @@ function LeviRoboto() {
     scrollToBottom();
   }, [messages]);
 
+  // --- BUSCAR CONFIGURAÇÃO DO CÉREBRO AO ABRIR ---
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsLoggedIn(true);
+      fetch(`${API_BASE_URL}/usuario/me`, { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(res => res.json())
+        .then(data => {
+          if (data.usar_banco_padrao !== undefined) {
+            setUsarBancoPadrao(data.usar_banco_padrao);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   const addMessage = (sender, text) => {
     setMessages(prev => [...prev, { sender, text }]);
   };
@@ -56,10 +77,33 @@ function LeviRoboto() {
     }
   };
 
-  // --- O CÉREBRO DA INTERAÇÃO (Comandos + Links) ---
+  // --- FUNÇÃO PARA ALTERAR O CÉREBRO ---
+  const handleToggleBanco = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    const novoValor = !usarBancoPadrao;
+    setUsarBancoPadrao(novoValor); 
+    
+    try {
+      await fetch(`${API_BASE_URL}/usuario/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ usar_banco_padrao: novoValor })
+      });
+      
+      addMessage('bot', novoValor 
+        ? "🤖 Cérebro alterado: Agora estou usando o **Repertório Global**!" 
+        : "🤖 Cérebro alterado: Agora vou buscar apenas no seu **Repertório Pessoal** exclusivo!");
+    } catch (error) {
+      setUsarBancoPadrao(!novoValor); // reverte visualmente se der erro
+    }
+  };
+
+  // --- O CÉREBRO DA INTERAÇÃO (Comandos + Links + Negrito) ---
   const formatarMensagem = (text) => {
-    // Procura por comandos EXATOS do bot OU por links http/https
-    const regex = /(\/(?:start|cancel|opcao1|opcao2|opcao3|opcao4|opcao5)|https?:\/\/[^\s]+)/gi;
+    // Procura por comandos EXATOS do bot, links http/https, OU texto entre **negrito**
+    const regex = /(\/(?:start|cancel|opcao1|opcao2|opcao3|opcao4|opcao5)|https?:\/\/[^\s]+|\*\*.*?\*\*)/gi;
     const partes = text.split(regex);
     
     return partes.map((parte, index) => {
@@ -91,6 +135,10 @@ function LeviRoboto() {
             🔗 Ouvir / Cifra
           </a>
         );
+      }
+      // Se for Negrito
+      else if (parte.startsWith('**') && parte.endsWith('**')) {
+        return <strong key={index}>{parte.replace(/\*\*/g, '')}</strong>;
       }
       // Se for texto normal:
       return <span key={index}>{parte}</span>;
@@ -275,6 +323,24 @@ function LeviRoboto() {
           Status: {botState === 'idle' ? 'Aguardando Comando' : '⏳ Esperando sua resposta...'}
         </span>
       </div>
+
+      {/* --- A CHAVETA DO CÉREBRO MOVIDA PARA CÁ --- */}
+      {isLoggedIn && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#1e2229', padding: '8px 15px', borderRadius: '20px', border: '1px solid #4a505c' }}>
+            <span style={{ fontSize: '0.85em', color: '#9ab' }}>🧠 Buscar músicas no:</span>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', margin: 0, fontSize: '0.9em', fontWeight: 'bold', color: usarBancoPadrao ? '#f39c12' : '#2ecc71' }}>
+              <input 
+                type="checkbox" 
+                checked={!usarBancoPadrao} 
+                onChange={handleToggleBanco} 
+                style={{ width: '16px', height: '16px', marginRight: '8px', cursor: 'pointer' }} 
+              />
+              {usarBancoPadrao ? 'Repertório Global' : 'Meu Repertório Pessoal'}
+            </label>
+          </div>
+        </div>
+      )}
 
       <div className="chat-container">
         

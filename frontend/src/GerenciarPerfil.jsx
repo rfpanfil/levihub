@@ -1,14 +1,19 @@
-//GerenciarPerfil.jsx
+// src/GerenciarPerfil.jsx
 
 import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 function GerenciarPerfil() {
-  const [perfil, setPerfil] = useState({ email: '', usar_banco_padrao: true, funcoes_padrao: [] });
+  const [perfil, setPerfil] = useState({ email: '', funcoes_padrao: [] });
   const [funcoesDisponiveis, setFuncoesDisponiveis] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
+
+  // Estados para alteração de credenciais
+  const [isEditingCredentials, setIsEditingCredentials] = useState(false);
+  const [novoEmail, setNovoEmail] = useState('');
+  const [novaSenha, setNovaSenha] = useState('');
 
   const carregarDados = async () => {
     const token = localStorage.getItem('token');
@@ -49,24 +54,6 @@ function GerenciarPerfil() {
     setTimeout(() => setMensagem({ texto: '', tipo: '' }), 3000);
   };
 
-  const handleToggleBanco = async () => {
-    const token = localStorage.getItem('token');
-    const novoValor = !perfil.usar_banco_padrao;
-    
-    try {
-      const res = await fetch(`${API_BASE_URL}/usuario/config`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ usar_banco_padrao: novoValor })
-      });
-
-      if (res.ok) {
-        setPerfil(prev => ({ ...prev, usar_banco_padrao: novoValor }));
-        mostrarMensagem(novoValor ? "A usar o Repertório Global do sistema!" : "A usar o seu Repertório Pessoal exclusivo!", "sucesso");
-      }
-    } catch (error) { mostrarMensagem("Erro ao alterar configuração.", "erro"); }
-  };
-
   const handleToggleFuncaoPadrao = async (funcaoNome) => {
     const token = localStorage.getItem('token');
     
@@ -91,6 +78,39 @@ function GerenciarPerfil() {
     } catch (error) { mostrarMensagem("Erro ao salvar padrão de escala.", "erro"); }
   };
 
+  const handleSalvarCredenciais = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    
+    if (!novoEmail.trim() && !novaSenha.trim()) {
+      mostrarMensagem("Preencha pelo menos um campo para atualizar.", "erro");
+      return;
+    }
+
+    const payload = {};
+    if (novoEmail.trim()) payload.novo_email = novoEmail.trim();
+    if (novaSenha.trim()) payload.nova_senha = novaSenha.trim();
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/usuario/credenciais`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        mostrarMensagem("Credenciais atualizadas com sucesso!", "sucesso");
+        if (payload.novo_email) setPerfil(prev => ({ ...prev, email: payload.novo_email }));
+        setIsEditingCredentials(false);
+        setNovoEmail('');
+        setNovaSenha('');
+      } else {
+        mostrarMensagem(`Erro: ${data.detail || 'Falha ao atualizar'}`, "erro");
+      }
+    } catch (error) { mostrarMensagem("Erro de conexão.", "erro"); }
+  };
+
   return (
     <div className="gerador-escala-container">
       <h2>⚙️ Configurações da Conta</h2>
@@ -106,32 +126,37 @@ function GerenciarPerfil() {
           
           <div className="input-area" style={{ backgroundColor: '#1e2229', border: '1px solid #4a505c' }}>
             <h3 style={{ color: '#61dafb', marginTop: 0 }}>👤 Os Seus Dados</h3>
-            <p><strong>E-mail de Acesso:</strong> {perfil.email}</p>
-            <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
-              <button disabled style={{ padding: '8px 15px', backgroundColor: '#4a505c', color: '#9ab', border: 'none', borderRadius: '5px', cursor: 'not-allowed' }}>Alterar E-mail (Fase 5)</button>
-              <button disabled style={{ padding: '8px 15px', backgroundColor: '#4a505c', color: '#9ab', border: 'none', borderRadius: '5px', cursor: 'not-allowed' }}>Alterar Senha (Fase 5)</button>
-            </div>
+            
+            {!isEditingCredentials ? (
+              <>
+                <p><strong>E-mail de Acesso:</strong> {perfil.email}</p>
+                <button onClick={() => setIsEditingCredentials(true)} style={{ padding: '8px 15px', backgroundColor: 'transparent', border: '1px solid #61dafb', color: '#61dafb', borderRadius: '5px', cursor: 'pointer', marginTop: '10px' }}>
+                  ✏️ Alterar E-mail ou Senha
+                </button>
+              </>
+            ) : (
+              <form onSubmit={handleSalvarCredenciais} style={{ marginTop: '15px', padding: '15px', backgroundColor: '#282c34', borderRadius: '8px', border: '1px dashed #61dafb' }}>
+                <p style={{ color: '#9ab', fontSize: '0.9em', marginTop: 0 }}>Preencha apenas o que deseja alterar.</p>
+                
+                <div style={{ marginBottom: '10px' }}>
+                  <label>Novo E-mail</label>
+                  <input type="email" value={novoEmail} onChange={e => setNovoEmail(e.target.value)} placeholder={perfil.email} style={{ width: '100%', padding: '10px', borderRadius: '5px', backgroundColor: '#1e2229', color: 'white', border: '1px solid #4a505c', marginTop: '5px' }} />
+                </div>
+                
+                <div style={{ marginBottom: '15px' }}>
+                  <label>Nova Senha</label>
+                  <input type="password" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} placeholder="Deixe em branco para não alterar" minLength="6" style={{ width: '100%', padding: '10px', borderRadius: '5px', backgroundColor: '#1e2229', color: 'white', border: '1px solid #4a505c', marginTop: '5px' }} />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button type="submit" className="main-button" style={{ margin: 0 }}>💾 Salvar Alterações</button>
+                  <button type="button" onClick={() => { setIsEditingCredentials(false); setNovoEmail(''); setNovaSenha(''); }} style={{ padding: '10px 20px', backgroundColor: 'transparent', border: '1px solid #ff4b4b', color: '#ff4b4b', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
+                </div>
+              </form>
+            )}
           </div>
 
-          <div className="input-area" style={{ backgroundColor: '#1e2229', border: '1px solid #4a505c' }}>
-            <h3 style={{ color: '#61dafb', marginTop: 0 }}>🧠 Cérebro do LeviRoboto</h3>
-            <p>Escolha de onde o LeviRoboto deve buscar as sugestões e sorteios de músicas.</p>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '15px', backgroundColor: '#282c34', borderRadius: '8px', marginTop: '10px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', margin: 0, fontSize: '1.1em', fontWeight: 'bold', color: 'white' }}>
-                <input 
-                  type="checkbox" 
-                  checked={!perfil.usar_banco_padrao} 
-                  onChange={handleToggleBanco} 
-                  style={{ width: '20px', height: '20px', marginRight: '10px' }} 
-                />
-                Usar Meu Próprio Repertório
-              </label>
-              <span style={{ fontSize: '0.9em', color: '#9ab' }}>
-                {perfil.usar_banco_padrao ? "(A usar o banco de dados gigante de todos)" : "(O robô só vai sortear as músicas que você adicionar na aba Meu Repertório)"}
-              </span>
-            </div>
-          </div>
+          {/* O BLOCO DO CÉREBRO FOI REMOVIDO DAQUI E MOVIDO PARA O LEVIROBOTO */}
 
           <div className="input-area" style={{ backgroundColor: '#1e2229', border: '1px solid #f39c12' }}>
             <h3 style={{ color: '#f39c12', marginTop: 0 }}>📅 Funções Padrão da Escala</h3>

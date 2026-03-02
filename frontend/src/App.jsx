@@ -11,6 +11,7 @@ import Login from './Login';
 import GestaoMembros from './GestaoMembros';
 import GerenciarPerfil from './GerenciarPerfil';
 import GerenciarRepertorio from './GerenciarRepertorio';
+import AdminPanel from './AdminPanel';
 // Importamos a lógica local para usar APENAS se a API falhar
 import { calcularSequenciaLocal, processarCifraCompleta } from './musicLogic';
 import './App.css';
@@ -45,25 +46,33 @@ function App() {
 
   const [appMode, setAppMode] = useState('transpositor');
 
-  // --- NOVOS ESTADOS DA FASE 2 ---
+  // --- ESTADOS DE USUÁRIO ---
   const [user, setUser] = useState(null);
   const [isVisitor, setIsVisitor] = useState(false);
 
-  // Verifica se já existe um token salvo ao abrir o site
+  const carregarPerfilUsuario = async (token) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/usuario/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setUser({ token, ...data }); // Salva o token + role + email
+      } else {
+        handleLogout();
+      }
+    } catch (e) {}
+  };
+
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
-    if (savedToken) {
-      // Por enquanto, apenas assume que o utilizador está logado. 
-      // Na Fase 3, validaremos este token com o backend.
-      setUser({ token: savedToken });
-    }
+    if (savedToken) carregarPerfilUsuario(savedToken);
   }, []);
 
   const handleLoginAction = (userData) => {
     if (userData === null) {
       setIsVisitor(true);
     } else {
-      setUser(userData);
+      localStorage.setItem('token', userData.access_token);
+      carregarPerfilUsuario(userData.access_token);
       setIsVisitor(false);
     }
   };
@@ -352,6 +361,16 @@ function App() {
             >
               👤 Perfil
             </button>
+
+            {user?.role === 'admin' && (
+              <button
+                className={appMode === 'admin' ? 'nav-btn active' : 'nav-btn'}
+                onClick={() => setAppMode('admin')}
+                style={{ borderColor: '#e74c3c', color: appMode === 'admin' ? '#1e2229' : '#e74c3c', backgroundColor: appMode === 'admin' ? '#e74c3c' : 'transparent' }}
+              >
+                🛠️ Painel Admin
+              </button>
+            )}
           </>
         )}
       </div>
@@ -522,6 +541,10 @@ function App() {
 
       {appMode === 'perfil' && (
         <GerenciarPerfil />
+      )}
+
+      {appMode === 'admin' && user?.role === 'admin' && (
+        <AdminPanel />
       )}
 
       {error && <p style={{ color: '#ff4b4b', textAlign: 'center', marginTop: '15px' }}>{error}</p>}
