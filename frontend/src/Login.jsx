@@ -41,14 +41,17 @@ function Login({ onLogin }) {
     setError('');
 
     try {
-      // O FastAPI usa formulário (form-data) para o login padrão
-      const formData = new FormData();
-      formData.append('username', email);
-      formData.append('password', password);
+      // Usamos URLSearchParams em vez de FormData para evitar que o servidor do Render trave (Timeout 500)
+      const params = new URLSearchParams();
+      params.append('username', email);
+      params.append('password', password);
 
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params,
       });
 
       const data = await response.json();
