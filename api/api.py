@@ -171,7 +171,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173", # Para testes locais
-        "https://levihub.vercel.app/", # ADICIONE AQUI O SEU ENDEREÇO DO VERCEL
+        "https://levihub.vercel.app", # ADICIONE AQUI O SEU ENDEREÇO DO VERCEL
     ],
     allow_credentials=True,
     allow_methods=["*"],
