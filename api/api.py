@@ -166,10 +166,13 @@ async def lifespan(app: FastAPI):
     yield
 app = FastAPI(lifespan=lifespan)
 
-# --- Configuração CORS (LIBERADO PARA ANDROID E FRONTEND) ---
+# --- Configuração CORS (AJUSTADA PARA VERCEL E LOCAL) ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=[
+        "http://localhost:5173", # Para testes locais
+        "https://levihub.vercel.app/", # ADICIONE AQUI O SEU ENDEREÇO DO VERCEL
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -302,6 +305,80 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         return {"access_token": access_token, "token_type": "bearer"}
     finally: await client.close()
 
+
+# --- NOVOS MODELOS PARA RECUPERAÇÃO DE SENHA ---
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    codigo: str
+    nova_senha: str
+
+# --- ROTA 1: SOLICITAR RECUPERAÇÃO ---
+@app.post("/auth/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, background_tasks: BackgroundTasks):
+    client = get_db_client()
+    try:
+        # Verifica se o usuário existe
+        res = await client.execute("SELECT id FROM usuarios WHERE email = ?", [req.email])
+        if not res.rows:
+            # Por segurança, não confirmamos se o e-mail existe ou não para evitar varredura de usuários
+            return {"message": "Se o e-mail estiver cadastrado, um código será enviado."}
+        
+        user_id = res.rows[0][0]
+        codigo = ''.join(random.choices(string.digits, k=6))
+        
+        # Salva o código no banco (reutilizando a coluna verification_code)
+        await client.execute("UPDATE usuarios SET verification_code = ? WHERE id = ?", [codigo, user_id])
+        
+        # Envia o e-mail em segundo plano
+        background_tasks.add_task(enviar_email_recuperacao, req.email, codigo)
+        
+        return {"message": "Código de recuperação enviado!"}
+    finally: await client.close()
+
+# --- FUNÇÃO DE E-MAIL DE RECUPERAÇÃO ---
+def enviar_email_recuperacao(destinatario: str, codigo: str):
+    remetente = os.getenv("SMTP_EMAIL")
+    senha = os.getenv("SMTP_PASSWORD")
+    if not remetente or not senha: return
+
+    msg = MIMEMultipart()
+    msg['From'] = remetente
+    msg['To'] = destinatario
+    msg['Subject'] = "Recuperação de Senha - LeviHub 🎸"
+
+    body = f"Você solicitou a recuperação de senha. Seu código é:\n\n{codigo}\n\nSe não foi você, ignore este e-mail."
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(remetente, senha)
+            server.sendmail(remetente, destinatario, msg.as_string())
+    except Exception as e: print(f"Erro ao enviar: {e}")
+
+# --- ROTA 2: VALIDAR CÓDIGO E DEFINIR NOVA SENHA ---
+@app.post("/auth/reset-password")
+async def reset_password(req: ResetPasswordRequest):
+    client = get_db_client()
+    try:
+        res = await client.execute("SELECT id, verification_code FROM usuarios WHERE email = ?", [req.email])
+        if not res.rows: raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+        
+        user_id = res.rows[0][0]
+        code_db = res.rows[0][1]
+        
+        if code_db != req.codigo.strip():
+            raise HTTPException(status_code=400, detail="Código inválido ou expirado.")
+            
+        hashed_pwd = get_password_hash(req.nova_senha)
+        await client.execute("UPDATE usuarios SET senha = ?, verification_code = NULL WHERE id = ?", [hashed_pwd, user_id])
+        return {"message": "Senha alterada com sucesso!"}
+    finally: await client.close()
 
 
 # ==========================================================
