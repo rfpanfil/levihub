@@ -16,7 +16,7 @@ import gspread
 import json
 from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from passlib.context import CryptContext
+import bcrypt  # <-- SUBSTITUÍMOS O PASSLIB PELO BCRYPT NATIVO
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from contextlib import asynccontextmanager
@@ -43,14 +43,18 @@ SECRET_KEY = os.getenv("SECRET_KEY", "uma_chave_secreta_super_segura_aqui_para_d
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # Token dura 7 dias logado
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
+def get_password_hash(password: str):
+    # Usa o bcrypt nativo para gerar senhas compatíveis e à prova de falhas
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain_password: str, hashed_password: str):
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
