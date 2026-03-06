@@ -20,6 +20,7 @@ function GerenciarRepertorio() {
   const [editId, setEditId] = useState(null);
   
   const [nomeMusica, setNomeMusica] = useState('');
+  const [artista, setArtista] = useState(''); // NOVO ESTADO
   const [tags, setTags] = useState('');
   const [link, setLink] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -82,7 +83,7 @@ function GerenciarRepertorio() {
   // --- LÓGICA DE MÚSICAS ---
   const abrirModalNovo = () => {
     setIsEditing(false); setEditId(null); 
-    setNomeMusica(''); setTags(''); setLink(''); 
+    setNomeMusica(''); setArtista(''); setTags(''); setLink(''); 
     setCategoria(categoriasObjetos.length > 0 ? categoriasObjetos[0].nome : '');
     setIsNovaCategoriaInline(false); setNovaCategoriaNomeInline('');
     setIsModalOpen(true);
@@ -91,6 +92,7 @@ function GerenciarRepertorio() {
   const iniciarEdicao = (musica) => {
     setIsEditing(true); setEditId(musica.id);
     setNomeMusica(musica.nome_musica);
+    setArtista(musica.artista || ''); // CARREGA O ARTISTA
     setTags(musica.tags); setLink(musica.link || '');
     setCategoria(musica.categoria);
     setIsNovaCategoriaInline(false); setNovaCategoriaNomeInline('');
@@ -133,7 +135,8 @@ function GerenciarRepertorio() {
 
       // 2. Salva a Música
       const linkLimpo = formatarLinkYouTube(link);
-      const bodyData = { nome_musica: nomeMusica, tags, categoria: catFinal, link: linkLimpo };
+      // INCLUI O ARTISTA NO ENVIO
+      const bodyData = { nome_musica: nomeMusica, artista, tags, categoria: catFinal, link: linkLimpo };
 
       const url = isEditing ? `${API_BASE_URL}/musicas/custom/${editId}` : `${API_BASE_URL}/musicas/custom`;
       const method = isEditing ? 'PUT' : 'POST';
@@ -263,7 +266,7 @@ function GerenciarRepertorio() {
               <div key={musica.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#282c34', padding: '15px', borderRadius: '8px', borderLeft: '4px solid #f39c12' }}>
                 <div style={{ overflow: 'hidden' }}>
                   <strong style={{ color: 'white', fontSize: '1.1em', display: 'block', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                    {musica.nome_musica}
+                    {musica.nome_musica} {musica.artista && <span style={{ color: '#f39c12', fontSize: '0.85em', fontWeight: 'normal' }}> - {musica.artista}</span>}
                   </strong>
                   <div style={{ display: 'flex', gap: '5px', marginTop: '5px', flexWrap: 'wrap' }}>
                     {musica.categoria && musica.categoria.split(',').map((cat, i) => (
@@ -307,8 +310,12 @@ function GerenciarRepertorio() {
                   <label>Nome da Música *</label>
                   <input type="text" value={nomeMusica} onChange={e => setNomeMusica(e.target.value)} placeholder="Ex: A Ele a Glória" style={inputStyle} required />
                 </div>
+                <div style={{ flex: 2, minWidth: '200px' }}>
+                  <label>Artista / Banda (Opcional)</label>
+                  <input type="text" value={artista} onChange={e => setArtista(e.target.value)} placeholder="Ex: Diante do Trono" style={inputStyle} />
+                </div>
                 <div style={{ flex: 1, minWidth: '150px' }}>
-                  <label>Categoria (Sorteio) *</label>
+                  <label>Categoria *</label>
                   <select 
                     value={isNovaCategoriaInline ? 'nova' : categoria} 
                     onChange={e => {

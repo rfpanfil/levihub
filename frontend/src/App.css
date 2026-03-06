@@ -810,6 +810,7 @@ pre {
 /* --- ESTILOS DA TELA DE LOGIN (FASE 2) --- */
 .login-container {
   display: flex;
+  flex-direction: column; /* FORÇA OS ELEMENTOS A FICAREM UM EMBAIXO DO OUTRO */
   justify-content: center;
   align-items: center;
   min-height: 100vh;

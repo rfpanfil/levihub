@@ -7,13 +7,14 @@ function LeviRoboto() {
   const [messages, setMessages] = useState([
     { 
       sender: 'bot', 
-      text: 'Olá Abençoado(a)! Escolha uma das opções:\n\n/opcao1: Procurar músicas a partir de uma palavra chave\n\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n\n/opcao3: Sugerir uma música para o nosso banco de dados (em breve)\n\n/opcao4: Encerrar\n\n(Ou use o menu ☰ abaixo)' 
+      text: 'Olá Abençoado(a)! Escolha uma das opções:\n\n/opcao1: Procurar músicas a partir de uma palavra chave\n\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n\n/opcao3: Músicas temáticas (Ceia, Natal, Infantis, etc.)\n\n/opcao4: Buscar por Artista ou Banda\n\n/opcao5: Sugerir uma música para o nosso banco de dados\n\n/opcao6: Encerrar\n\n(Ou use o menu ☰ abaixo)' 
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [botState, setBotState] = useState('idle'); 
   const [isLoading, setIsLoading] = useState(false);
   const [ultimaPalavra, setUltimaPalavra] = useState(''); 
+  const [ultimoTipoBusca, setUltimoTipoBusca] = useState('palavra'); // NOVO ESTADO
   
   const [showCommandMenu, setShowCommandMenu] = useState(false);
 
@@ -28,9 +29,11 @@ function LeviRoboto() {
     { cmd: '/start', desc: 'Dá início a conversa', enabled: true },
     { cmd: '/opcao1', desc: '🔍 Procurar músicas a partir de uma palavra chave', enabled: true },
     { cmd: '/opcao2', desc: '🎲 Listar músicas para planejar o louvor', enabled: true },
-    { cmd: '/opcao3', desc: '💡 Sugerir uma música para o banco de dados', enabled: true },
-    { cmd: '/opcao4', desc: '❌ Encerrar', enabled: true },
-    { cmd: '/opcao5', desc: '🔄 Refazer última busca', enabled: true },
+    { cmd: '/opcao3', desc: '🎵 Músicas temáticas', enabled: true }, 
+    { cmd: '/opcao4', desc: '🎤 Buscar por Artista ou Banda', enabled: true }, // NOVA OPÇÃO AQUI
+    { cmd: '/opcao5', desc: '💡 Sugerir uma música para o banco de dados', enabled: true },
+    { cmd: '/opcao6', desc: '❌ Encerrar', enabled: true },
+    { cmd: '/opcao7', desc: '🔄 Refazer última busca', enabled: true }
   ];
 
   const scrollToBottom = () => {
@@ -103,12 +106,13 @@ function LeviRoboto() {
   // --- O CÉREBRO DA INTERAÇÃO (Comandos + Links + Negrito) ---
   const formatarMensagem = (text) => {
     // Procura por comandos EXATOS do bot, links http/https, OU texto entre **negrito**
-    const regex = /(\/(?:start|cancel|opcao1|opcao2|opcao3|opcao4|opcao5)|https?:\/\/[^\s]+|\*\*.*?\*\*)/gi;
+    // ATUALIZADO: Agora lê de opcao1 até opcao7 dinamicamente
+    const regex = /(\/(?:start|cancel|opcao[1-7])|https?:\/\/[^\s]+|\*\*.*?\*\*)/gi;
     const partes = text.split(regex);
     
     return partes.map((parte, index) => {
       // Se for um comando do bot:
-      if (parte.match(/^\/(?:start|cancel|opcao1|opcao2|opcao3|opcao4|opcao5)$/i)) {
+      if (parte.match(/^\/(?:start|cancel|opcao[1-7])$/i)) {
         return (
           <span 
             key={index} 
@@ -148,6 +152,7 @@ function LeviRoboto() {
   // --- FUNÇÃO ISOLADA DE BUSCA (CURA O ERRO DE RECURSÃO INFINITA) ---
   const executarBusca = async (termoDeBusca) => {
     setUltimaPalavra(termoDeBusca); 
+    setUltimoTipoBusca('palavra'); // AQUI ESTAVA FALTANDO! Agora ele sempre lembra que é palavra-chave.
     
     try {
       const token = localStorage.getItem('token');
@@ -171,10 +176,10 @@ function LeviRoboto() {
              addMessage('bot', msg);
              
              setTimeout(() => {
-               addMessage('bot', 'Gostaria de consultar mais músicas relacionadas à mesma palavra-chave? Se sim, basta selecionar a /opcao5');
+               addMessage('bot', 'Gostaria de consultar mais músicas relacionadas à mesma palavra-chave? Se sim, basta selecionar a /opcao7');
                
                setTimeout(() => {
-                   addMessage('bot', 'Se não, você também pode:\n/opcao1: Fazer uma busca com uma palavra chave diferente\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n/opcao3: Sugerir uma música para o nosso banco de dados\n/opcao4: Encerrar');
+                   addMessage('bot', 'Se não, você também pode:\n/opcao1: Fazer uma busca com uma palavra chave diferente\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n/opcao3: Músicas temáticas\n/opcao4: Buscar por Artista ou Banda\n/opcao5: Sugerir uma música para o banco de dados\n/opcao6: Encerrar');
                }, 600);
              }, 600);
          }, 600);
@@ -189,6 +194,52 @@ function LeviRoboto() {
     setBotState('idle'); 
   };
 
+  // --- NOVA FUNÇÃO DE BUSCA POR ARTISTA ---
+  const executarBuscaArtista = async (termoDeBusca) => {
+    setUltimaPalavra(termoDeBusca); 
+    setUltimoTipoBusca('artista'); // Mantemos apenas a memória certa para esta função!
+    
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      const res = await fetch(`${API_BASE_URL}/musicas/buscar_artista?q=${encodeURIComponent(termoDeBusca)}`, { headers });
+      const data = await res.json();
+      
+      if (data.error) {
+         addMessage('bot', `Erro ao buscar: ${data.error}`);
+      } else if (data.resultados && data.resultados.length > 0) {
+         
+         const palavraFormatada = data.closest_word.charAt(0).toUpperCase() + data.closest_word.slice(1);
+         addMessage('bot', `Bip... Bop... 🤖 Legal! 🥳 Encontrei essas músicas do artista/banda parecido com "${palavraFormatada}" no meu banco de dados:`);
+         
+         setTimeout(() => {
+             let msg = "";
+             data.resultados.forEach(musica => {
+               msg += `\n${musica}\n`;
+             });
+             addMessage('bot', msg);
+             
+             setTimeout(() => {
+               addMessage('bot', 'Gostaria de consultar mais resultados para esse mesmo artista? Se sim, basta selecionar a /opcao7');
+               
+               setTimeout(() => {
+                   addMessage('bot', 'Se não, você também pode:\n/opcao1: Busca por palavra chave\n/opcao2: Listar músicas para o louvor\n/opcao3: Músicas temáticas\n/opcao4: Buscar novo Artista\n/opcao5: Sugerir música\n/opcao6: Encerrar');
+               }, 600);
+             }, 600);
+         }, 600);
+
+      } else {
+         addMessage('bot', `Bip... Bop... 🤖 Misericórdia! Não encontrei nenhum artista parecido com "${termoDeBusca}" no meu banco de dados 🙄`);
+      }
+    } catch (e) {
+      addMessage('bot', 'Desculpe, ocorreu um erro de conexão com a API.');
+    }
+    
+    setBotState('idle'); 
+  };
+
+  // --- O GERENCIADOR PRINCIPAL ---
   // --- O GERENCIADOR PRINCIPAL ---
   const handleSend = async (textOverride) => {
     const text = textOverride !== undefined ? textOverride : inputValue;
@@ -209,18 +260,19 @@ function LeviRoboto() {
       }
       else if (command === '/start') {
         setBotState('idle');
-        addMessage('bot', 'Olá Abençoado(a)! Escolha uma das opções:\n\n/opcao1: Procurar músicas a partir de uma palavra chave\n\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n\n/opcao3: Sugerir uma música para o nosso banco de dados\n\n/opcao4: Encerrar');
+        addMessage('bot', 'Olá Abençoado(a)! Escolha uma das opções:\n\n/opcao1: Procurar músicas a partir de uma palavra chave\n\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n\n/opcao3: Músicas temáticas (Ceia, Natal, Infantis, etc.)\n\n/opcao4: Buscar por Artista ou Banda\n\n/opcao5: Sugerir uma música para o nosso banco de dados\n\n/opcao6: Encerrar');
       }
-      else if (command === '/opcao4') {
+      else if (command === '/opcao6') {
         setBotState('idle');
         addMessage('bot', 'Volte logo! 😉 Se precisar é só dar um /start para começarmos a conversar novamente!\n\nDeus abençoe!');
       }
-      else if (command === '/opcao5') {
+      else if (command === '/opcao7') {
         if (ultimaPalavra) {
           addMessage('bot', `Refazendo a busca para: ${ultimaPalavra}...`);
-          await executarBusca(ultimaPalavra); 
+          if (ultimoTipoBusca === 'artista') await executarBuscaArtista(ultimaPalavra);
+          else await executarBusca(ultimaPalavra);
         } else {
-          addMessage('bot', 'Não há uma palavra-chave armazenada. Use a /opcao1.');
+          addMessage('bot', 'Não há uma pesquisa armazenada. Use a /opcao1 ou /opcao4.');
         }
       }
       else if (command === '/opcao1') {
@@ -241,7 +293,6 @@ function LeviRoboto() {
            let msgSorteio = "🎸 Músicas sorteadas para o louvor:\n\n";
            
            if (data.is_custom) {
-               // --- LÓGICA DO REPERTÓRIO PESSOAL (CATEGORIAS DINÂMICAS) ---
                if (Object.keys(data.sorteio).length === 0) {
                    msgSorteio = "Seu repertório está vazio! Adicione músicas na aba 'Meu Repertório' para eu poder sortear.";
                } else {
@@ -250,7 +301,6 @@ function LeviRoboto() {
                    });
                }
            } else {
-               // --- LÓGICA DO REPERTÓRIO GLOBAL (FIXO) ---
                msgSorteio += `1) ${data.agitadas1}\n\n2) ${data.agitadas2}\n\n3) ${data.lentas1}\n\n4) ${data.lentas2}\n\n`;
                msgSorteio += `Música para ceia: ${data.ceia}\n\n`;
                msgSorteio += `Música para as crianças: ${data.infantis}\n\n`;
@@ -259,11 +309,19 @@ function LeviRoboto() {
            addMessage('bot', msgSorteio);
            
            setTimeout(() => {
-              addMessage('bot', 'O que gostaria de fazer agora? 🤔\n/opcao1: Fazer uma busca por palavra chave\n/opcao2: Listar novamente as músicas\n/opcao3: Sugerir uma música\n/opcao4: Encerrar');
+              addMessage('bot', 'O que gostaria de fazer agora? 🤔\n/opcao1: Fazer uma busca por palavra chave\n/opcao2: Listar novamente as músicas\n/opcao3: Músicas temáticas\n/opcao4: Buscar por Artista\n/opcao5: Sugerir uma música\n/opcao6: Encerrar');
            }, 600);
         }
       }
       else if (command === '/opcao3') {
+        setBotState('tematicas');
+        addMessage('bot', 'Ótima escolha! Qual tema você procura?\n\n1️⃣ Músicas para Ceia\n2️⃣ Músicas para Crianças\n3️⃣ Músicas de Natal\n4️⃣ Músicas para Casais / Dia dos Namorados\n5️⃣ Músicas para Festa Junina\n6️⃣ Voltar');
+      }
+      else if (command === '/opcao4') {
+        setBotState('esperando_artista');
+        addMessage('bot', 'Por favor, digite o nome do Artista ou Banda:');
+      }
+      else if (command === '/opcao5') {
         setBotState('esperando_sugestao');
         addMessage('bot', 'Por favor, sugira uma música que gostaria de adicionar à lista.');
       }
@@ -272,6 +330,27 @@ function LeviRoboto() {
       else {
         if (botState === 'esperando_busca') {
           await executarBusca(text);
+        }
+        else if (botState === 'esperando_artista') {
+          await executarBuscaArtista(text);
+        }
+        else if (botState === 'tematicas') {
+          const txt = text.toLowerCase();
+          if (txt === '1' || txt.includes('ceia')) {
+            await executarBusca('ceia');
+          } else if (txt === '2' || txt.includes('criança') || txt.includes('infantil')) {
+            await executarBusca('infantil');
+          } else if (txt === '3' || txt.includes('natal')) {
+            await executarBusca('natal');
+          } else if (txt === '4' || txt.includes('casais') || txt.includes('amor') || txt.includes('namorado')) {
+            await executarBusca('casamento');
+          } else if (txt === '5' || txt.includes('junina')) {
+            await executarBusca('junina');
+          } else if (txt === '6' || txt.includes('voltar')) {
+            handleSend('/start');
+          } else {
+            addMessage('bot', 'Por favor, digite um número de 1 a 6 para escolher o tema.');
+          }
         }
         else if (botState === 'esperando_sugestao') {
           const res = await fetch(`${API_BASE_URL}/musicas/sugerir`, {
@@ -288,7 +367,7 @@ function LeviRoboto() {
           }
           
           setTimeout(() => {
-              addMessage('bot', 'O que gostaria de fazer agora? 🤔\n/opcao1: Buscar por palavra chave\n/opcao2: Listar músicas\n/opcao3: Sugerir nova música\n/opcao4: Encerrar');
+              addMessage('bot', 'O que gostaria de fazer agora? 🤔\n/opcao1: Buscar por palavra chave\n/opcao2: Listar músicas\n/opcao3: Músicas temáticas\n/opcao4: Buscar por Artista\n/opcao5: Sugerir nova música\n/opcao6: Encerrar');
           }, 600);
           
           setBotState('idle');

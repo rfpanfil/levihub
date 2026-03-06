@@ -117,6 +117,7 @@ function AdminPanel() {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ 
           nome_musica: musicaGlobal.nome_musica, 
+          artista: musicaGlobal.artista, // <-- NOVO CAMPO AQUI
           tags: musicaGlobal.tags, 
           categoria: categoriasStr, 
           link: linkLimpo 
@@ -124,7 +125,7 @@ function AdminPanel() {
       });
       if (res.ok) {
         mostrarMensagem("Música adicionada ao Banco Global com sucesso!", "sucesso");
-        setMusicaGlobal({ nome_musica: '', tags: '', categorias: [], link: '' });
+        setMusicaGlobal({ nome_musica: '', artista: '', tags: '', categorias: [], link: '' });
         setIsModalMusicaOpen(false);
       } else mostrarMensagem("Erro ao adicionar música global.", "erro");
     } catch(e) { mostrarMensagem("Erro de conexão.", "erro"); }
@@ -208,9 +209,15 @@ function AdminPanel() {
             </p>
 
             <form onSubmit={handleSalvarMusicaGlobal} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div>
-                <label>Nome da Música *</label>
-                <input type="text" value={musicaGlobal.nome_musica} onChange={e => setMusicaGlobal({...musicaGlobal, nome_musica: e.target.value})} placeholder="Ex: Grandioso És Tu" style={{...inputStyle, padding: '10px'}} required />
+              <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <label>Nome da Música *</label>
+                  <input type="text" value={musicaGlobal.nome_musica} onChange={e => setMusicaGlobal({...musicaGlobal, nome_musica: e.target.value})} placeholder="Ex: Grandioso És Tu" style={{...inputStyle, padding: '10px'}} required />
+                </div>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <label>Artista / Banda (Opcional)</label>
+                  <input type="text" value={musicaGlobal.artista} onChange={e => setMusicaGlobal({...musicaGlobal, artista: e.target.value})} placeholder="Ex: Harpa Cristã" style={{...inputStyle, padding: '10px'}} />
+                </div>
               </div>
               
               {/* MUDANÇA: CHECKBOXES PARA MÚLTIPLAS CATEGORIAS GLOBAIS */}

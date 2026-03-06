@@ -340,8 +340,8 @@ function Login({ onLogin }) {
         )}
       </div>
       {/* Rodapé adicionado abaixo do card de login */}
-      <footer className="app-footer" style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.8em', color: '#9ab' }}>
-        <p>Desenvolvido para a Glória de Deus.<br />Copyright &copy; <a href="https://about.me/panfil" target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Rafael Panfil</a></p>
+      <footer className="app-footer" style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.8em', color: '#9ab', borderTop: 'none', paddingTop: '0' }}>
+        <p>Desenvolvido para a Glória de Deus.<br />Copyright &copy; {new Date().getFullYear()} <a href="https://about.me/panfil" target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Rafael Panfil</a></p>
       </footer>
     </div>
   );

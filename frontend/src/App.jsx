@@ -550,7 +550,7 @@ function App() {
       {error && <p style={{ color: '#ff4b4b', textAlign: 'center', marginTop: '15px' }}>{error}</p>}
 
       <footer className="app-footer">
-        <p>Desenvolvido para a Glória de Deus.<br />Copyright &copy; <a href="https://about.me/panfil" target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Rafael Panfil</a></p>
+        <p>Desenvolvido para a Glória de Deus.<br />Copyright &copy; {new Date().getFullYear()} <a href="https://about.me/panfil" target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Rafael Panfil</a></p>
       </footer>
     </div>
   );

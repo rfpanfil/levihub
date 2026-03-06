@@ -162,8 +162,12 @@ async def lifespan(app: FastAPI):
     except: pass
     try: await client.execute("ALTER TABLE biblioteca_busca ADD COLUMN categoria TEXT DEFAULT 'agitadas1'")
     except: pass
+    try: await client.execute("ALTER TABLE biblioteca_busca ADD COLUMN artista TEXT DEFAULT ''")
+    except: pass
     for t in ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis"]:
         try: await client.execute(f"ALTER TABLE {t} ADD COLUMN link TEXT DEFAULT ''")
+        except: pass
+        try: await client.execute(f"ALTER TABLE {t} ADD COLUMN artista TEXT DEFAULT ''")
         except: pass
 
     await client.close()
@@ -758,6 +762,39 @@ async def buscar_musicas(q: str, current_user: Optional[dict] = Depends(get_opti
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/musicas/buscar_artista")
+async def buscar_artista(q: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    try:
+        client = get_db_client()
+        if not current_user or current_user["usar_banco_padrao"] == 1:
+            result = await client.execute("SELECT nome_musica, artista, link FROM biblioteca_busca WHERE usuario_id IS NULL AND artista IS NOT NULL AND artista != ''")
+        else:
+            result = await client.execute("SELECT nome_musica, artista, link FROM biblioteca_busca WHERE usuario_id = ? AND artista IS NOT NULL AND artista != ''", [current_user["id"]])
+        await client.close()
+        
+        q_lower = q.lower().strip()
+        todos_artistas = set()
+        for row in result.rows:
+            todos_artistas.add(row[1].strip().lower())
+            
+        closest_word = q_lower
+        # Tolerância para erros de digitação (ex: "adianimar" acha "Adhemar")
+        matches = difflib.get_close_matches(q_lower, list(todos_artistas), n=1, cutoff=0.5)
+        if matches: closest_word = matches[0]
+            
+        musicas_encontradas = []
+        for row in result.rows:
+            nome, artista, link = row[0], row[1], row[2]
+            if closest_word in artista.lower() or q_lower in artista.lower():
+                resultado_str = f"{nome} ({artista})"
+                if link: resultado_str += f": {link}"
+                musicas_encontradas.append(resultado_str)
+                
+        random.shuffle(musicas_encontradas)
+        return {"closest_word": closest_word, "resultados": musicas_encontradas[:10]}
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/musicas/sortear")
 async def sortear_musica(current_user: Optional[dict] = Depends(get_optional_user)):
     try:
@@ -912,6 +949,7 @@ async def admin_delete_user(user_id: int, admin: dict = Depends(require_admin)):
 # --- ADICIONAR MÚSICAS AO REPERTÓRIO GLOBAL (ADMIN) ---
 class NovaMusicaGlobalRequest(BaseModel):
     nome_musica: str
+    artista: Optional[str] = ""
     tags: str
     categoria: str # Agora vai receber uma string separada por vírgula (ex: "agitadas1, ceia")
     link: Optional[str] = ""
@@ -922,8 +960,8 @@ async def admin_add_global_musica(musica: NovaMusicaGlobalRequest, admin: dict =
     try:
         # 1. Adiciona na biblioteca de busca global
         await client.execute(
-            "INSERT INTO biblioteca_busca (nome_musica, tags, categoria, link, usuario_id) VALUES (?, ?, ?, ?, NULL)",
-            [musica.nome_musica, musica.tags, musica.categoria, musica.link]
+            "INSERT INTO biblioteca_busca (nome_musica, artista, tags, categoria, link, usuario_id) VALUES (?, ?, ?, ?, ?, NULL)",
+            [musica.nome_musica, musica.artista, musica.tags, musica.categoria, musica.link]
         )
         
         # 2. Divide as categorias pela vírgula e grava em cada tabela específica
@@ -933,8 +971,8 @@ async def admin_add_global_musica(musica: NovaMusicaGlobalRequest, admin: dict =
         for tabela in categorias_selecionadas:
             if tabela in tabelas_validas:
                 await client.execute(
-                    f"INSERT INTO {tabela} (conteudo, link, usuario_id) VALUES (?, ?, NULL)",
-                    [musica.nome_musica, musica.link]
+                    f"INSERT INTO {tabela} (conteudo, artista, link, usuario_id) VALUES (?, ?, ?, NULL)",
+                    [musica.nome_musica, musica.artista, musica.link]
                 )
                 
         return {"message": "Música adicionada ao repertório global em múltiplas categorias!"}
@@ -1007,12 +1045,14 @@ async def delete_categoria(cat_id: int, current_user: dict = Depends(get_current
 
 class NovaMusicaRequest(BaseModel):
     nome_musica: str
+    artista: Optional[str] = ""
     tags: str
     categoria: str 
     link: Optional[str] = ""
 
 class EditaMusicaRequest(BaseModel):
     nome_musica: str
+    artista: Optional[str] = ""
     tags: str
     categoria: str
     link: Optional[str] = ""
@@ -1021,8 +1061,8 @@ class EditaMusicaRequest(BaseModel):
 async def get_custom_musicas(current_user: dict = Depends(get_current_user)):
     try:
         client = get_db_client()
-        result = await client.execute("SELECT id, nome_musica, tags, categoria, link FROM biblioteca_busca WHERE usuario_id = ? ORDER BY nome_musica", [current_user["id"]])
-        musicas = [{"id": r[0], "nome_musica": r[1], "tags": r[2], "categoria": r[3] or "Sem Categoria", "link": r[4] or ""} for r in result.rows]
+        result = await client.execute("SELECT id, nome_musica, artista, tags, categoria, link FROM biblioteca_busca WHERE usuario_id = ? ORDER BY nome_musica", [current_user["id"]])
+        musicas = [{"id": r[0], "nome_musica": r[1], "artista": r[2] or "", "tags": r[3], "categoria": r[4] or "Sem Categoria", "link": r[5] or ""} for r in result.rows]
         await client.close()
         return {"musicas": musicas}
     except Exception as e: return {"error": str(e)}
@@ -1032,8 +1072,8 @@ async def add_custom_musica(musica: NovaMusicaRequest, current_user: dict = Depe
     try:
         client = get_db_client()
         await client.execute(
-            "INSERT INTO biblioteca_busca (nome_musica, tags, usuario_id, link, categoria) VALUES (?, ?, ?, ?, ?)",
-            [musica.nome_musica, musica.tags, current_user["id"], musica.link, musica.categoria]
+            "INSERT INTO biblioteca_busca (nome_musica, artista, tags, usuario_id, link, categoria) VALUES (?, ?, ?, ?, ?, ?)",
+            [musica.nome_musica, musica.artista, musica.tags, current_user["id"], musica.link, musica.categoria]
         )
         await client.close()
         return {"message": "Música adicionada ao seu repertório!"}
@@ -1044,8 +1084,8 @@ async def update_custom_musica(musica_id: int, req: EditaMusicaRequest, current_
     try:
         client = get_db_client()
         await client.execute(
-            "UPDATE biblioteca_busca SET nome_musica = ?, tags = ?, categoria = ?, link = ? WHERE id = ? AND usuario_id = ?",
-            [req.nome_musica, req.tags, req.categoria, req.link, musica_id, current_user["id"]]
+            "UPDATE biblioteca_busca SET nome_musica = ?, artista = ?, tags = ?, categoria = ?, link = ? WHERE id = ? AND usuario_id = ?",
+            [req.nome_musica, req.artista, req.tags, req.categoria, req.link, musica_id, current_user["id"]]
         )
         await client.close()
         return {"message": "Música atualizada!"}
