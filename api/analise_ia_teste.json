@@ -1,21 +1,21 @@
 [
   {
     "nome": "A Boa Parte",
-    "artista": "Fhop music",
+    "artista": "Fhop music, Fhop",
     "tags": "jesus, maria, pés, tesouro, precioso, entregar, entrega, devotar, devoção, adorar, adoração, palavra, voz, amor, amar, valor, valorizar, boa parte",
     "categoria": "lentas1, lentas2",
-    "link": ""
+    "link": "https://youtu.be/dlGOiuxSzVw"
   },
   {
     "nome": "A Cada Manhã",
     "artista": "Diante do Trono",
     "tags": "misericórdia, manhã, renovar, renovação, força, fortalecer, esperança, esperar, alma, amor, amar, porção, alegria, alegrar, alegre, louvor, louvar, inspiração, inspirar, consolo, consolar, fidelidade, fiel, consolo na tempestade, tempestade, misericórdias se renovam",
-    "categoria": "lentas1",
-    "link": ""
+    "categoria": "agiatadas1, agitadas2, lentas1",
+    "link": "https://youtu.be/ReLkS4nrt1I"
   },
   {
     "nome": "A Casa É Sua",
-    "artista": "MEGAFONE",
+    "artista": "Megafone",
     "tags": "abrir, abertura, amar, amor, bater, boca, casa, chamar, chamado, coisas, convidar, convite, coração, deus, dia, entrar, entrada, ensolarado, sol, falar, fala, fechar, fechado, ficar, gelado, gélido, lar, lugar, mudar, mudança, olho, parar, parado, porta, querer, triste, tristeza, usar, uso, voar, voo, morada, transformar, transformação, nova vida, vida, testemunhar, testemunho, morada de deus",
     "categoria": "agitadas2, lentas1",
     "link": "https://youtu.be/7X0cHoxPGOk"
@@ -29,9 +29,9 @@
   },
   {
     "nome": "A começar em mim",
-    "artista": "",
+    "artista": "Vencedores por Cristo",
     "tags": "começar, começo, amor, amar, corações, coração, corpo, crescer, crescimento, frieza, frio, perdoar, perdão, perfeição, perfeito, quebrar, quebra, rumo, quebrantar, quebrantamento, unir, unidade, união, igreja, corpo de cristo, cristo, reconciliar, reconciliação, comungar, comunhão",
-    "categoria": "lentas1, lentas2",
+    "categoria": "lentas1, lentas2, missoes",
     "link": "https://youtu.be/uxWyNszgnqo"
   },
   {
@@ -43,14 +43,14 @@
   },
   {
     "nome": "A luz do céu",
-    "artista": "Cantor Cristão",
+    "artista": "Cantor Cristão, CC",
     "tags": "luz, iluminar, céu, celestial, salvar, salvação, salvador, cristo, jesus, banir, escuridão, escuro, abrir, porta, coração, trevas, pecado, pecar, dissipar, dissipação, caminho, alegrar, alegria, brilho, brilhar, vida, eterno, eternidade, paz, aceitar, habitar, habitação",
     "categoria": "agitadas2, lentas1",
     "link": "https://youtu.be/XdNuq1uBf2o"
   },
   {
     "nome": "A Mensagem da Cruz (Rude Cruz)",
-    "artista": "Harpa Cristã",
+    "artista": "Harpa Cristã, Hino da Harpa, Harpa, HC",
     "tags": "cruz, crucificar, rude, erigir, dia, fugir, fuga, emblema, vergonha, envergonhar, dor, doer, amar, amor, jesus, dar, vida, viver, pecador, pecar, pecado, mensagem, morrer, morte, proclamar, proclamação, glória, glorificar, céu, celestial, cordeiro, deus, calvário, humilhar, humilhante, atrativo, atrair, padecer, perdoar, perdão, alegrar, alegria, graça, luz, iluminar, santificar, santificação, sofrer, sofrimento, cristo, buscar, busca, lar",
     "categoria": "lentas1",
     "link": "https://youtu.be/71mhH3O3RJQ"
@@ -59,14 +59,882 @@
     "nome": "A Mesa",
     "artista": "Eli Soares",
     "tags": "pai, ceia, santa ceia, ceia do senhor, céu, pecar, pecado, encher, escravo, escravidão, errar, erro, trocar, liberdade, livre, tentar, encontrar, encontro, perder, perda, voz, mesa, assentar, lugar, esperar, espera, demorar, volta",
-    "categoria": "ceia, lentas2",
+    "categoria": "ceia, lentas2, missoes",
     "link": "https://youtu.be/J5eGCfesRbw"
   },
   {
     "nome": "A Tua Glória",
-    "artista": "Fernanda Brum",
+    "artista": "Fernanda Brum, Brum",
     "tags": "glória, glorificar, senhor, mão, poder, poderoso, céu, celestial, aberto, abrir, contemplar, contemplação, amor, amar, descer, inundar, inundação, levantar, receber, recepção, louvar, louvor, nome, sentir, sentimento, tocar, toque",
-    "categoria": "agitadas2",
+    "categoria": "agitadas1, agitadas2",
     "link": "https://youtu.be/iADdGg2saAM"
+  },
+  {
+    "nome": "Abra os olhos do meu coração",
+    "artista": "David Quinlan, Quinlan",
+    "tags": "olho, coração, ver, visão, exaltar, exaltação, brilhar, brilho, luz, iluminar, glória, glorificar, derramar, amor, amar, poder, poderoso, santo, santidade, tocar, toque, abraçar, abraço",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/_o0WQ_KSil4"
+  },
+  {
+    "nome": "Abraça-me (Quero ser como criança)",
+    "artista": "David Quinlan, Quinlan",
+    "tags": "criança, infantil, amar, amor, inocência, inocente, acreditar, crescer, crescimento, independente, independência, crer, crença, viver, vida, afago, afagar, abraço, abraçar, braço",
+    "categoria": "lentas2",
+    "link": "https://youtu.be/n2XwWRVj0Yo"
+  },
+  {
+    "nome": "Aclame ao Senhor",
+    "artista": "Diante do Trono",
+    "tags": "jesus, salvador, salvação, louvar, louvor, maravilha, amor, amar, consolar, consolo, abrigar, abrigo, força, forte, refugiar, refúgio, senhor, adorar, adoração, aclamar, aclamação, terra, cantar, canção, poder, poderoso, majestade, majestoso, rei, reinado, montanha, prostrar, prostração, rugir, mar, nome, alegrar, alegre, alegria, firme, firmeza, promessa, prometer, incomparável",
+    "categoria": "agitadas2, ceia",
+    "link": "https://youtu.be/Sh-0CtB6jAE"
+  },
+  {
+    "nome": "Acredito",
+    "artista": "Leonardo Gonçalves",
+    "tags": "desespero, desesperar, incerteza, medo, medroso, salvar, salvação, crer, crença, jesus cristo, jesus, cristo, deus, pai, espírito santo, santo, espírito, vida nova, cruz, morte, morrer, vencer, vitória, ressurreto, ressurreição, voltar, volta, fé, hino, canção, cantar, tentação, tentar, fraco, fraqueza, perder, perdido, perdoar, perdão, igreja, cadeia, prevalecer, véu, rasgar, chão, vão",
+    "categoria": "lentas1, pascoa",
+    "link": "https://youtu.be/t9dz882vNB8"
+  },
+  {
+    "nome": "Agindo Eu, quem impedirá",
+    "artista": "",
+    "tags": "agir, ação, impedir, impedimento, deus, amor, amar, formar, formar, testemunhar, testemunho, senhor",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/wf0i4TqKCso"
+  },
+  {
+    "nome": "Alegra-te",
+    "artista": "",
+    "tags": "alegrar, alegre, alegria, páscoa, jesus, ressuscitou, ressurreição, ressurreto, amigo, amizade, viver, vida, morte, morrer, derrotar, derrota, chorar, choro, dor, doer, senhor, barreira, separar, separação, deus, unir, unido, união, pai",
+    "categoria": "agitadas1, agitadas2, ceia",
+    "link": "https://docs.google.com/document/d/11VDBFDraQj5FWVhL2NU4T_O4w5lMI-m_/edit?usp=sharing&ouid=102361384509510737003&rtpof=true&sd=true"
+  },
+  {
+    "nome": "Aleluia, Salvação e Glória",
+    "artista": "MILAD",
+    "tags": "aleluia, salvar, salvação, glória, glorificar, honrar, honra, poder, poderoso, pertencer, deus, cantar, canção, levantar, nome, jesus, rei dos reis, rei, reinado",
+    "categoria": "agitadas1",
+    "link": "https://youtu.be/w7K8E2TbVoc?t=36s"
+  },
+  {
+    "nome": "Aliança",
+    "artista": "Ministério Koinonya de Louvor",
+    "tags": "aliança, aceitar, aceitação, amar, amor, andar, caminhar, caminho, barreira, calvário, expressar, expressão, irmão, irmandade, jesus, junto, união, unir, livre, liberdade, louvar, louvor, pai, pedir, pedido, oração, perdoar, perdão, precioso, preciosidade, tesouro, sangue, senhor, vida, viver, lado a lado, lado",
+    "categoria": "agitadas1, lentas1, ceia, missoes",
+    "link": "https://youtu.be/7XNFu7mA_JM"
+  },
+  {
+    "nome": "Alto preço",
+    "artista": "Asaph Borba,Fernanda Brum, Asaph, Brum",
+    "tags": "ceia, santa ceia, ceia do senhor, amor, amar, andar, caminhar, barreira, combate, combater, lutar, luta, coração, cristo, derramar, derramamento, edificar, edificação, espírito santo, espírito, santo, igreja, jesus, lado a lado, lado, preço, alto preço, pagar, pagamento, proclamar, proclamação, redimir, redenção, romper, rompimento, sangue, separar, separação, trevas, trabalhar, trabalho, unido, união, vida, viver",
+    "categoria": "ceia, lentas2",
+    "link": "https://youtu.be/paQ2gSPpmTI"
+  },
+  {
+    "nome": "Amigo de Deus",
+    "artista": "Adhemar de Campos, Adhemar",
+    "tags": "amigo, amizade, caminhar, caminho, comunhão, comungar, coração, desfrutar, deus, grandeza, grande, jesus, luz, iluminar, paz, perceber, percepção, poder, poderoso, seguro, segurança, vida, viver, pastor, pastorear, amor, amar",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/hIrw_wRXAfk"
+  },
+  {
+    "nome": "Amor ao perdido",
+    "artista": "Rede Ativa",
+    "tags": "amor, amar, amor ao perdido, perdido, perder, perdição, coração, deus, enxergar, visão, escutar, escuta, estender, extensão, enviar, envio, nação, necessitar, necessidade, olho, ouvir, ouvido, precisar, precisão, reacender, senhor, usar, uso, voz",
+    "categoria": "lentas1, lentas2, missoes",
+    "link": "https://youtu.be/2jENCnpWsKk"
+  },
+  {
+    "nome": "Andam procurando",
+    "artista": "JELB",
+    "tags": "procurar, procura, busca, buscar, razão, viver, vida, mundo, mal, maldade, paz, receber, recepção, caminho, caminhar, tentar, tentativa, achar, valor, valorizar, jesus, gozo, gozar, feliz, felicidade, alegrar, alegria, encontrar, encontro, salvar, salvação, salvador, novo, novidade, renovar",
+    "categoria": "agitadas2, lentas1",
+    "link": "https://youtu.be/nNIi-ieYM9k"
+  },
+  {
+    "nome": "Ao findar o labor",
+    "artista": "Adilson Silva",
+    "tags": "findar, fim, labor, trabalho, trabalhar, vida, viver, morte, morrer, destino, destinar, alma, futuro, lar, morada, amigo, amizade, escolher, escolha, aceitar, aceitação, cristo, jesus, libertar, libertação, livre, procurar, procura, paz, mundo, prazer, satisfazer, satisfação, ouvir, falar, fala, salvar, salvação, salvador, cruz, manchar, mancha, contemplar, contemplação, semblante, face, deus, cristão, cristianismo, coração, limpo, limpar, limpeza, gozo, gozar, céu, celestial, decidir, decisão, deixar, pecar, pecado, pecador, entregar, entrega, trilhar, caminho, caminhar, brilhar, brilhante, brilho, luz, iluminar",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/dE_j8AX_ajA"
+  },
+  {
+    "nome": "Ao Rei",
+    "artista": "Resgate, Resgate, Banda Resgate",
+    "tags": "céu, celestial, proclamar, proclamação, glória, glorificar, falar, fala, mão, rio, aplaudir, aplauso, exaltar, exaltação, força, forte, monte, montanha, cantar, canção, cântico, deus, fôlego, respirar, respiração, louvar, louvor, vida, viver, rei, reinado, majestade, nuvem, casa, lar, morada, terra, descansar, descanso, pé, voz, som, água, rosto, face, brilhar, brilho, luz, iluminar, sol",
+    "categoria": "agitadas1, agitadas2, missoes",
+    "link": "https://youtu.be/NWSMgzl6Iu0"
+  },
+  {
+    "nome": "Ao único",
+    "artista": "Aline Barros",
+    "tags": "único, digno, dignidade, receber, recepção, honrar, honra, glória, glorificar, força, forte, poder, poderoso, rei, reinado, majestade, eterno, eternidade, imortal, imortalidade, invisível, real, realidade, ministrar, ministração, louvar, louvor, coroar, coroa, coroação, jesus, adorar, adoração, nome, render, rendição, pé, prostrar, prostração, consagrar, consagração",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/5pNbKcc001U"
+  },
+  {
+    "nome": "Aos pés da Cruz",
+    "artista": "Kleber Lucas, Oficina G3, G3, Oficina",
+    "tags": "jesus, maravilha, maravilhoso, inspirar, inspiração, prosseguir, continuar, olhar, visão, coração, força, forte, guardar, promessa, prometer, orar, oração, firme, firmeza, deus, senhor, chorar, choro, lágrima, regar, fé, crer, crença, consolar, consolo, cruz, crucificar, clamar, clamor, nome, alcançar, alcance, misericórdia, perdoar, perdão, graça, luz, iluminar, amor, amar, eterno, eternidade, refugiar, refúgio, abrigar, abrigo, descansar, descanso, poder, poderoso, pé, prostrar, prostração",
+    "categoria": "lentas1, lentas2, ceia",
+    "link": "https://youtu.be/YmMd6CJbtos"
+  },
+  {
+    "nome": "Aquele que está feliz",
+    "artista": "Comunidade de Nilópolis",
+    "tags": "feliz, felicidade, amém, gritar, grito, aleluia, bater, palma, dançar, dança, jesus, coração, condução, alegrar, alegria, alegre, euforia, companhia, motivo",
+    "categoria": "agitadas1, agitadas2, infantis",
+    "link": "https://youtu.be/x6WOuUJNQ2s"
+  },
+  {
+    "nome": "Aquieta Minh'alma",
+    "artista": "Ministério Zoe",
+    "tags": "aquietar, alma, coração, ouvir, voz, perto, só, solidão, descobrir, descoberta, precisar, precisão, teimoso, teimosia, admitir, depender, dependência, viver, vida, perigo, perigosamente, acreditar, confiar, confiança, entender, controle, controlar, esconder, esconderijo, amarrar, desistir, desistência, fugir, fuga, vontade, difícil, dificuldade, gritar, grito, tentar, tentativa, voltar, volta, descansar, descanso, lançar, amor, amar, senhor, tempo, apagar, água, levar, sentir, sentimento, cumprir, largar, pensar, pensamento, lado, segurar, segurança, assegurar, cair, queda, mão, levantar, chorar, choro, lágrima, enxugar",
+    "categoria": "lentas2",
+    "link": "https://youtu.be/ANfpF0pNob4?t=90"
+  },
+  {
+    "nome": "Até que Ele venha",
+    "artista": "Alexandre Magnani",
+    "tags": "graça, alcançar, alcance, viver, vida, compartilhar, amor, amar, estender, mão, envolver, envolvimento, entregar, entrega, mundo, jesus, voltar, volta, cristo, esperança, razão",
+    "categoria": "agitadas2, lentas1, ceia, missoes",
+    "link": "https://youtu.be/LgMR5Ak7zHQ"
+  },
+  {
+    "nome": "Aumenta o fogo",
+    "artista": "Nívea Soares, Nívea",
+    "tags": "aumentar, aumento, fogo, espírito, unção, perto, colocar, temor, santo, nome, despertar, amor, amar, jesus, canção, cantar, cântico, vida, viver, fluir, interior, agir, ação, honrar, honra, exaltar, exaltação, senhor, digno, dignidade, dançar, dança, gritar, grito",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/-KwG-9bv7U0"
+  },
+  {
+    "nome": "Autoridade e poder",
+    "artista": "Marcos Góes",
+    "tags": "confiar, confiança, senhor, monte, sião, abalar, permanecer, permanência, jerusalém, povo, autoridade, poder, poderoso, domínio, dominar, mão, deus, rei, calar, silêncio, terra, dobrar, joelho, erigir, erguer, jesus",
+    "categoria": "agitadas1, agitadas2, lentas1",
+    "link": "https://youtu.be/L1jyMgQ7wZw"
+  },
+  {
+    "nome": "Bendirei",
+    "artista": "Morada",
+    "tags": "correr, corrida, encontrar, encontro, desesperar, desespero, estender, extensão, cetro, amor, amar, senhor, viver, vida, prostrar, prostração, pé, crucificar, aquecer, coração, abraço, abraçar, provar, prova, poder, saciar, santidade, santo, render, rendição, bendizer, nome, exaltar, exaltação, glória, glorificar, majestade, majestoso, amado, rei, honra, honrar, forte, força, incenso",
+    "categoria": "lentas1, agitadas2",
+    "link": "https://youtu.be/USEganWkObg"
+  },
+  {
+    "nome": "Bondade De Deus",
+    "artista": "Isaías Saad",
+    "tags": "amor, amar, graça, mão, levantar, deitar, cantar, canção, bondade, bom, fiel, fidelidade, tempo, fôlego, voz, guiar, guia, fogo, escuridão, escuro, presença, confortar, conforto, pai, amigo, amizade, viver, vida, seguir, render, rendição, entregar, entrega, deus, poder, poderoso, senhor, sintonia",
+    "categoria": "lentas2, ceia, natal",
+    "link": "https://youtu.be/mZ9yZYo9Mmk"
+  },
+  {
+    "nome": "Brilha Jesus",
+    "artista": "Vencedores por Cristo",
+    "tags": "luz, iluminar, senhor, brilhar, brilho, trevas, jesus cristo, jesus, cristo, mundo, acordar, sono, profundo, profundidade, mostrar, deus, pai, espírito, refulgir, transbordar, povo, graça, perdão, perdoar, ordenar, ordem, achegar, trono, incrível, finito, intangível, sangue, precioso, preciosidade, ousar, ousadia, entrar, entrada, sombra, alma, dissipar, contemplar, contemplação, majestade, majestoso, reflexo, refletir, face, rosto, dia, glória, glorificar, história, tona",
+    "categoria": "agitadas1, agitadas2, lentas1, natal",
+    "link": "https://youtu.be/EfTw2gamDeA"
+  },
+  {
+    "nome": "Brilho Celeste",
+    "artista": "Cantor Cristão",
+    "tags": "peregrinar, peregrino, monte, montanha, vale, luz, iluminar, cristo, prometer, promessa, jesus, brilho celeste, brilho, celeste, brilhar, encher, alma, glória, glorificar, deus, aleluia, cantar, canção, louvor, louvar, céu, sombra, nuvem, salvador, salvar, salvação, ocultar, apagar, andar, caminhar, caminho, guiar, guia, raio, bendito, bendizer, conduzir, condução, mansão, perto, mestre",
+    "categoria": "agitadas2, lentas1",
+    "link": "https://youtu.be/aUMyZxPoT4k"
+  },
+  {
+    "nome": "Buscai Primeiro",
+    "artista": "Vencedores por Cristo",
+    "tags": "buscar, busca, primeiro, reino, deus, justiça, aleluia, pão, homem, humanidade, viver, vida, palavra, boca, pedir, pedido, achar, bater, abrir, abertura",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/c78saIQuOHo"
+  },
+  {
+    "nome": "Veja (Canta minh'alma)",
+    "artista": "Hillsong",
+    "tags": "amor, amar, pai, mistério, misterioso, entender, entendimento, mundo, infalível, falhar, comparar, comparação, filho, leão, cordeiro, verbo, encarnar, encarnação, salvador, salvar, salvação, alma, sofrer, sofrimento, humanidade, sangue, jesus, messias, justo, justiça, entregar, entrega, ressuscitou, ressurreição, ressurreto, cantar, canção, espírito, queimar, fogo, amigo, amizade, protetor, proteger, proteção, levar, verdade, verdadeiro, luz, iluminar, perder, perdido, perdição, coração, tempo, findar, fim, reino, santo",
+    "categoria": "lentas1, lentas2, pascoa, natal, ceia",
+    "link": "https://youtu.be/KVky_akU_i8"
+  },
+  {
+    "nome": "Cantai",
+    "artista": "Igreja Bíblica da Paz",
+    "tags": "cantar, canção, perto, senhor, templo, erguer, louvor, louvar, palácio, graças, graça, trono, rei dos reis, rei, majestade, eterno, eternidade, amor, amar, glória, glorificar, encher, deus, habitar, habitação, santo, santidade, adorar, adoração, música, alegre, alegria, pai, altar, comunhão, pertencer",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/O88IEzFn-P8"
+  },
+  {
+    "nome": "Cantarei Teu amor pra sempre",
+    "artista": "Alexandre Magnani",
+    "tags": "monte, montanha, correr, corrida, mar, rio, amor, amar, abrir, abertura, coração, cura, curar, alegrar, alegre, alegria, levantar, mão, alcançar, alcance, louvar, louvor, cantar, canção, cântico, exultar, exultação, conhecer, conhecimento, mundo, encher, enchimento, coragem, corajoso, deus, exaltar, exaltação, fé, crer, glória, glorificar, graça, sorriso, sorrir, reggae",
+    "categoria": "agitadas1, agitadas2, ceia, missoes",
+    "link": "https://youtu.be/gs-pEqktiB8"
+  },
+  {
+    "nome": "Cantarei Teu amor pra sempre",
+    "artista": "Ludimila Ferber",
+    "tags": "monte, montanha, correr, corrida, mar, rio, amor, amar, abrir, abertura, coração, cura, curar, alegrar, alegre, alegria, levantar, mão, alcançar, alcance, louvar, louvor, cantar, canção, cântico, exultar, exultação, conhecer, conhecimento, mundo, encher, enchimento, coragem, corajoso, deus, exaltar, exaltação, fé, crer, glória, glorificar, graça, sorriso, sorrir, reggae",
+    "categoria": "lentas1, lentas2, ceia, missoes",
+    "link": "https://youtu.be/Gukqh4Ww8Rg?si=2UCUdr3-r-fFfemp"
+  },
+  {
+    "nome": "Canção do Apocalipse",
+    "artista": "Nívea Soares, Nívea",
+    "tags": "digno, dignidade, cordeiro, morto, morte, morrer, santo, santidade, novo, novidade, cântico, cantar, canção, assentar, trono, céu, celestial, deus, poder, poderoso, criar, criação, louvar, louvor, rei dos reis, rei, reinado, adorar, adoração, vestir, veste, arco-íris, som, trovão, luz, iluminar, relâmpago, honrar, honra, glória, glorificar, força, forte, eterno, eternidade, maravilhar, maravilha, extasiar, êxtase, ouvir, audição, jesus, fôlego, respirar, vida, viver, misterioso, mistério, água viva, água, apocalipse",
+    "categoria": "lentas1, lentas2, ceia, pascoa",
+    "link": "https://youtu.be/Id0FgIVT-aE"
+  },
+  {
+    "nome": "Cartas Para o Mundo",
+    "artista": "IBAB",
+    "tags": "carta, mundo, expressão, expressar, amor, amar, filho, mão, remir, remido, redenção, redentor, cristo, imagem, criador, criar, criação, exaltar, exaltação, jesus, adorar, adoração, povo, impedir, impedimento, ver, visão, santificar, santificação, santo, terra, prostrar, prostração, louvar, louvor, escrever, escrita",
+    "categoria": "lentas1, lentas2, missoes",
+    "link": "https://youtu.be/rCcWfzEE6eo"
+  },
+  {
+    "nome": "Casa favorita",
+    "artista": "Megafone",
+    "tags": "casa, favorito, favorita, altar, lugar, encontrar, encontro, valor, valorizar, atrair, atração, presença, misericórdia, deus, israel, encher, enchimento, templo, glória, glorificar, restaurar, restauração, cair, queda, davi, povo, saber, sabedoria",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/CppARFjPCfg"
+  },
+  {
+    "nome": "Casa",
+    "artista": "Palavrantiga",
+    "tags": "deus, preferir, preferência, carne, templo, construir, construção, mão, casa, morar, morada, lugar, abrir, abertura, porta, entrar, entrada, obra, perfeição, perfeito, janela, olho, brilhar, brilho, iluminar, luz, iluminação, amado, amar, amor, mudar, mudança, habitar, habitação, frio, frieza, medo, medroso, monte, montanha, deserto, vazio, aquecer, calor, livre, liberdade, santo espírito, espírito santo, espírito, santo, encher, enchimento, alegrar, alegre, alegria",
+    "categoria": "agitadas1, agitadas2, lentas1",
+    "link": "https://youtu.be/OMRcMT1THaU"
+  },
+  {
+    "nome": "Castelo Forte",
+    "artista": "Fábio Sampaio",
+    "tags": "castelo, forte, força, deus, escudo, espada, poder, poderoso, defender, defesa, igreja, amado, amor, amar, furor, fúria, provar, prova, provação, tentador, tentação, artimanha, astúcia, infernal, inferno, terra, perder, perdido, perdição, socorro, socorrer, proteger, proteção, protegido, jesus, vencer, vitória, cruz, crucificar, senhor, céu, celestial, triunfar, triunfo, batalha, batalhar, pai, salvar, salvação",
+    "categoria": "agitadas2, ceia, lentas1",
+    "link": "https://youtu.be/OE0ScEm4Y98"
+  },
+  {
+    "nome": "Celebrai com júbilo",
+    "artista": "",
+    "tags": "celebrar, celebração, jubilar, júbilo, senhor, morar, morador, morada, terra, servir, servo, alegrar, alegre, alegria, apresentar, apresentação, cantar, canção, cântico, saber, sabedoria, deus, eterno, eternidade, bom, bondade, fiel, fidelidade, gerar, geração, aleluia, glória, glorificar, amém, festejar, festa, louvar, louvor",
+    "categoria": "agitadas1, agitadas2, infantis",
+    "link": "https://youtu.be/wgnLn7_uzeU"
+  },
+  {
+    "nome": "Celebrai a Cristo",
+    "artista": "Ministério Koinonya de Louvor",
+    "tags": "celebrar, celebração, cristo, comemorar, comemoração, festejar, festa, louvar, louvor, ressuscitar, ressurreição, ressurreto, senhor, vencer, vitória, vencedor, viver, vida",
+    "categoria": "agitadas1, agitadas2, ceia, infantis",
+    "link": "https://youtu.be/pv1xjs6BS8w"
+  },
+  {
+    "nome": "Clamarei teu Santo nome",
+    "artista": "Heloísa Rosa",
+    "tags": "ajudar, ajuda, chamar, chamado, clamar, clamor, ferir, ferida, ferido, guerra, guerrear, guerreiro, inimigo, inimizade, jesus, levantar, noite, pedir, pedido, proteger, proteção, protetor, salvar, salvação, salvador, santo, santidade, senhor, tempestade, trevas, cercar, cerco, chegar, chegada, cair, queda",
+    "categoria": "agitadas2",
+    "link": "https://youtu.be/qCrTzvQhHwc"
+  },
+  {
+    "nome": "Colossenses 1 e Da Vida, O Melhor",
+    "artista": "Projeto Sola",
+    "tags": "imagem, imaginar, deus, invisível, senhor, criar, criação, céu, celestial, terra, trono, soberania, soberano, poder, poderoso, autoridade, sustentar, sustento, palavra, agradar, agrado, supremacia, supremo, resplendor, resplandecer, glória, glorificar, pai, exato, exatidão, expressar, expressão, pertencer, graça, cantar, canção, cântico, viver, vida, verdade, verdadeiro, caminho, caminhar, paz, luz, iluminar, trevas, redentor, redimir, redenção, refugiar, refúgio, fortaleza, forte, força, batalhar, batalha, perfeito, perfeição, sacrificar, sacrifício, verbo, carne, rei, reinado, melhor, melhorar, mover, movimento, existir, existência, paraíso, entregar, entrega, princípio, fim, final, universo, universal, mundo",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/Xzbj3r3h7ps"
+  },
+  {
+    "nome": "Com Alegria",
+    "artista": "Nani Azevedo",
+    "tags": "alegrar, alegre, alegria, abençoar, abençoado, bênção, adorar, adoração, amar, amor, compartilhar, comungar, comunhão, coração, deus, feliz, felicidade, grato, gratidão, irmão, irmandade, paz, senhor, chegar, chegada, lugar, cantar, canção, cântico, dançar, dança, sair, saída, levar",
+    "categoria": "agitadas1, ceia, missoes",
+    "link": "https://youtu.be/NIXrzpu9nvA"
+  },
+  {
+    "nome": "Comunhão",
+    "artista": "Asaph Borba, Asaph",
+    "tags": "ceia, santo, santidade, acessar, acesso, comunidade, comum, agradecer, agradecimento, grato, adorar, adoração, aliança, aliar, amar, amor, cálice, celebrar, celebração, comungar, comunhão, confiar, confiança, coração, cristo, cruz, crucificar, eterno, eternidade, eucaristia, crer, fé, igreja, jesus, lembrar, lembrança, louvar, louvor, pai, pão, partir, partido, paz, puro, pureza, redimir, redenção, redentor, sacrificar, sacrifício, sangue, salvar, salvação, salvador, senhor, unir, união, unido, viver, vida, vivo, querido, provar, prova, provação, lindo, beleza, fortalecer, fortaleza, derramar, derramamento, perfeito, perfeição, beber, laço, voz",
+    "categoria": "ceia, lentas1, lentas2, missoes",
+    "link": "https://youtu.be/4Nr-QhveQBE"
+  },
+  {
+    "nome": "Consagração",
+    "artista": "Aline Barros",
+    "tags": "adorar, adoração, alto, altíssimo, amar, amor, cantar, canção, cântico, céu, celestial, celebrar, celebração, consagrar, consagração, criar, criador, criatura, criação, deus, elogiar, elogio, entregar, entrega, eterno, eternidade, exaltar, exaltação, glória, glorificar, harmonia, harmonioso, honrar, honra, jesus, júbilo, jubilar, justo, justiça, louvar, louvor, paz, poder, poderoso, prazer, puro, pureza, rei, reinado, reino, senhor, terra, viver, vida, grato, gratidão, transbordar, transbordamento, coração, mão, contar, conto, obra, mar, força, forte",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/b2mxe9IbxRY"
+  },
+  {
+    "nome": "Conta as Bênçãos",
+    "artista": "Johnson Oatman Jr., IBAB",
+    "tags": "vida, viver, vaga, proceloso, desalento, julgar, conta, contar, bênção, abençoar, divino, divindade, deus, mão, mágoa, triste, tristeza, cruz, crucificar, pesado, peso, duvidar, dúvida, canção, cantar, cântico, alegre, alegria, alegrar, dia, ouro, riqueza, bem, tesouro, prometer, promessa, terra, comprar, compra, mansão, casa, lar, morada, morar, celeste, celestial, céu, conflito, lutar, luta, fraco, fraqueza, forte, força, fortalecer, desanimar, desânimo, auxílio, auxiliar, ajudar, ajuda, minorar, mal, maldade, consolo, consolar, paz",
+    "categoria": "agitadas2, lentas1",
+    "link": "https://youtu.be/wWcmdZLw-yY"
+  },
+  {
+    "nome": "Coração igual ao teu",
+    "artista": "Diante do Trono",
+    "tags": "olhar, visão, senhor, deus, desejo, desejar, transformar, transformação, perdão, perdoar, novo, novidade, renovar, renovação, coração, mestre, disposto, disposição, obedecer, obediência, cumprir, cumprimento, querer, vontade, ensinar, ensino, amar, amor, irmão, irmandade, olho, encher, enchimento, espírito, santo, endireitar, direito, caminho, caminhar",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/YKOU5lqwxHc"
+  },
+  {
+    "nome": "Cordeiro e Leão",
+    "artista": "Central 3",
+    "tags": "amor, amar, rasgar, afastar, afastamento, temor, temer, medo, medroso, escolher, escolha, primeiro, princípio, mostrar, visão, jesus, morrer, morte, cordeiro, ressuscitar, ressurreição, ressurreto, leão, segurar, segurança, vivo, vida, viver, cantar, canção, cântico, rei, reinado, lugar",
+    "categoria": "lentas2, ceia",
+    "link": "https://youtu.be/d4Kxupwg5GU"
+  },
+  {
+    "nome": "Cordeiro Santo",
+    "artista": "Filhos do Homem",
+    "tags": "cruz, crucificar, fardo, peso, pecado, pecar, pecador, apagar, novo, novidade, renovar, santidade, santo, santificar, adoração, adorar, cordeiro, deus, amado, amar, amor, alma, salvador, salvar, salvação, cristo, jesus cristo, jesus, eternidade, eterno, graça, justiça, justo, louvor, louvar, redenção, redimir",
+    "categoria": "agitadas1, agitadas2, ceia, lentas1",
+    "link": "https://youtu.be/hxn82d04bfY"
+  },
+  {
+    "nome": "Creio que Tu és a cura",
+    "artista": "Gabriela Rocha",
+    "tags": "escutar, escuta, ouvir, audição, clamar, clamor, acalmar, calma, pensar, pensamento, fogo, curar, cura, confiar, confiança, crer, crença, fé, vida, viver, jesus, impossível, impossibilidade, mundo, mão, adoração, adorar, amor, amar, divino, divindade, eterno, eternidade, garantia, garantir, libertação, libertar, livre, medo, medroso, obediência, obedecer, oração, orar, paz, poder, poderoso, reconhecimento, reconhecer, salvação, salvar, salvador, socorro, socorrer",
+    "categoria": "lentas1, ceia",
+    "link": "https://youtu.be/HEkjg5ZZCMU"
+  },
+  {
+    "nome": "Cântico de Maria (Minh'alma Engrandece)",
+    "artista": "Asaph Borba",
+    "tags": "alma, engrandecer, grande, grandeza, senhor, espírito, alegrar, alegre, alegria, deus, salvador, salvar, salvação, poder, poderoso, misericórdia, demonstrar, demonstração, amor, amar, santo, santidade, encher, enchimento, lâmpada, luz, óleo, unção, vide, videira, florescer, flor, cântico, cantar, glória, glorificar, maria",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/parq-gj2-rU"
+  },
+  {
+    "nome": "Descansarei",
+    "artista": "Hillsong",
+    "tags": "cobrir, cobertura, mão, poder, poderoso, esconder, esconderijo, senhor, trovão, mar, erguer, erigir, tempestade, voar, voo, água, rei, reinado, descansar, descanso, deus, alma, seguro, segurança, cristo, firme, firmeza, confiar, confiança, esperança, esperar, fé, crer, crença, garantia, garantir, paz, proteção, proteger, salvação, salvar",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/fd_jLB9YACI"
+  },
+  {
+    "nome": "Deus cuidará de ti",
+    "artista": "Cantor Cristão, CC",
+    "tags": "aflito, aflição, triste, tristeza, coração, deus, cuidar, cuidado, operar, obra, mão, prover, provisão, dia, dor, doer, cruel, crueldade, provação, provar, prova, socorro, socorrer, salvação, salvar, salvador, fé, crer, crença, amor, amar, aumentar, aumento, tesouro, riqueza, terrestre, terra, celeste, celestial, céu, bem, bondade, mister, necessidade, braço, sustentar, sustento",
+    "categoria": "lentas1, lentas2, ceia",
+    "link": "https://youtu.be/5kNvIjzRVTM"
+  },
+  {
+    "nome": "Deus da minha vida",
+    "artista": "Thalles Roberto, Thalles",
+    "tags": "deus, pai, amor, amar, razão, raciocínio, ar, respirar, farol, iluminar, precisar, precisão, necessidade, sentir, sentimento, dia, olhar, visão, luz, brilho, perder, perdição, perdido, senhor, alegria, alegrar, alegre, vida, viver, ficar, permanência, casa, lar, morada, morar",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/ZJGbSGMZ0HA"
+  },
+  {
+    "nome": "Deus de Promessas",
+    "artista": "Davi Sacer",
+    "tags": "olho, visão, atento, atenção, permanecer, permanência, ouvido, audição, sensível, sensibilidade, ouvir, escutar, clamor, clamar, chorar, choro, alegria, alegrar, alegre, manhã, dia, deus, perto, proximidade, longe, distância, mudar, mudança, fiel, fidelidade, aliança, aliar, promessa, prometer, homem, humanidade, mentir, mentira, palavra, cumprir, cumprimento, enfrentar, confronto, lutar, luta, plano, planejar, frustrar, frustração, esperança, esperar, mão, grande, grandeza, impossível, impossibilidade, acontecer, acontecimento",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/meiqsELWxNs"
+  },
+  {
+    "nome": "Deus Poderoso",
+    "artista": "Alda Célia",
+    "tags": "deus, poder, poderoso, infinito, pedimos, pedido, oração, orar, pensamos, pensamento, sonhamos, sonho, esperamos, esperança, mudar, mudança, situação, afligir, aflição, dia, impossível, ressuscitar, ressurreição, ressurreto, morte, morto, derrotar, derrota, rede, lançar, mar, crer, fé, palavra, sinal, maravilha",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/F9Q7DLpvUpg"
+  },
+  {
+    "nome": "Deus Poderoso",
+    "artista": "Alda Célia",
+    "tags": "deus, poder, poderoso, infinito, pedimos, pedido, oração, orar, pensamos, pensamento, sonhamos, sonho, esperamos, esperança, mudar, mudança, situação, afligir, aflição, dia, impossível, ressuscitar, ressurreição, ressurreto, morte, morto, derrotar, derrota, rede, lançar, mar, crer, fé, palavra, sinal, maravilha",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/zpVxTkzhzSE"
+  },
+  {
+    "nome": "Deus é fiel",
+    "artista": "Asaph Borba",
+    "tags": "deus, fiel, fidelidade, problema, lutar, luta, dilema, noite, chorar, choro, amanhã, sol, brilhar, brilho, alegrar, alegre, alegria, lábio, coração, louvar, louvor, descansar, descanso, confiar, confiança, imenso, amor, amar",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/8lz26hF0Gz0"
+  },
+  {
+    "nome": "Dia Feliz",
+    "artista": "David Quinlan",
+    "tags": "história, dia, feliz, felicidade, vencer, vitória, morte, morto, resgatar, resgate, cantar, canção, jesus, vivo, viver, vida, sepulcro, eterno, eternidade, conquistar, conquista, coração, lavar, mudar, mudança, confiar, confiança, amor, amar, livre, liberdade, cristo, alegrar, alegre, alegria, paz, pranto, cessar, bradar, clamor, glória, glorioso, salvar, salvação, salvador, nome",
+    "categoria": "agitadas2, agitadas1",
+    "link": "https://youtu.be/RgSQqwD18OI"
+  },
+  {
+    "nome": "Diante de ti",
+    "artista": "Quatro por Um",
+    "tags": "senhor, encher, enchimento, lugar, glória, glorificar, falar, fala, ouvir, audição, tocar, toque, sentir, sentimento, abraçar, abraço, adorar, adoração, segundo, tempo, encontrar, encontro, presença, vontade, pular, pulo, dançar, dança, gritar, grito, correr, corrida, saltar, salto, alegrar, alegre, alegria, conhecer, conhecimento, erguer, levantar, mão",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/ahz6-0XKnQw"
+  },
+  {
+    "nome": "Dias de Elias",
+    "artista": "",
+    "tags": "dia, elias, pregar, pregação, palavra, deus, servo, moisés, justiça, justo, reinar, reinado, tribulação, treva, fome, dor, doer, voz, deserto, clamar, clamor, preparar, preparação, caminho, senhor, trombeta, soar, som, brilhar, brilho, sol, nuvem, voltar, volta, erguer, declarar, declaração, redimir, redenção, redentor, sião, salvar, salvação, salvador, ezequiel, osso, viver, vida, amado, davi, padrão, louvar, louvor, colher, colheita, branco, pureza, campo, trabalhar, trabalho, vinha, jeová",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/MZm0JXfwDU4?t=141"
+  },
+  {
+    "nome": "Digno és de glória",
+    "artista": "Asaph Borba",
+    "tags": "digno, dignidade, glória, glorificar, honra, honrar, levantar, mão, adorar, adoração, senhor, grandioso, grandeza, maravilha, igual, incomparável",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/KGbN6B9Vifc"
+  },
+  {
+    "nome": "Eis-me aqui",
+    "artista": "Diante do Trono",
+    "tags": "luz, iluminar, acender, coração, ver, visão, escuridão, escuro, presença, fiel, fidelidade, graça, amor, amar, levantar, força, forte, prosseguir, senhor, chamado, chamar, cumprir, cumprimento, alegrar, alegre, alegria, dor, doer, chorar, choro, desanimar, desânimo, consolar, consolo, espírito, fraqueza, fraco, manifestar, manifestação, poder, poderoso, depender, dependência, precisar, precisão, glória, glorificar, vencer, vitória, honra, honrar, louvar, louvor, entregar, entrega",
+    "categoria": "lentas2, ceia",
+    "link": "https://youtu.be/gltSkRNs9bU"
+  },
+  {
+    "nome": "Ele é exaltado",
+    "artista": "Adhemar de Campos",
+    "tags": "exaltar, exaltação, rei, céu, celestial, louvar, louvor, nome, senhor, verdade, verdadeiro, reinar, reinado, reino, terra, glória, glorificar, santo, santidade",
+    "categoria": "lentas1, ceia",
+    "link": "https://youtu.be/22c5Flzd8Iw"
+  },
+  {
+    "nome": "Ele é o Leão",
+    "artista": "Adhemar de Campos",
+    "tags": "leão, tribo, judá, jesus, cadeia, libertar, libertação, rocha, vitória, vencedor, força, forte, tempo, fraqueza, fraco, torre, guerra, guerrear, esperança, esperar, israel",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/3oq7_2yc89o"
+  },
+  {
+    "nome": "Ele é o Leão + Eu Celebrarei",
+    "artista": "",
+    "tags": "leão, tribo, judá, jesus, cadeia, libertar, libertação, rocha, vitória, vencedor, força, forte, tempo, fraqueza, fraco, torre, guerra, guerrear, esperança, esperar, israel, celebrar, celebração, cantar, canção, senhor, alegrar, alegre, alegria, louvar, louvor, adorar, adoração, triunfar, triunfo",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/CYvj_YvcIaA + https://youtu.be/6ANyXL69WjQ"
+  },
+  {
+    "nome": "Em teus átrios",
+    "artista": "Diante do Trono",
+    "tags": "igreja, átrio, encontrar, encontro, vida, viver, fome, alma, saciar, fonte, água, caminho, altar, rio, permanecer, permanência, presença, senhor, dançar, dança, celebrar, celebração, liberdade, livre, oferecer, sacrificar, sacrifício, louvar, louvor, abundância, alegrar, alegre, alegria, buscar, busca, face, rosto, fôlego",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/HvNErklV40A"
+  },
+  {
+    "nome": "Em Tua Presença",
+    "artista": "Nívea Soares",
+    "tags": "lugar, pecar, pecado, pecador, perdoar, perdão, culpa, amor, amar, esfriar, frio, fogo, apagar, apago, presença, senhor, jesus, santo, espírito, santo espírito, render, rendição, agir, ação, anseio, ansiar, permanecer, permanência, poder, poderoso, corromper, corrupção, riqueza, cegar, cego, cegueira, mundo, atrair, atração, paixão, seduzir, sedução",
+    "categoria": "ceia, lentas2",
+    "link": "https://youtu.be/DRJgpvPDUZM"
+  },
+  {
+    "nome": "Emaús",
+    "artista": "Morada",
+    "tags": "abraçar, abraço, constranger, constrangimento, olhar, visão, sábio, sabedoria, ensinar, ensino, amor, amar, manso, mansidão, cuidar, cuidado, coração, entrar, casa, mesa, observar, observação, esperar, espera, partir, pão, olho, abrir, abertura, reconhecer, reconhecimento, voz, queimar, fogo, arrumar, perfumar, perfume, preparar, preparação, honrar, honra",
+    "categoria": "agitadas2, ceia, lentas1, lentas2",
+    "link": "https://youtu.be/4GyHNgZR_nU"
+  },
+  {
+    "nome": "Entrega",
+    "artista": "Vineyard",
+    "tags": "coração, entregar, entrega, viver, vida, amor, amar, rei, sonho, render, rendição, direito, orgulho, orgulhoso, trocar, troca, senhor, cantar, canção, jesus, mundo, deixar, pé, cruz, crucificar, conhecer, conhecimento, nome, dar, louvar, louvor, sentir, sentimento, alegrar, alegre, alegria, partilhar, partilha, dor, doer",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/z1vnYfxqIZ8"
+  },
+  {
+    "nome": "Espírito enche a minha vida",
+    "artista": "Quatro por Um",
+    "tags": "espírito, encher, enchimento, vida, viver, poder, poderoso, mão, levantar, louvar, louvor, adorar, adoração, coração, derramar, derramamento, altar",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/riRbvZ8kH5M"
+  },
+  {
+    "nome": "Essência",
+    "artista": "Davi Sacer",
+    "tags": "passo, frase, falar, fala, música, cantar, canção, agradar, agrado, senhor, amor, amar, adorar, adoração, prazer, dono, essência, viver, vida",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/pbQktbdQ3UY"
+  },
+  {
+    "nome": "Essência da Adoração",
+    "artista": "David Quinlan",
+    "tags": "música, esmorecer, desaparecer, achegar, ansiar, anseio, oferecer, valor, valorizar, abençoar, coração, canção, cantar, buscar, busca, senhor, profundo, profundidade, olho, visão, ver, essência, adorar, adoração, jesus, perdoar, perdão, rei, imensurável, expressar, expressão, digno, dignidade, pobre, fraco, fraqueza, fôlego",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/OI8ND8O6I6M"
+  },
+  {
+    "nome": "Esta paz que sinto em minh'alma",
+    "artista": "Igreja Cristã Maranata",
+    "tags": "paz, pacífico, alma, louvar, louvor, senhor, olho, visão, circunstância, amor, amar, guiar, guia, vista, alegre, alegria, alegrar, gozo, gozar, campo, florescer, flor, vide, videira, fruto, monte, montanha, lançar, mar, terra, tremer, tremor, confiar, confiança, glória, glorificar, aleluia",
+    "categoria": "agitadas2, lentas1",
+    "link": ""
+  },
+  {
+    "nome": "Estamos de pé",
+    "artista": "Marcus Salles",
+    "tags": "pressionar, pressão, desanimar, desânimo, perplexo, perplexidade, desesperar, desespero, pé, perseguir, perseguição, abandonar, abandono, abater, abatimento, destruir, destruição, caminhar, caminho, mover, movimento, crer, crença, nação, santo, santidade, igreja, viver, vida, fé, coliseu, leão, senhor, inferno, prevalecer, prevalência, avançar, avanço, crescer, crescimento",
+    "categoria": "agitadas1, agitadas2, lentas1, missoes",
+    "link": "https://youtu.be/4x-yrCz1D9g"
+  },
+  {
+    "nome": "Este é o dia",
+    "artista": "Diante do Trono",
+    "tags": "dia, senhor, alegrar, alegre, alegria, deus, dançar, dança, louvar, louvor, pastor, pastorear, anjo, frente, livrar, livramento, livre, tropeçar, tropeço, lábio, cantar, canção, amor, amar, digno, dignidade, sangue, jesus, vencer, vitória, vencedor, comprar, compra, libertar, libertação",
+    "categoria": "agitadas1, agitadas2, junina",
+    "link": "https://youtu.be/dmIbq2X6SfQ"
+  },
+  {
+    "nome": "Eu celebrarei",
+    "artista": "",
+    "tags": "celebrar, celebração, cantar, canção, cântico, senhor, alegrar, alegre, alegria, louvar, louvor, adorar, adoração, triunfar, triunfo",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/6ANyXL69WjQ"
+  },
+  {
+    "nome": "Eu e minha casa",
+    "artista": "Israel Subirá",
+    "tags": "mão, guardar, guarda, pequeno, pequenino, voz, guiar, guia, amor, amar, sustentar, sustento, senhor, casa, morada, lar, louvar, louvor, servir, servo, deus, pai, filho, princípio, gerar, geração, fim",
+    "categoria": "ceia, lentas1, lentas2",
+    "link": ""
+  },
+  {
+    "nome": "Eu nasci pra te adorar",
+    "artista": "Nívea Soares",
+    "tags": "nome, jesus, trono, forte, força, joelho, domínio, dominar, dobrar, enganar, engano, falso, falsidade, deus, quebrar, quebra, rei, nascer, nascimento, adorar, adoração, alegrar, alegria, alegre, alma, sede, poder, poderoso, espírito, empenhar, empenho, vida, viver, servir, servo, livre, liberdade, injustiça, injusto, medo, medroso, homem, humanidade, amor, amar, senhor",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/0jt_LAaqIPA"
+  },
+  {
+    "nome": "Eu navegarei",
+    "artista": "Harpa Cristã, Hino da Harpa, Harpa, HC",
+    "tags": "navegar, navegação, oceano, espírito, adorar, adoração, deus, amor, amar, vida, viver, compreender, compreensão, explicação, explicar, descer, descida, fogo, pentecostes, encher, enchimento, novo, renovar, novidade",
+    "categoria": "lentas2",
+    "link": "https://youtu.be/qFKl9pTUrj8"
+  },
+  {
+    "nome": "Eu Quero Viver Para Ti",
+    "artista": "Rodrigo Soeiro",
+    "tags": "segundo, viver, vida, amor, amar, imenso, afastar, afastamento, servir, servo, mão, levantar, lábio, proclamar, proclamação, erguer, voz, adorar, adoração, sonhar, sonho, morrer, morte, vontade, querer, conhecer, conhecimento, presente, jesus",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/uDD9TUnDCGw"
+  },
+  {
+    "nome": "Eu só confio no Senhor",
+    "artista": "JELB",
+    "tags": "confiar, confiança, senhor, falhar, falha, cantar, canção, sol, escurecer, escuro, escuridão, céu, celestial, toldar, lar, morada, casa, cristo",
+    "categoria": "agitadas2, lentas1",
+    "link": "https://youtu.be/g0TtRb1wiH0"
+  },
+  {
+    "nome": "Eu te louvarei meu bom Jesus",
+    "artista": "Emmanuel Espinosa",
+    "tags": "razão, raciocínio, adorar, adoração, jesus, esperança, esperar, anelar, anseio, confiar, confiança, ajudar, ajuda, salvar, salvação, salvador, alegrar, alegre, alegria, gozo, gozar, coração, cantar, canção, cântico, louvar, louvor, glorificar, glória, bom, bondade, tempo",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/_xVuItEPVQE"
+  },
+  {
+    "nome": "Eu tenho um chamado",
+    "artista": "Quatro por um",
+    "tags": "chamar, chamado, parar, estrada, continuar, continuação, lutar, luta, vida, viver, aflição, afligir, enfrentar, confronto, senhor, proteger, proteção, vento, soprar, sopro, problema, abater, abatimento, lembrar, lembrança, grande, enviar, envio, calar, silêncio, evangelho, anunciar, anúncio, escolhido, escolha, ventre, mãe, deus, olhar, visão, tempo",
+    "categoria": "",
+    "link": ""
+  },
+  {
+    "nome": "Eu tenho você",
+    "artista": "Marcelo Markes",
+    "tags": "falar, fala, ver, visão, demorar, demora, perceber, percepção, longe, distância, perto, proximidade, rejeitar, rejeição, afeto, afetar, sozinho, solidão, filho, morada, morar, lar, abandonar, abandono, cair, queda, ouvir, audição, feliz, felicidade, vagar, mundo, encontrar, encontro",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/3YlXIAqI-kY"
+  },
+  {
+    "nome": "Eu vejo a glória",
+    "artista": "Luciano Claw",
+    "tags": "supremo, supremacia, formoso, beleza, render, rendição, glória, glorificar, senhor, imenso, amor, amar, campo, monte, montanha, bênção, abençoar, acompanhar, companhia, cruz, crucificar, guiar, guia, jesus, confiar, confiança, ver, visão, curar, cura, libertar, libertação, livre, cativo, cativeiro, palavra, viver, vida, louvor, louvar, criar, criação, perfeição, perfeito, alegrar, alegre, alegria, erguer, alto",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/SCPyJrzIN54"
+  },
+  {
+    "nome": "Eu vou (África)",
+    "artista": "Fernanda Brum",
+    "tags": "ásia, ajudar, ajuda, ouvir, audição, áfrica, pedir, pedido, socorrer, socorro, ruanda, somália, nigéria, clamar, clamor, amor, amar, evangelho, pregar, pregação, crer, crença, senhor, menino, rússia, olhar, visão, céu, celestial, el salvador, chorar, choro, salvar, salvação, romênia, arábia saudita, iraque, esperar, espera, colômbia, indonésia, albânia, china, brasil, deus, nação",
+    "categoria": "agitadas1, agitadas2, missoes",
+    "link": "https://youtu.be/25-O4IpiSe8"
+  },
+  {
+    "nome": "Eu vou construir",
+    "artista": "Livres para adorar, Juliano Son",
+    "tags": "digno, dignidade, canção, cantar, senhor, louvar, louvor, vida, viver, jesus, fonte, salvar, salvação, santo, santidade, incomparável, inigualável, olho, visão, coração, amor, amar, mudar, mudança, mundo, construir, construção, fundamento, fundamentar, confiar, confiança, abalar, abalo",
+    "categoria": "lentas1, lentas2, ceia",
+    "link": "https://youtu.be/1htnqzaKLP8"
+  },
+  {
+    "nome": "Eu vou construir + Oh quão lindo esse nome é",
+    "artista": "Gabi Sampaio",
+    "tags": "digno, dignidade, canção, cantar, senhor, louvar, louvor, vida, viver, jesus, fonte, salvar, salvação, santo, santidade, incomparável, inigualável, olho, visão, coração, amor, amar, mudar, mudança, mundo, construir, construção, fundamento, fundamentar, confiar, confiança, abalar, abalo, morte, morrer, vencer, vitória, vencedor, véu, romper, rompimento, tumba, vazio, céu, celestial, adorar, adoração, proclamar, proclamação, glória, glorificar, ressuscitou, ressurreição, ressurreto, invencível, reinar, reinado, reino, poder, poderoso, forte, força",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/-G4vFzmeTkM"
+  },
+  {
+    "nome": "Eu vou dançar na chuva",
+    "artista": "Fernandinho",
+    "tags": "caminho, caminhar, andar, sonhar, sonho, deserto, lugar, vida, viver, prometer, promessa, crer, fé, crença, mar, frente, abrir, abertura, criatura, criar, criação, velho, homem, morrer, morte, morto, dançar, dança, terra, chuva",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/6NNcx6gpMBc"
+  },
+  {
+    "nome": "Faz chover (Eu vejo uma pequena nuvem)",
+    "artista": "Denis Salles",
+    "tags": "ver, visão, pequeno, nuvem, tamanho, mão, homem, sinal, chuva, chover, descer, descida, comporta, céu, celestial, pedir, pedido, jesus, clamar, clamor, gritar, grito, chamar, chamado",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/5PLn5mNywto"
+  },
+  {
+    "nome": "Faz chover",
+    "artista": "Fernandinho",
+    "tags": "corça, ansiar, anseio, água, terra, seca, seco, precisar, precisão, chuva, chover, coração, sede, rei, reinado, deus, senhor, jesus, derramar, derramamento, lugar, rio, inundar, inundação",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/-VlUIBJ-few"
+  },
+  {
+    "nome": "Fico Feliz (Bendito é o nome do Senhor)",
+    "artista": "Aline Barros",
+    "tags": "feliz, felicidade, casa, lar, morada, erguer, voz, cantar, canção, aleluia, mão, adorar, adoração, bendito, bendizer, nome, senhor",
+    "categoria": "agitadas1, agitadas2, infantis",
+    "link": "https://youtu.be/wp2V6B-hAO0"
+  },
+  {
+    "nome": "Filho do Deus Vivo",
+    "artista": "Nívea Soares, Nívea",
+    "tags": "verbo, vivo, viver, vida, filho, homem, humanidade, deus, curar, cura, enfermo, enfermidade, livrar, livramento, cativo, cativeiro, chegar, chegada, reino, humilhar, humilhação, crucificar, crucificação, cruz, rejeitar, rejeição, ressuscitar, ressurreição, ressurreto, glorificar, glória, inferno, morte, morrer, vencer, vitória, profeta, agitador, espírito, revelar, revelação, ungir, unção, cristo, rocha, igreja, inabalável, igual, incomparável",
+    "categoria": "agitadas1, agitadas2, ceia, pascoa",
+    "link": "https://youtu.be/jZxBo2zn0lw"
+  },
+  {
+    "nome": "Foi Graça",
+    "artista": "Asaph Borba, Asaph",
+    "tags": "terminar, término, vida, viver, céu, celestial, multidão, irmão, irmandade, esperar, espera, abraçar, abraço, perguntar, pergunta, voz, vencer, vitória, falar, fala, cantar, canção, jesus, amar, amor, pecador, pecar, pecado, entregar, entrega, graça, abundante, abundância, precioso, preciosidade, doce",
+    "categoria": "agitadas2, lentas1, lentas2",
+    "link": "https://youtu.be/FmEdBPnL3FA"
+  },
+  {
+    "nome": "Foi na Cruz",
+    "artista": "Isaac Watts",
+    "tags": "cego, cegueira, andar, caminhar, perder, perdido, perdição, vagar, longe, distância, salvador, salvar, salvação, céu, celestial, descer, descida, sangue, verter, pobre, pobreza, pecador, pecar, pecado, cruz, crucificar, dia, ver, visão, castigar, castigo, jesus, crer, fé, olho, abrir, abertura, alegrar, alegre, alegria, luz, iluminar, ouvir, audição, falar, fala, graça, surdo, surdez, converter, conversão, senhor, morrer, morte, espada, lei, apressar, pressa, fugir, fuga, esconder, esconderijo, abrigar, abrigo, seguro, segurança, prazer, inundar, inundação, conhecer, conhecimento, amor, amar, sofrer, sofrimento",
+    "categoria": "lentas1, lentas2, pascoa",
+    "link": "https://youtu.be/dbVTpQu7yF4"
+  },
+  {
+    "nome": "Fonte de Água Viva (Aquele Que Tem Sede)",
+    "artista": "Adhemar de Campos",
+    "tags": "sede, ansiar, buscar, busca, beber, bebida, água, água viva, cristo, fonte, acabar, fim, senhor, consolador, consolo, espírito, vida, viver, louvor, louvar, precisar, precisão, amor, amar, guia, guiar, encher, enchimento, fogo",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/OniDiUvVI2s"
+  },
+  {
+    "nome": "Geração dos que te amam",
+    "artista": "Sonhos e Visões",
+    "tags": "subir, subida, elevação, monte, montanha, senhor, jeová, permanecer, permanência, santo, santidade, poderoso, poder, lugar, limpo, limpeza, mão, puro, pureza, coração, geração, gerar, amar, amor, confiar, confiança, buscar, busca, face, rosto, visão, sonho",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/ivbXN_96FsU"
+  },
+  {
+    "nome": "Geração que dança",
+    "artista": "Adoração & Adoradores",
+    "tags": "graça, dançar, dança, força, forte, celebrar, celebração, grato, gratidão, amor, amar, glória, glorificar, cantar, canção, cântico, terra, exaltar, exaltação, senhor, transbordar, transbordamento, perdoar, perdão, conhecer, conhecimento, calar, silêncio, geração, gerar, misericórdia, deus",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/EIxTcrNtdKU"
+  },
+  {
+    "nome": "Glorificar",
+    "artista": "Projeto Sola",
+    "tags": "canto, cantar, mundo, passo, caminhar, ecoar, eco, amor, amar, redenção, redimir, bandeira, cristo, luz, iluminar, senhor, rei, reinado, grande, grandeza, chamar, chamado, existir, existência, servir, servo, igreja, santo, santidade, nome, fim, findar, glorificar, glória, tesouro, vaso, fragilidade, frágil, brilhar, brilho, escuridão, escuro, treva, coração, poder, poderoso, graça, expressar, expressão",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/JCZkKzH5Po0"
+  },
+  {
+    "nome": "Grande é o Senhor (Grande é o Senhor e mui digno de louvor...)",
+    "artista": "Adhemar de Campos",
+    "tags": "grande, grandeza, senhor, digno, dignidade, louvor, louvar, cidade, deus, santo, santidade, monte, montanha, alegria, alegrar, alegre, terra, vitória, vencedor, vencer, ajudar, ajuda, inimigo, inimizade, prostrar, prostração, nome, engrandecer, agradecer, gratidão, obra, operar, vida, viver, confiar, confiança, infinito, amor, amar, eterno, eternidade, céu, celestial",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/4_rv9Jmgc78"
+  },
+  {
+    "nome": "Grande é o Senhor (Grande é o seu amor...)",
+    "artista": "David Quinlan",
+    "tags": "grande, grandeza, amor, amar, derramar, derramamento, espírito, conselheiro, aconselhar, amigo, amizade, fiel, fidelidade, fidedigno, prometer, promessa, agradável, agradar, vontade, querer, eterno, eternidade, bondade, bom, senhor, obra, operar, olho, visão, ver",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/dIzZXsbVcDg"
+  },
+  {
+    "nome": "Graça",
+    "artista": "Israel Salazar",
+    "tags": "nome, graça, explicar, explicação, precisar, precisão, merecer, merecimento, raiar, luz, iluminar, novo, novidade, renovar, dia, misericórdia, receber, recepção, bom, bondade, firmado, firmeza, firme, inabalável, abalar",
+    "categoria": "agitadas1, agitadas2, ceia",
+    "link": "https://youtu.be/_hL1pguiHX0"
+  },
+  {
+    "nome": "Graças dou (Hino 597)",
+    "artista": "Harpa Cristã, Hino da Harpa, HC",
+    "tags": "graça, dar, vida, viver, bem, bondade, revelar, revelação, futuro, passar, passado, bênção, abençoar, derramar, derramamento, dor, doer, aflição, afligir, perdão, perdoar, azul, celeste, celestial, céu, nuvem, rosa, caminho, caminhar, espinho, escuridão, escuro, treva, noite, estrela, brilhar, brilho, prece, orar, oração, responder, resposta, sonho, sonhar, falhar, falha, cruz, crucificar, sofrer, sofrimento, provação, provar, prova, amor, amar, medida, mediar, paz, coração, lágrima, chorar, choro, verter, alívio, aliviar, dom, eterno, eternidade",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/USAKQYJkeZQ"
+  },
+  {
+    "nome": "Graças, Senhor",
+    "artista": "PIB Curitiba",
+    "tags": "agradecer, gratidão, grato, dar, graça, senhor, bênção, abençoar, ver, visão, olho, coração, louvor, louvar, mão, céu, celestial, escuridão, escuro, treva, luz, iluminar, tirar, amor, amar, perdão, perdoar, pecado, pecar, pecador, levar, cruz, crucificar",
+    "categoria": "agitadas2, lentas1",
+    "link": "https://youtu.be/Arp_NbB-oG8"
+  },
+  {
+    "nome": "Hey Pai",
+    "artista": "Isadora Pompeo",
+    "tags": "deixar, abandono, coração, noite, acalmar, calma, mente, pensar, pensamento, pai, olhar, visão, lembrar, lembrança, lutar, luta, guerrear, sozinho, solidão, perto, proximidade, desanimar, desânimo, saber, sabedoria, cuidar, cuidado, merecer, merecimento, dar, mão",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/MF5Vj2X4s3Q?si=YDJSSv3NzLmoIG-V"
+  },
+  {
+    "nome": "Há um Deus",
+    "artista": "Felipe Valente",
+    "tags": "deus, céu, celestial, terra, mar, imagem, imaginar, semelhança, tentar, tentativa, entender, entendimento, razão, raciocínio, conseguir, palavra, mundo, criar, criação, esculpir, escultura, empoeirar, pó, mão, pé, flagrante, amor, amar, sentir, sentimento, soprar, sopro, cortante, cortar, diamante, ver, visão, viver, vida, pensar, pensamento, dar, costa, fingir, fingimento, existir, existência, saber, sabedoria, homem, humanidade, infiel, infidelidade, desistir, desistência, morrer, morte, morto, cruz, crucificar",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/wCL5X5r-FCY"
+  },
+  {
+    "nome": "Há um lugar",
+    "artista": "",
+    "tags": "lugar, descansar, descanso, refrigerar, refrigério, verdade, reinar, reinado, senhor, influenciar, influência, ouvir, audição, espírito, vencer, vitória, guerrear, guerra, inconstância, dominar, domínio, fé, crer, crença, fortalecer, força, paz, governar, governo, sonhar, sonho, abortar, temer, temor, perder, perda, ganhar, ganho, precisar, precisão, jesus",
+    "categoria": "lentas2",
+    "link": "https://youtu.be/mUubQBy5OVY"
+  },
+  {
+    "nome": "Há um lugar pra mim",
+    "artista": "Rodolfo Abrantes",
+    "tags": "esperar, espera, levar, mão, lugar, alto, altura, ver, visão, tempo, paz, sonhar, sonho, voz, chamar, chamado, ecoar, eco, coração, guiar, guia, segredo, precisar, precisão, conhecer, conhecimento, deus, convidar, convite, assentar, cobrir, salvação, salvar, salvador, vestir, veste, justiça, justo, noiva, enfeitar, grandeza, grande, porta, ganhar, ganho, mesa",
+    "categoria": "agitadas1, agitadas2, lentas1",
+    "link": "https://youtu.be/w2e1EJliOXQ"
+  },
+  {
+    "nome": "Isaías 53",
+    "artista": "Projeto Sola",
+    "tags": "beleza, majestade, majestoso, atrair, atração, aparência, desejar, desejo, rejeitar, rejeição, homem, humanidade, carregar, carga, dor, doer, castigar, castigo, paz, esperança, esvair, oferecer, oferta, culpar, culpa, satisfazer, satisfação, criador, criar, criação, morrer, morte, luz, iluminar, brilhar, brilho, filho, amor, amar, entregar, entrega, lugar, cordeiro, pecado, pecar, esmagar, palavra, cravo, crucificar, derramar, vida, viver, provar, provação, ira, amargo, graça, doce",
+    "categoria": "ceia, lentas1, lentas2, pascoa",
+    "link": "https://youtu.be/bvki6GuGsn0"
+  },
+  {
+    "nome": "Isaías 9",
+    "artista": "Rodolfo Abrantes",
+    "tags": "natal, menino, nascer, nascimento, filho, deus, viver, vida, asa, esconder, esconderijo, maravilha, maravilhoso, glória, glorificar, príncipe, paz, céu, celestial, abrir, abertura, terra, dobrar, cristo, rei dos reis, rei, buscar, busca, levar, mão, porta, cidade, jerusalém, noiva, entrar, entrada",
+    "categoria": "ceia, lentas2, natal",
+    "link": "https://youtu.be/d6pflSCLIao"
+  },
+  {
+    "nome": "Jesus em tua presença",
+    "artista": "Asaph Borba",
+    "tags": "jesus, presença, reunir, reunião, contemplar, contemplação, face, rosto, render, rendição, morte, morrer, vida, viver, acessar, acesso, coração, pai, véu, separar, separação, luz, iluminar, apagar, brilhar, brilho, dia, adorar, adoração, nome, grande, grandeza, dar, louvar, louvor",
+    "categoria": "agitadas2",
+    "link": "https://youtu.be/hizQh4R-a5E"
+  },
+  {
+    "nome": "Jesus você me libertou",
+    "artista": "Ministério Vineyard",
+    "tags": "jesus, libertar, libertação, livre, salvar, salvação, salvador, condenar, condenação, morte, morrer, absolver, absolvição, escravo, escravidão, pecado, pecar, pecador, mal, maldade, sangue, cristo, comprar, compra, servir, servo",
+    "categoria": "agitadas1, agitadas2, lentas1",
+    "link": "https://youtu.be/RfA2BO-A0PA"
+  },
+  {
+    "nome": "Jesus é o Caminho",
+    "artista": "Heloísa Rosa / Gio e Álvaro",
+    "tags": "turbar, coração, crer, crença, fé, deus, casa, pai, morar, morada, preparar, preparação, lugar, levar, conhecer, conhecimento, caminho, caminhar, verdade, verdadeiro, vida, viver, obra, operar, maior, amar, amor, guardar, mandamento, rogar, orar, consolador, consolo, espírito, mundo, receber, recepção, habitar, habitação, eterno, eternidade, manifestar, manifestação, senhor",
+    "categoria": "lentas1, pascoa",
+    "link": "https://youtu.be/zsFI4Da8Mek"
+  },
+  {
+    "nome": "Jesus, Filho de Deus",
+    "artista": "Fernandinho",
+    "tags": "deixar, abandono, céu, celestial, encontrar, encontro, lugar, amor, amar, mundo, conhecer, conhecimento, cruz, crucificar, entregar, entrega, perdão, perdoar, alcançar, alcance, altar, adorar, adoração, exaltar, exaltação, jesus, filho, deus, glória, glorificar, morrer, morte, levar, pecar, pecado, dor, doer, vencer, vitória, vencedor, ressuscitar, ressurreição, ressurreto, engrandecer, grandeza, santo, santidade, poder, poderoso, apagar, libertar, libertação, livre",
+    "categoria": "lentas1, pascoa, natal",
+    "link": "https://youtu.be/_G_xbDaSDEQ"
+  },
+  {
+    "nome": "Juntos",
+    "artista": "Edilson Botelho Nogueira",
+    "tags": "junto, união, fé, crer, crença, amor, amar, mente, pensar, pensamento, coração, marca, sangue, cruz, crucificar, corpo, cristo, vivo, vida, viver, adorar, adoração, servir, servo, chorar, choro, alegrar, alegre, alegria, partir, repartir, carga, irmão, irmandade, corda, soar, som, jesus",
+    "categoria": "agitadas1, agitadas2, missoes",
+    "link": "https://youtu.be/GnmlGm9YKnA"
+  },
+  {
+    "nome": "Lava-me",
+    "artista": "Marcos Witt",
+    "tags": "espelho, senhor, reflexo, refletir, amor, amar, formar, forma, mudar, mudança, céu, celestial, lavar, água, perdão, perdoar, purificar, pureza, limpar, limpo, limpeza, vida, viver, coração, necessitar, necessidade",
+    "categoria": "agitadas1, agitadas2",
+    "link": "https://youtu.be/0l2kDVt65t4"
+  },
+  {
+    "nome": "Livre pra servir",
+    "artista": "Pr. Samuel Ferreira",
+    "tags": "mão, alcançar, alcance, graça, salvar, salvação, salvador, cruz, crucificar, resgatar, resgate, livre, liberdade, santidade, santo, andar, caminhar, alegria, alegrar, alegre, adorar, adoração, amor, amar, servir, servo, ouvir, audição, proclamar, proclamação, conquistar, conquista, separar, separação, jesus, palavra, sustentar, sustento, sal, luz, iluminar",
+    "categoria": "agitadas1, agitadas2, ceia",
+    "link": "https://youtu.be/8kRKxGwlPG8"
+  },
+  {
+    "nome": "Lá (A Tua mão está)",
+    "artista": "Paulo César Baruk, Baruk",
+    "tags": "fim, horizonte, canto, distante, distância, mão, universo, verso, céu, celestial, profundo, profundidade, mar, ver, visão, olhar, imenso, imensidão, firmamento, momento, coração, chorar, choro, abraço, abraçar, consolar, consolo, deus, amanhecer, manhã, dia, conhecer, conhecimento, precisar, precisão, alegria, alegrar, alegre",
+    "categoria": "agitadas2, lentas1",
+    "link": "https://youtu.be/ePZR6DZkOqc"
+  },
+  {
+    "nome": "Mais Perto",
+    "artista": "Laura Souguellis",
+    "tags": "senhor, amor, amar, arrebatar, arrebatamento, desejo, desejar, perto, proximidade, profundo, profundidade, conhecer, conhecimento, coração, doce, provar, prova, grande, grandeza",
+    "categoria": "lentas2",
+    "link": "https://youtu.be/VNP9qUpvNTg"
+  },
+  {
+    "nome": "Maranata",
+    "artista": "Avivah",
+    "tags": "luz, iluminar, salvar, salvação, salvador, render, rendição, lado, seguro, segurança, mão, temer, temor, santo, santidade, senhor, digno, dignidade, louvar, louvor, confiar, confiança, frente, viver, vivo, vida, voltar, volta, céu, celestial, buscar, busca, reinar, reinado, aleluia, jesus, maranata",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/iS6GXPbhCwU"
+  },
+  {
+    "nome": "Maravilhoso És",
+    "artista": "Ministério Koinonya de Louvor",
+    "tags": "formoso, beleza, rei, universo, glória, glorificar, encher, enchimento, terra, céu, celestial, vida, viver, senhor, maravilha, maravilhoso, presença, adorar, adoração, tocar, toque, veste, contemplar, contemplação",
+    "categoria": "lentas1, lentas2",
+    "link": "https://youtu.be/YcfeE476S0I"
+  },
+  {
+    "nome": "Marca de Cristo",
+    "artista": "Marco Antônio, Ana e Edson Feitosa",
+    "tags": "plano, planejar, senhor, cumprir, cumprimento, palavra, cair, queda, criar, criação, esperar, espera, ver, visão, glória, glorificar, brilhar, brilho, empenhar, empenho, vida, viver, pedra, clamar, clamor, lugar, marca, marcar, cristo, coração, escrever, escrita, nome, seguir, passo, desejo, desejar, corresponder, correspondência, chamado, chamar, deus, prosseguir, vencer, vitória, vencedor, perseguir, perseguição, destino, herdar, herança, reino, fraqueza, fraco, fortalecer, força, presença, poder, poderoso",
+    "categoria": "lentas1",
+    "link": "https://youtu.be/eszTeVNLcIU"
+  },
+  {
+    "nome": "Marcharemos",
+    "artista": "Gerson Borges",
+    "tags": "ouvir, audição, voz, louvar, louvor, senhor, sábio, sabedoria, verdade, verdadeiro, amor, amar, marchar, marcha, coragem, corajoso, cheio, seguir, dor, doer, cercar, cerco, viagem, viajar, escuridão, escuro, treva, noite, descer, descida, graça, fé, crer, viver, vida, esperança, esperar, alegria, alegre, alegrar",
+    "categoria": "lentas2, ceia",
+    "link": "https://youtu.be/0Awg2knrbUY"
+  },
+  {
+    "nome": "Me derramar",
+    "artista": "Vineyard",
+    "tags": "coração, clamar, clamor, escutar, escuta, cair, queda, barreira, fiel, fidelidade, senhor, palavra, amor, amar, esperança, esperar, fim, sentir, sentimento, toque, tocar, bondade, bom, libertar, libertação, livre, calor, aquecer, derramar, derramamento, precisar, precisão, grato, gratidão, formoso, beleza",
+    "categoria": "ceia, lentas2",
+    "link": "https://youtu.be/LJyK6vZRFSw"
+  },
+  {
+    "nome": "Me leva",
+    "artista": "Filhos do Homem",
+    "tags": "jesus, levar, perto, proximidade, ouvir, audição, voz, escutar, escuta, coração, obedecer, obediência, curar, cura, vontade, querer, completar, pé",
+    "categoria": "lentas2",
+    "link": "https://youtu.be/n59BehDmJtc"
+  },
+  {
+    "nome": "Medley Águas Purficadores + Tu és + É Ele",
+    "artista": "Fhop",
+    "tags": "rio, senhor, fluir, amor, amar, água, correr, trono, curar, cura, limpar, limpeza, transformar, transformação, vida, viver, deus, lugar, beber, bebida, saciar, sede, lavar, interior, fonte, água viva, buscar, busca, ouvir, audição, falar, fala, alma, esperar, espera, encontrar, encontro, dom, messias, salvador, salvar, salvação, soberano, poder, poderoso, governo, governar, recompensa, gastar, perder, perda, alegria, alegrar, alegre, dono, dia",
+    "categoria": "lentas1, lentas2",
+    "link": ""
   }
 ]

@@ -1,0 +1,28 @@
+Analise a letra de cada música e me dê uma estrutura horizontal para JSON. Focaremos no retorno de palavras-chave que exprimam a música teologicamente, sentimentalmente, espiritualmente, conceitualmente e contextualmente no modelo: "tags": "palavra1, palavra2".
+
+Regras para as Tags (Filtro e Expansão):
+
+    Filtro de Relevância: NUNCA inclua pronomes, artigos, preposições, conjunções, advérbios comuns ou verbos genéricos de ação nas tags (exclua palavras como: tu, um, em, para, teu, nós, haja, mim, onde, me, nome, pode, sua, toma, vem, você, vai, faz, etc.). Foque estritamente em substantivos, adjetivos e verbos com real peso teológico, sentimental ou conceitual.
+
+    Desmembramento: Pode inserir pequenas frases como "consolo na tempestade", mas SEMPRE insira também as palavras desmembradas separadamente na mesma lista (ou seja, adicione "consolo" e "tempestade").
+
+    Variações e Raízes (Lemmatização): Para as palavras-chave principais, adicione as suas variações morfológicas ou a sua palavra raiz para cobrir todas as formas de pesquisa do usuário. Exemplo: se encontrar "mude", adicione "mudar, mudança"; se encontrar "alegria", adicione "alegrar, alegre"; se encontrar "fidelidade", adicione "fiel"; se encontrar "consolo", adicione "consolar".
+
+    Limpeza de Legado: Aplique rigorosamente todas as regras acima (1, 2 e 3) também para as tags pré-existentes que eu enviar, filtrando, desmembrando e expandindo as palavras antigas para que fiquem no mesmo padrão de qualidade das novas.
+
+Regra para o Artista: Identifique o artista, banda, intérprete ou ministério (geralmente no início do arquivo, como "Fhop music", "Diante do Trono") e coloque EXCLUSIVAMENTE no campo "artista". Não coloque nomes de artistas dentro das tags para não poluir a busca temática! Se não houver artista identificado, deixe "artista": "".
+
+Ignorar: Ignore marcas d'água de arquivo (ex: "♯♪♬𝄞𝄞 Ministério de louvor Igreja Evangélica Livre do Cajuru"). Ignore instruções de cifra/canto (ex: "REFRÃO (2x)", "Solo").
+
+A estrutura completa deve ser exatamente esta:
+{ "nome": "A Boa Parte", "artista": "Fhop music", "tags": "jesus, maria, pés, tesouro, precioso, entrega, devoção", "categoria": "lentas1, lentas2", "link": "https://youtu.be/..." }
+
+Se eu enviar dados pré-existentes (Categorias, Link ou Tags), incorpore-os aplicando as regras de limpeza, e adicione as suas novas tags à lista.
+
+Músicas dessa analise:
+
+
+
+Dados pré-existentes:
+
+

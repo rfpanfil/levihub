@@ -24,7 +24,7 @@ async def main():
     client = libsql_client.create_client(url=TURSO_URL, auth_token=TURSO_TOKEN)
     
     # As tabelas da roleta dos visitantes
-    tabelas_globais = ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis"]
+    tabelas_globais = ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis", "natal", "junina", "casais", "pascoa", "missoes"]
 
     try:
         # --- 2. LIMPAR A BASE DE DADOS ---

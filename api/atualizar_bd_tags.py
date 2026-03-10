@@ -28,8 +28,8 @@ async def main():
 
     client = libsql_client.create_client(url=TURSO_URL, auth_token=TURSO_TOKEN)
     
-    # As tabelas clássicas que alimentam a roleta dos visitantes
-    tabelas_globais = ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis"]
+    # ATUALIZADO: Agora inclui as novas categorias temáticas isoladas por aspas!
+    tabelas_globais = ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis", "natal", "junina", "casais", "pascoa", "missoes"]
 
     try:
         print(f"🚀 Iniciando a injeção dupla para {len(musicas_analisadas)} músicas...")
@@ -59,9 +59,10 @@ async def main():
                     tags_banco = res.rows[0][1] or ""
                     tags_atualizadas = juntar_tags(tags_banco, novas_tags)
                     
+                    # ATUALIZADO: Agora também atualiza o artista, a categoria e o link da música existente!
                     await client.execute(
-                        "UPDATE biblioteca_busca SET tags = ? WHERE id = ?",
-                        [tags_atualizadas, id_musica]
+                        "UPDATE biblioteca_busca SET tags = ?, artista = ?, categoria = ?, link = ? WHERE id = ?",
+                        [tags_atualizadas, artista, categoria_sugerida, link_musica, id_musica]
                     )
                     print(f"🔄 ATUALIZADA no {tipo_banco}: '{nome}'")
                 else:
@@ -76,9 +77,10 @@ async def main():
                         categorias_separadas = [c.strip().lower() for c in categoria_sugerida.split(',')]
                         for cat in categorias_separadas:
                             if cat in tabelas_globais:
+                                # ATUALIZADO: Agora insere a coluna 'artista' nas tabelas específicas também!
                                 await client.execute(
-                                    f"INSERT INTO {cat} (conteudo, link, usuario_id) VALUES (?, ?, NULL)",
-                                    [nome, link_musica]
+                                    f"INSERT INTO {cat} (conteudo, artista, link, usuario_id) VALUES (?, ?, ?, NULL)",
+                                    [nome, artista, link_musica]
                                 )
                     else:
                         # Insere na busca/roleta Pessoal
@@ -89,6 +91,8 @@ async def main():
                     print(f"✨ CRIADA no {tipo_banco}: '{nome}'")
                     
         print("\n🎉 PROCESSO CONCLUÍDO COM SUCESSO EM AMBOS OS REPERTÓRIOS!")
+    except Exception as e:
+        print(f"❌ Ocorreu um erro durante a execução: {e}")
     finally:
         await client.close()
 

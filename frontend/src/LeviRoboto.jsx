@@ -106,13 +106,13 @@ function LeviRoboto() {
   // --- O CÉREBRO DA INTERAÇÃO (Comandos + Links + Negrito) ---
   const formatarMensagem = (text) => {
     // Procura por comandos EXATOS do bot, links http/https, OU texto entre **negrito**
-    // ATUALIZADO: Agora lê de opcao1 até opcao7 dinamicamente
-    const regex = /(\/(?:start|cancel|opcao[1-7])|https?:\/\/[^\s]+|\*\*.*?\*\*)/gi;
+    // ATUALIZADO: Agora lê de opcao1 até opcao9 dinamicamente para expansões futuras
+    const regex = /(\/(?:start|cancel|opcao[1-9])|https?:\/\/[^\s]+|\*\*.*?\*\*)/gi;
     const partes = text.split(regex);
     
     return partes.map((parte, index) => {
       // Se for um comando do bot:
-      if (parte.match(/^\/(?:start|cancel|opcao[1-7])$/i)) {
+      if (parte.match(/^\/(?:start|cancel|opcao[1-9])$/i)) {
         return (
           <span 
             key={index} 
@@ -315,7 +315,7 @@ function LeviRoboto() {
       }
       else if (command === '/opcao3') {
         setBotState('tematicas');
-        addMessage('bot', 'Ótima escolha! Qual tema você procura?\n\n1️⃣ Músicas para Ceia\n2️⃣ Músicas para Crianças\n3️⃣ Músicas de Natal\n4️⃣ Músicas para Casais / Dia dos Namorados\n5️⃣ Músicas para Festa Junina\n6️⃣ Voltar');
+        addMessage('bot', 'Ótima escolha! Qual tema você procura?\n\n1️⃣ Músicas para Ceia\n2️⃣ Músicas para Crianças\n3️⃣ Músicas de Natal\n4️⃣ Músicas para Casais / Dia dos Namorados\n5️⃣ Músicas para Festa Junina\n6️⃣ Músicas de Páscoa\n7️⃣ Músicas de Missões\n8️⃣ Voltar');
       }
       else if (command === '/opcao4') {
         setBotState('esperando_artista');
@@ -346,10 +346,14 @@ function LeviRoboto() {
             await executarBusca('casamento');
           } else if (txt === '5' || txt.includes('junina')) {
             await executarBusca('junina');
-          } else if (txt === '6' || txt.includes('voltar')) {
+          } else if (txt === '6' || txt.includes('pascoa') || txt.includes('páscoa')) {
+            await executarBusca('pascoa');
+          } else if (txt === '7' || txt.includes('missoes') || txt.includes('missões') || txt.includes('missao')) {
+            await executarBusca('missoes');
+          } else if (txt === '8' || txt.includes('voltar')) {
             handleSend('/start');
           } else {
-            addMessage('bot', 'Por favor, digite um número de 1 a 6 para escolher o tema.');
+            addMessage('bot', 'Por favor, digite um número de 1 a 8 para escolher o tema.');
           }
         }
         else if (botState === 'esperando_sugestao') {

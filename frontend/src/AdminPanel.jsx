@@ -25,7 +25,12 @@ function AdminPanel() {
     { id: 'lentas1', label: 'Lentas 1' },
     { id: 'lentas2', label: 'Lentas 2' },
     { id: 'ceia', label: 'Ceia' },
-    { id: 'infantis', label: 'Infantis' }
+    { id: 'infantis', label: 'Infantis' },
+    { id: 'casais', label: 'Casais' },
+    { id: 'junina', label: 'Festa Junina' },
+    { id: 'natal', label: 'Natal' }, 
+    { id: 'pascoa', label: 'Páscoa' },
+    { id: 'missoes', label: 'Missões' }
   ];
 
   const carregarUsuarios = async () => {

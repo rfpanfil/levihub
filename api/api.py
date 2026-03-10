@@ -153,7 +153,7 @@ async def lifespan(app: FastAPI):
     try: await client.execute("ALTER TABLE usuarios ADD COLUMN verification_code TEXT")
     except: pass
     
-    tabelas = ["membros", "funcoes", "biblioteca_busca", "agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis"]
+    tabelas = ["membros", "funcoes", "biblioteca_busca", "agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis", "natal", "junina", "casais", "pascoa", "missoes"]
     for tabela in tabelas:
         try: await client.execute(f"ALTER TABLE {tabela} ADD COLUMN usuario_id INTEGER")
         except Exception: pass 
@@ -164,7 +164,7 @@ async def lifespan(app: FastAPI):
     except: pass
     try: await client.execute("ALTER TABLE biblioteca_busca ADD COLUMN artista TEXT DEFAULT ''")
     except: pass
-    for t in ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis"]:
+    for t in ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis", "natal", "junina", "casais", "pascoa", "missoes"]:
         try: await client.execute(f"ALTER TABLE {t} ADD COLUMN link TEXT DEFAULT ''")
         except: pass
         try: await client.execute(f"ALTER TABLE {t} ADD COLUMN artista TEXT DEFAULT ''")
@@ -818,7 +818,12 @@ async def sortear_musica(current_user: Optional[dict] = Depends(get_optional_use
                 "lentas1": await pegar_aleatoria("lentas1"),
                 "lentas2": await pegar_aleatoria("lentas2"),
                 "ceia": await pegar_aleatoria("ceia"),
-                "infantis": await pegar_aleatoria("infantis")
+                "infantis": await pegar_aleatoria("infantis"),
+                "natal": await pegar_aleatoria("natal"),
+                "junina": await pegar_aleatoria("junina"),
+                "casais": await pegar_aleatoria("casais"),
+                "pascoa": await pegar_aleatoria("pascoa"),
+                "missoes": await pegar_aleatoria("missoes")
             }
             await client.close()
             return resultado
@@ -966,7 +971,7 @@ async def admin_add_global_musica(musica: NovaMusicaGlobalRequest, admin: dict =
         
         # 2. Divide as categorias pela vírgula e grava em cada tabela específica
         categorias_selecionadas = [c.strip().lower() for c in musica.categoria.split(',')]
-        tabelas_validas = ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis"]
+        tabelas_validas = ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis", "natal", "junina", "casais", "pascoa", "missoes"]
         
         for tabela in categorias_selecionadas:
             if tabela in tabelas_validas:
