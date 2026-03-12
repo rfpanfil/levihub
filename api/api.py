@@ -153,7 +153,7 @@ async def lifespan(app: FastAPI):
     try: await client.execute("ALTER TABLE usuarios ADD COLUMN verification_code TEXT")
     except: pass
     
-    tabelas = ["membros", "funcoes", "biblioteca_busca", "agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis", "natal", "junina", "casais", "pascoa", "missoes"]
+    tabelas = ["membros", "funcoes", "biblioteca_busca"]
     for tabela in tabelas:
         try: await client.execute(f"ALTER TABLE {tabela} ADD COLUMN usuario_id INTEGER")
         except Exception: pass 
@@ -164,11 +164,6 @@ async def lifespan(app: FastAPI):
     except: pass
     try: await client.execute("ALTER TABLE biblioteca_busca ADD COLUMN artista TEXT DEFAULT ''")
     except: pass
-    for t in ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis", "natal", "junina", "casais", "pascoa", "missoes"]:
-        try: await client.execute(f"ALTER TABLE {t} ADD COLUMN link TEXT DEFAULT ''")
-        except: pass
-        try: await client.execute(f"ALTER TABLE {t} ADD COLUMN artista TEXT DEFAULT ''")
-        except: pass
 
     await client.close()
     yield
@@ -800,11 +795,14 @@ async def sortear_musica(current_user: Optional[dict] = Depends(get_optional_use
     try:
         client = get_db_client()
         
-        # Se for visitante ou usar o banco padrão (Lógica Antiga Fixa)
+        # Se for visitante ou usar o banco padrão (Agora buscando da tabela unificada)
         if not current_user or current_user["usar_banco_padrao"] == 1:
-            async def pegar_aleatoria(tabela):
+            async def pegar_aleatoria(categoria_nome):
                 try:
-                    res = await client.execute(f"SELECT conteudo, link FROM {tabela} WHERE usuario_id IS NULL ORDER BY RANDOM() LIMIT 1")
+                    res = await client.execute(
+                        "SELECT nome_musica, link FROM biblioteca_busca WHERE usuario_id IS NULL AND categoria LIKE ? ORDER BY RANDOM() LIMIT 1", 
+                        [f"%{categoria_nome}%"]
+                    )
                     if res.rows:
                         nome, link = res.rows[0][0], res.rows[0][1]
                         return f"{nome}: {link}" if link else nome
@@ -963,24 +961,11 @@ class NovaMusicaGlobalRequest(BaseModel):
 async def admin_add_global_musica(musica: NovaMusicaGlobalRequest, admin: dict = Depends(require_admin)):
     client = get_db_client()
     try:
-        # 1. Adiciona na biblioteca de busca global
         await client.execute(
             "INSERT INTO biblioteca_busca (nome_musica, artista, tags, categoria, link, usuario_id) VALUES (?, ?, ?, ?, ?, NULL)",
             [musica.nome_musica, musica.artista, musica.tags, musica.categoria, musica.link]
         )
-        
-        # 2. Divide as categorias pela vírgula e grava em cada tabela específica
-        categorias_selecionadas = [c.strip().lower() for c in musica.categoria.split(',')]
-        tabelas_validas = ["agitadas1", "agitadas2", "lentas1", "lentas2", "ceia", "infantis", "natal", "junina", "casais", "pascoa", "missoes"]
-        
-        for tabela in categorias_selecionadas:
-            if tabela in tabelas_validas:
-                await client.execute(
-                    f"INSERT INTO {tabela} (conteudo, artista, link, usuario_id) VALUES (?, ?, ?, NULL)",
-                    [musica.nome_musica, musica.artista, musica.link]
-                )
-                
-        return {"message": "Música adicionada ao repertório global em múltiplas categorias!"}
+        return {"message": "Música adicionada ao repertório global com sucesso!"}
     except Exception as e:
         return {"error": str(e)}
     finally: 
