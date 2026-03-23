@@ -239,6 +239,51 @@ function LeviRoboto() {
     setBotState('idle'); 
   };
 
+  // --- NOVA FUNÇÃO DE BUSCA POR CATEGORIA TEMÁTICA ---
+  const executarBuscaCategoria = async (tema) => {
+    setUltimaPalavra(tema); 
+    setUltimoTipoBusca('categoria'); // Memória para refazer a busca na /opcao7
+    
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      // ATENÇÃO: Você precisará criar esta rota no seu backend!
+      const res = await fetch(`${API_BASE_URL}/musicas/buscar_categoria?q=${encodeURIComponent(tema)}`, { headers });
+      const data = await res.json();
+      
+      if (data.error) {
+         addMessage('bot', `Erro ao buscar: ${data.error}`);
+      } else if (data.resultados && data.resultados.length > 0) {
+         
+         addMessage('bot', `Bip... Bop... 🤖 Eita glória! 🥳 Encontrei estas músicas para o tema "${tema.toUpperCase()}" no meu banco de dados:`);
+         
+         setTimeout(() => {
+             let msg = "";
+             data.resultados.forEach(musica => {
+               msg += `\n${musica}\n`;
+             });
+             addMessage('bot', msg);
+             
+             setTimeout(() => {
+               addMessage('bot', 'Gostaria de consultar mais resultados para esse mesmo tema? Se sim, basta selecionar a /opcao7');
+               
+               setTimeout(() => {
+                   addMessage('bot', 'Se não, você também pode:\n/opcao1: Busca por palavra chave\n/opcao2: Listar músicas para o louvor\n/opcao3: Escolher outro Tema\n/opcao4: Buscar por Artista\n/opcao5: Sugerir música\n/opcao6: Encerrar');
+               }, 600);
+             }, 600);
+         }, 600);
+
+      } else {
+         addMessage('bot', `Bip... Bop... 🤖 Misericórdia! Não encontrei nenhuma música na categoria "${tema}" no meu banco de dados 🙄`);
+      }
+    } catch (e) {
+      addMessage('bot', 'Desculpe, ocorreu um erro de conexão com a API.');
+    }
+    
+    setBotState('idle'); 
+  };
+
   // --- O GERENCIADOR PRINCIPAL ---
   // --- O GERENCIADOR PRINCIPAL ---
   const handleSend = async (textOverride) => {
@@ -270,9 +315,10 @@ function LeviRoboto() {
         if (ultimaPalavra) {
           addMessage('bot', `Refazendo a busca para: ${ultimaPalavra}...`);
           if (ultimoTipoBusca === 'artista') await executarBuscaArtista(ultimaPalavra);
+          else if (ultimoTipoBusca === 'categoria') await executarBuscaCategoria(ultimaPalavra); // Nova linha
           else await executarBusca(ultimaPalavra);
         } else {
-          addMessage('bot', 'Não há uma pesquisa armazenada. Use a /opcao1 ou /opcao4.');
+          addMessage('bot', 'Não há uma pesquisa armazenada. Use a /opcao1, /opcao3 ou /opcao4.');
         }
       }
       else if (command === '/opcao1') {
@@ -337,19 +383,19 @@ function LeviRoboto() {
         else if (botState === 'tematicas') {
           const txt = text.toLowerCase();
           if (txt === '1' || txt.includes('ceia')) {
-            await executarBusca('ceia');
+            await executarBuscaCategoria('ceia');
           } else if (txt === '2' || txt.includes('criança') || txt.includes('infantil')) {
-            await executarBusca('infantil');
+            await executarBuscaCategoria('infantil');
           } else if (txt === '3' || txt.includes('natal')) {
-            await executarBusca('natal');
+            await executarBuscaCategoria('natal');
           } else if (txt === '4' || txt.includes('casais') || txt.includes('amor') || txt.includes('namorado')) {
-            await executarBusca('casamento');
+            await executarBuscaCategoria('casamento');
           } else if (txt === '5' || txt.includes('junina')) {
-            await executarBusca('junina');
+            await executarBuscaCategoria('junina');
           } else if (txt === '6' || txt.includes('pascoa') || txt.includes('páscoa')) {
-            await executarBusca('pascoa');
+            await executarBuscaCategoria('pascoa'); // AQUI ESTÁ A MÁGICA PARA A PÁSCOA
           } else if (txt === '7' || txt.includes('missoes') || txt.includes('missões') || txt.includes('missao')) {
-            await executarBusca('missoes');
+            await executarBuscaCategoria('missoes');
           } else if (txt === '8' || txt.includes('voltar')) {
             handleSend('/start');
           } else {

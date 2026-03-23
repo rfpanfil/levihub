@@ -790,6 +790,41 @@ async def buscar_artista(q: str, current_user: Optional[dict] = Depends(get_opti
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/musicas/buscar_categoria")
+async def buscar_categoria(q: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    try:
+        client = get_db_client()
+        q_lower = q.lower().strip()
+        
+        # Define a busca dependendo se o usuário está no banco padrão ou pessoal
+        if not current_user or current_user["usar_banco_padrao"] == 1:
+            result = await client.execute(
+                "SELECT nome_musica, link FROM biblioteca_busca WHERE usuario_id IS NULL AND LOWER(categoria) LIKE ?", 
+                [f"%{q_lower}%"]
+            )
+        else:
+            result = await client.execute(
+                "SELECT nome_musica, link FROM biblioteca_busca WHERE usuario_id = ? AND LOWER(categoria) LIKE ?", 
+                [current_user["id"], f"%{q_lower}%"]
+            )
+        await client.close()
+            
+        musicas_encontradas = []
+        for row in result.rows:
+            nome, link = row[0], row[1]
+            # Monta a string bonitinha pro bot: "Nome da Música: https://..."
+            resultado_str = f"{nome}: {link}" if link else nome
+            musicas_encontradas.append(resultado_str)
+                
+        # Embaralha os resultados para o bot não dar sempre as mesmas respostas na mesma ordem
+        random.shuffle(musicas_encontradas)
+        
+        # Diferente das outras rotas, aqui não precisamos de 'closest_word'
+        return {"resultados": musicas_encontradas[:10]}
+        
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/musicas/sortear")
 async def sortear_musica(current_user: Optional[dict] = Depends(get_optional_user)):
     try:
