@@ -1,4 +1,4 @@
-// src/DragDropOverlay.jsx
+// arquivo: frontend/src/components/DragDropOverlay.jsx
 
 import React from 'react';
 import './DragDropOverlay.css';

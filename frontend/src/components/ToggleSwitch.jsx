@@ -1,4 +1,4 @@
-// src/ToggleSwitch.jsx
+//arquivo: frontend/src/components/ToggleSwitch.jsx
 
 import React from 'react';
 import { motion } from 'framer-motion'; // Importa o 'motion'

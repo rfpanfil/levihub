@@ -1,15 +1,29 @@
-// src/LeviRoboto.jsx
+// arquivo: frontend/src/pages/LeviRoboto.jsx
 import React, { useState, useRef, useEffect } from 'react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 function LeviRoboto() {
-  const [messages, setMessages] = useState([
-    { 
-      sender: 'bot', 
-      text: 'Olá Abençoado(a)! Escolha uma das opções:\n\n/opcao1: Procurar músicas a partir de uma palavra chave\n\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n\n/opcao3: Músicas temáticas (Ceia, Natal, Infantis, etc.)\n\n/opcao4: Buscar por Artista ou Banda\n\n/opcao5: Sugerir uma música para o nosso banco de dados\n\n/opcao6: Encerrar\n\n(Ou use o menu ☰ abaixo)' 
+  const defaultMessage = { 
+    sender: 'bot', 
+    text: 'Olá Abençoado(a)! Escolha uma das opções:\n\n/opcao1: Procurar músicas a partir de uma palavra chave\n\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n\n/opcao3: Músicas temáticas (Ceia, Natal, Infantis, etc.)\n\n/opcao4: Buscar por Artista ou Banda\n\n/opcao5: Sugerir uma música para o nosso banco de dados\n\n/opcao6: Encerrar\n\n(Ou use o menu ☰ abaixo)' 
+  };
+
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem('leviRobotoChat');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.length > 0) return parsed;
+      } catch (e) {}
     }
-  ]);
+    return [defaultMessage];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('leviRobotoChat', JSON.stringify(messages));
+  }, [messages]);
+
   const [inputValue, setInputValue] = useState('');
   const [botState, setBotState] = useState('idle'); 
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +75,11 @@ function LeviRoboto() {
   }, []);
 
   const addMessage = (sender, text) => {
-    setMessages(prev => [...prev, { sender, text }]);
+    setMessages(prev => {
+      const newMessages = [...prev, { sender, text }];
+      // Trava de segurança: Mantém apenas as últimas 50 mensagens para não sobrecarregar
+      return newMessages.length > 50 ? newMessages.slice(newMessages.length - 50) : newMessages;
+    });
   };
 
   const handleSelectCommand = (cmd) => {

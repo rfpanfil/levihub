@@ -1,4 +1,4 @@
-# api.py
+# arquivo: api/api.py
 # VERSÃO ATUALIZADA (Transpositor + Banco de Dados da Escala no Turso)
 
 from fastapi import FastAPI, File, UploadFile, Form
@@ -428,7 +428,8 @@ async def add_membro(membro: MembroRequest, current_user: dict = Depends(get_cur
         membro_id = res.last_insert_rowid
         
         for f in membro.funcoes:
-            f_res = await client.execute("SELECT id FROM funcoes WHERE TRIM(nome) = ? AND usuario_id = ?", [f.strip(), user_id])
+            # Aceita a função se for sua OU se for uma função sem dono (NULL)
+            f_res = await client.execute("SELECT id FROM funcoes WHERE TRIM(nome) = ? AND (usuario_id = ? OR usuario_id IS NULL)", [f.strip(), user_id])
             if f_res.rows:
                 await client.execute("INSERT INTO membro_funcoes (membro_id, funcao_id) VALUES (?, ?)", [membro_id, f_res.rows[0][0]])
         return {"message": "Membro adicionado com sucesso!", "id": membro_id}
@@ -450,7 +451,8 @@ async def update_membro(membro_id: int, membro: MembroRequest, current_user: dic
         
         await client.execute("DELETE FROM membro_funcoes WHERE membro_id = ?", [membro_id])
         for f in membro.funcoes:
-            f_res = await client.execute("SELECT id FROM funcoes WHERE TRIM(nome) = ? AND usuario_id = ?", [f.strip(), user_id])
+            # Aceita a função se for sua OU se for uma função sem dono (NULL)
+            f_res = await client.execute("SELECT id FROM funcoes WHERE TRIM(nome) = ? AND (usuario_id = ? OR usuario_id IS NULL)", [f.strip(), user_id])
             if f_res.rows:
                 await client.execute("INSERT INTO membro_funcoes (membro_id, funcao_id) VALUES (?, ?)", [membro_id, f_res.rows[0][0]])
         return {"message": "Membro atualizado com sucesso!"}
@@ -472,7 +474,19 @@ async def delete_membro(membro_id: int, current_user: dict = Depends(get_current
 async def get_funcoes(current_user: dict = Depends(get_current_user)):
     client = get_db_client()
     try:
-        result = await client.execute("SELECT id, TRIM(nome) FROM funcoes WHERE usuario_id = ? ORDER BY TRIM(nome)", [current_user["id"]])
+        # Busca funções suas, funções sem dono E também funções de outras contas
+        # que já estejam atreladas aos membros da sua equipe atual!
+        query = """
+            SELECT id, TRIM(nome) as nome_funcao FROM funcoes 
+            WHERE usuario_id = ? OR usuario_id IS NULL
+            UNION
+            SELECT f.id, TRIM(f.nome) as nome_funcao FROM funcoes f
+            JOIN membro_funcoes mf ON f.id = mf.funcao_id
+            JOIN membros m ON mf.membro_id = m.id
+            WHERE m.usuario_id = ?
+            ORDER BY nome_funcao
+        """
+        result = await client.execute(query, [current_user["id"], current_user["id"]])
         funcoes = [{"id": row[0], "nome": row[1]} for row in result.rows]
         return {"funcoes": funcoes}
     except Exception as e: return {"error": str(e)}
@@ -524,10 +538,11 @@ async def update_funcao(funcao_id: int, funcao: FuncaoRequest, current_user: dic
     try:
         nome_limpo = funcao.nome.strip()
         try:
-            await client.execute("UPDATE funcoes SET nome = ? WHERE id = ? AND usuario_id = ?", [nome_limpo, funcao_id, current_user["id"]])
+            # Atualiza a função e "adota" ela caso fosse uma função antiga sem dono
+            await client.execute("UPDATE funcoes SET nome = ?, usuario_id = ? WHERE id = ? AND (usuario_id = ? OR usuario_id IS NULL)", [nome_limpo, current_user["id"], funcao_id, current_user["id"]])
         except Exception:
             # Se bater no UNIQUE ao renomear, burla com o espaço
-            await client.execute("UPDATE funcoes SET nome = ? WHERE id = ? AND usuario_id = ?", [nome_limpo + " ", funcao_id, current_user["id"]])
+            await client.execute("UPDATE funcoes SET nome = ?, usuario_id = ? WHERE id = ? AND (usuario_id = ? OR usuario_id IS NULL)", [nome_limpo + " ", current_user["id"], funcao_id, current_user["id"]])
         return {"message": "Função atualizada!"}
     except Exception as e: return {"error": str(e)}
     finally: await client.close()
@@ -536,7 +551,8 @@ async def update_funcao(funcao_id: int, funcao: FuncaoRequest, current_user: dic
 async def delete_funcao(funcao_id: int, current_user: dict = Depends(get_current_user)):
     client = get_db_client()
     try:
-        await client.execute("DELETE FROM funcoes WHERE id = ? AND usuario_id = ?", [funcao_id, current_user["id"]])
+        # Permite deletar funções antigas que ficaram sem dono
+        await client.execute("DELETE FROM funcoes WHERE id = ? AND (usuario_id = ? OR usuario_id IS NULL)", [funcao_id, current_user["id"]])
         return {"message": "Função excluída!"}
     except Exception as e: return {"error": str(e)}
     finally: await client.close()

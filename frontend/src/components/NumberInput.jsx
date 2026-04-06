@@ -1,4 +1,4 @@
-// src/NumberInput.jsx
+// arquivo: frontend/src/components/NumberInput.jsx
 
 import React, { useState, useEffect, useRef } from 'react';
 import CountUp from 'react-countup'; // Importa o componente da nova biblioteca

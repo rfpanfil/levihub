@@ -1,4 +1,4 @@
-// src/scaleLogic.js
+//arquivo: frontend/src/utils/scaleLogic.js
 
 export const gerarEscalas = (equipa, datasEscala, indisponibilidades, regras, vagasPorDia) => {
   const formatDataKey = (d) => `${d.getDate()}-${d.getMonth()}-${d.getFullYear()}`;

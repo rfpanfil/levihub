@@ -1,6 +1,6 @@
-// src/GeradorEscala.jsx
+// arquivo: frontend/src/pages/GeradorEscala.jsx
 import React, { useState, useEffect } from 'react';
-import { gerarEscalas } from './scaleLogic';
+import { gerarEscalas } from '../utils/scaleLogic';
 import html2canvas from 'html2canvas';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -50,6 +50,21 @@ function GeradorEscala() {
   const [escalaAtualIndex, setEscalaAtualIndex] = useState(0);
   const [isGerando, setIsGerando] = useState(false);
   const [swapMessage, setSwapMessage] = useState('');
+
+  // ESTADOS TEMPORÁRIOS DE ORDENAÇÃO NA MATRIZ FINAL
+  const [draggedRow, setDraggedRow] = useState(null); // index da linha da tabela
+  const [ordemMatriz, setOrdemMatriz] = useState([]); // Ordem das linhas da tabela gerada
+
+  const handleDragStartRow = (index) => setDraggedRow(index);
+  const handleDragEnterRow = (index) => {
+    if (draggedRow === null || draggedRow === index) return;
+    const newOrdem = [...ordemMatriz];
+    const item = newOrdem.splice(draggedRow, 1)[0];
+    newOrdem.splice(index, 0, item);
+    setDraggedRow(index);
+    setOrdemMatriz(newOrdem);
+  };
+  const handleDragEndRow = () => setDraggedRow(null);
 
   const mesesNomes = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
   const diasSemanaNomes = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
@@ -102,16 +117,28 @@ function GeradorEscala() {
     
     const novasVagas = {};
     
-    // AGORA ELE USA O PADRÃO QUE VEIO DO BANCO DE DADOS DO USUÁRIO
+    // AGORA ELE USA O PADRÃO QUE VEIO DO BANCO DE DADOS E APLICA A ORDEM
     diasEncontrados.forEach(d => {
       const key = formatDataKey(d);
-      novasVagas[key] = catalogoVagas.filter(v => funcoesPadraoUsuario.includes(v.label));
+      let vagasDoDia = catalogoVagas.filter(v => funcoesPadraoUsuario.includes(v.label));
+      
+      // Ordenação inicial baseada no painel de Perfil
+      vagasDoDia.sort((a, b) => {
+        const indexA = funcoesPadraoUsuario.indexOf(a.label);
+        const indexB = funcoesPadraoUsuario.indexOf(b.label);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.label.localeCompare(b.label);
+      });
+      novasVagas[key] = vagasDoDia;
     });
     
     setVagasPorDia(novasVagas);
     setIndisponibilidades({});
     setRegras([]);
     setEscalasGeradas([]); 
+    setOrdemMatriz([]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mes, ano, diaSemanaAlvo, catalogoVagas, funcoesPadraoUsuario]);
 
@@ -177,6 +204,20 @@ function GeradorEscala() {
       const resultados = gerarEscalas(equipa, datasEscala, indisponibilidades, regras, vagasPorDia);
       setEscalasGeradas(resultados);
       setEscalaAtualIndex(0);
+
+      // Salva a ordem em que as funções aparecerão na tabela
+      const vagasEmUso = catalogoVagas.filter(vagaCatalogo => 
+        datasEscala.some(d => vagasPorDia[formatDataKey(d)]?.some(v => v.id === vagaCatalogo.id))
+      ).sort((a, b) => {
+        const indexA = funcoesPadraoUsuario.indexOf(a.label);
+        const indexB = funcoesPadraoUsuario.indexOf(b.label);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.label.localeCompare(b.label);
+      });
+      setOrdemMatriz(vagasEmUso);
+
       setIsGerando(false);
       if (resultados.length > 0) window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }, 100);
@@ -336,7 +377,14 @@ function GeradorEscala() {
                     </strong>
                     
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '15px' }}>
-                      {vagasAtuais.map(v => (
+                      {[...vagasAtuais].sort((a, b) => {
+                        const indexA = funcoesPadraoUsuario.indexOf(a.label);
+                        const indexB = funcoesPadraoUsuario.indexOf(b.label);
+                        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                        if (indexA !== -1) return -1;
+                        if (indexB !== -1) return 1;
+                        return a.label.localeCompare(b.label);
+                      }).map((v) => (
                         <span key={v.id} style={{ backgroundColor: '#4a505c', padding: '6px 12px', borderRadius: '20px', fontSize: '0.9em', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {v.label}
                           <button onClick={() => removerVaga(key, v.id)} style={{ background: 'none', border: 'none', color: '#ff4b4b', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.2em', lineHeight: '10px' }}>&times;</button>
@@ -366,9 +414,9 @@ function GeradorEscala() {
             </div>
           </div>
 
-          {/* 3. INDISPONIBILIDADES E REGRAS */}
+          {/* 3. DISPONIBILIDADES E REGRAS */}
           <div className="input-area" style={{ overflowX: 'auto' }}>
-            <h2>❌ Indisponibilidades</h2>
+            <h2>✅ Disponibilidades</h2>
             <table className="escala-matrix">
               <thead>
                 <tr>
@@ -388,7 +436,8 @@ function GeradorEscala() {
                       const isIndisponivel = indisponibilidades[key];
                       return (
                         <td key={i} onClick={() => toggleIndisponibilidade(membro.id, d)} className={isIndisponivel ? 'celula-falta' : 'celula-ok'}>
-                          {isIndisponivel ? '❌ Falta' : '✅ OK'}
+                          {isIndisponivel ? '❌ Indisponível' : '✅ Disponível'}<br/>
+                          <span style={{ fontSize: '0.75em', opacity: 0.8 }}>{formatDataDDMM(d)}</span>
                         </td>
                       );
                     })}
@@ -468,7 +517,7 @@ function GeradorEscala() {
                       <option value="">Selecione...</option>
                       {regraTipo === 'dia_especifico' 
                         ? datasEscala.map((d, i) => <option key={i} value={formatDataKey(d)}>{formatDataDDMM(d)}</option>)
-                        : equipa.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)
+                        : equipa.filter(m => m.id.toString() !== regraMembro1).map(m => <option key={m.id} value={m.id}>{m.nome}</option>)
                       }
                     </select>
                   </div>
@@ -525,40 +574,40 @@ function GeradorEscala() {
                 <table className="escala-matrix" style={{ backgroundColor: '#282c34', width: '100%' }}>
                   <thead>
                     <tr>
-                      <th style={{ backgroundColor: '#3c414d' }}>Função</th>
-                      {datasEscala.map((d, i) => <th key={i}>{formatDataDDMM(d)}</th>)}
+                      <th style={{ backgroundColor: '#3c414d', borderBottom: '3px solid #61dafb' }}>Função</th>
+                      {datasEscala.map((d, i) => <th key={i} style={{ borderBottom: '3px solid #61dafb' }}>{formatDataDDMM(d)}</th>)}
                     </tr>
                   </thead>
                   <tbody>
                     {(() => {
-                      // Filtra apenas as vagas que realmente estão em uso neste mês
-                      const vagasAtivasNoMes = catalogoVagas.filter(vagaCatalogo => 
-                        datasEscala.some(d => vagasPorDia[formatDataKey(d)]?.some(v => v.id === vagaCatalogo.id))
-                      );
-
-                      return vagasAtivasNoMes.map((vagaCatalogo, index, arr) => {
-                        // Verifica se é a primeira linha de criança para desenhar a borda separadora
-                        const isPrimeiraCrianca = vagaCatalogo.label.includes('Crianças') && 
-                                                  (index === 0 || !arr[index - 1].label.includes('Crianças'));
-                        
-                        const cellBorderStyle = isPrimeiraCrianca ? { borderTop: '3px solid #61dafb' } : {};
-
+                      return ordemMatriz.map((vagaCatalogo, index) => {
                         return (
-                          <tr key={vagaCatalogo.id}>
-                            <td style={{ backgroundColor: '#3c414d', fontWeight: 'bold', color: '#61dafb', ...cellBorderStyle }}>
-                              {vagaCatalogo.label}
+                          <tr 
+                            key={vagaCatalogo.id}
+                            draggable
+                            onDragStart={(e) => { handleDragStartRow(index); e.dataTransfer.effectAllowed = "move"; }}
+                            onDragEnter={() => handleDragEnterRow(index)}
+                            onDragEnd={handleDragEndRow}
+                            onDragOver={(e) => e.preventDefault()}
+                            style={{ transition: 'background-color 0.2s', backgroundColor: draggedRow === index ? 'rgba(97, 218, 251, 0.1)' : 'transparent' }}
+                          >
+                            <td style={{ backgroundColor: '#3c414d', fontWeight: 'bold', color: '#61dafb', cursor: 'grab' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span style={{ color: '#9ab', cursor: 'grab', fontSize: '1.2em' }} data-html2canvas-ignore="true">☰</span>
+                                {vagaCatalogo.label}
+                              </div>
                             </td>
                             {datasEscala.map((d, colIndex) => {
                               const diaKey = formatDataKey(d);
                               const alocacaoDia = escalasGeradas[escalaAtualIndex][diaKey];
                               const alocacao = alocacaoDia ? alocacaoDia.find(a => a.vaga.label === vagaCatalogo.label) : null;
                               
-                              if (!alocacao) return <td key={colIndex} style={{ backgroundColor: '#2c3038', color: '#666', textAlign: 'center', ...cellBorderStyle }}>-</td>;
+                              if (!alocacao) return <td key={colIndex} style={{ backgroundColor: '#2c3038', color: '#666', textAlign: 'center' }}>-</td>;
                               
                               const pessoa = alocacao.membro.nome;
                               
                               return (
-                                <td key={colIndex} style={{ textAlign: 'center', color: pessoa === '---' ? '#ff4b4b' : 'white', fontWeight: pessoa !== '---' ? 'bold' : 'normal', ...cellBorderStyle }}>
+                                <td key={colIndex} style={{ textAlign: 'center', color: pessoa === '---' ? '#ff4b4b' : 'white', fontWeight: pessoa !== '---' ? 'bold' : 'normal' }}>
                                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
                                     <span>{pessoa}</span>
                                     <button 

@@ -1,4 +1,4 @@
-//GerenciarRepertorio.jsx
+// arquivo: frontend/src/pages/GerenciarRepertorio.jsx
 
 import React, { useState, useEffect } from 'react';
 

@@ -1,4 +1,4 @@
-// src/GestaoMembros.jsx
+// arquivo: frontend/src/pages/GestaoMembros.jsx
 import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -31,6 +31,58 @@ function GestaoMembros() {
   const [novaFuncaoMembrosSelecionados, setNovaFuncaoMembrosSelecionados] = useState([]);
   const [editandoFuncaoId, setEditandoFuncaoId] = useState(null);
   const [editandoFuncaoNome, setEditandoFuncaoNome] = useState('');
+  const [isSavingFuncao, setIsSavingFuncao] = useState(false); // NOVO: LOADING DE SALVAR
+
+  // --- NOVOS ESTADOS: ORDENAÇÃO E FUNÇÕES PADRÃO ---
+  const [funcoesPadrao, setFuncoesPadrao] = useState([]);
+  const [isReordering, setIsReordering] = useState(() => JSON.parse(localStorage.getItem('isReordering')) || false);
+  const [draggedItemIndex, setDraggedItemIndex] = useState(null);
+
+  useEffect(() => {
+    localStorage.setItem('isReordering', JSON.stringify(isReordering));
+  }, [isReordering]);
+
+  const handleDragStart = (index) => setDraggedItemIndex(index);
+  
+  const handleDragEnter = (index) => {
+    if (draggedItemIndex === null || draggedItemIndex === index) return;
+    const newOrder = [...funcoesPadrao];
+    const item = newOrder.splice(draggedItemIndex, 1)[0];
+    newOrder.splice(index, 0, item);
+    setDraggedItemIndex(index);
+    setFuncoesPadrao(newOrder);
+  };
+  
+  const handleDragEnd = async () => {
+    setDraggedItemIndex(null);
+    const token = localStorage.getItem('token');
+    const stringPadrao = funcoesPadrao.join(',');
+    try {
+      await fetch(`${API_BASE_URL}/usuario/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ funcoes_padrao: stringPadrao })
+      });
+    } catch (error) {}
+  };
+
+  const handleToggleFuncaoPadrao = async (funcaoNome) => {
+    const token = localStorage.getItem('token');
+    const novoArray = funcoesPadrao.includes(funcaoNome)
+      ? funcoesPadrao.filter(f => f !== funcaoNome)
+      : [...funcoesPadrao, funcaoNome];
+      
+    const stringPadrao = novoArray.join(',');
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/usuario/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ funcoes_padrao: stringPadrao })
+      });
+      if (res.ok) setFuncoesPadrao(novoArray);
+    } catch (error) { mostrarMensagem("Erro ao salvar padrão.", "erro"); }
+  };
 
   const carregarDados = async () => {
     const token = localStorage.getItem('token');
@@ -40,9 +92,10 @@ function GestaoMembros() {
     try {
       const headers = { 'Authorization': `Bearer ${token}` };
       
-      const [resEquipe, resFuncoes] = await Promise.all([
+      const [resEquipe, resFuncoes, resPerfil] = await Promise.all([
         fetch(`${API_BASE_URL}/equipe?apenas_ativos=false`, { headers }), 
-        fetch(`${API_BASE_URL}/funcoes`, { headers })
+        fetch(`${API_BASE_URL}/funcoes`, { headers }),
+        fetch(`${API_BASE_URL}/usuario/me`, { headers })
       ]);
       
       const dataEquipe = await resEquipe.json();
@@ -52,6 +105,10 @@ function GestaoMembros() {
       if (dataFuncoes.funcoes) {
         setFuncoesObjetos(dataFuncoes.funcoes);
         setFuncoesDisponiveis(dataFuncoes.funcoes.map(f => f.nome));
+      }
+      if (resPerfil.ok) {
+        const dataPerfil = await resPerfil.json();
+        setFuncoesPadrao(dataPerfil.funcoes_padrao ? dataPerfil.funcoes_padrao.split(',') : []);
       }
       
     } catch (error) {
@@ -180,6 +237,8 @@ function GestaoMembros() {
   const handleSalvarNovaFuncao = async () => {
     const token = localStorage.getItem('token');
     if (!novaFuncaoNome.trim()) { mostrarMensagem("O nome da função não pode estar vazio.", "erro"); return; }
+    
+    setIsSavingFuncao(true); // LIGA O LOADING
     try {
       const res = await fetch(`${API_BASE_URL}/funcoes`, {
         method: 'POST',
@@ -195,7 +254,11 @@ function GestaoMembros() {
       } else {
         mostrarMensagem(`Erro: ${data.error}`, "erro");
       }
-    } catch (error) { mostrarMensagem("Erro ao criar função.", "erro"); }
+    } catch (error) { 
+      mostrarMensagem("Erro ao criar função.", "erro"); 
+    } finally {
+      setIsSavingFuncao(false); // DESLIGA O LOADING
+    }
   };
 
   const handleExcluirFuncao = async (id) => {
@@ -261,6 +324,74 @@ function GestaoMembros() {
           </button>
         </div>
       </div>
+
+      {/* --- BLOCO DE ORDENAÇÃO DE FUNÇÕES PADRÃO --- */}
+      {!isLoading && (
+        <div className="input-area" style={{ backgroundColor: '#1e2229', border: '1px solid #f39c12', marginBottom: '30px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <h3 style={{ color: '#f39c12', margin: 0 }}>📅 Funções Padrão da Escala</h3>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: '#61dafb', fontSize: '0.95em', fontWeight: 'bold' }}>
+                <input type="checkbox" checked={isReordering} onChange={() => setIsReordering(!isReordering)} style={{ marginRight: '8px' }} />
+                Mudar Ordem (Arrastar)
+            </label>
+          </div>
+          <p style={{ marginTop: '10px' }}>{isReordering ? "Arraste as funções abaixo para definir a ordem no Gerador de Escalas." : "Selecione as funções que devem aparecer automaticamente ao gerar uma nova escala."}</p>
+          
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '15px', padding: '15px', backgroundColor: '#282c34', borderRadius: '8px', border: '1px solid #4a505c' }}>
+            {funcoesDisponiveis.length === 0 ? (
+              <p style={{ color: '#9ab', fontStyle: 'italic', margin: 0 }}>Nenhuma função cadastrada. Clique em "Gerenciar Funções" acima!</p>
+            ) : isReordering ? (
+              <>
+                {funcoesPadrao.map((f, idx) => (
+                  <label 
+                      key={`drag-${idx}`} 
+                      draggable
+                      onDragStart={(e) => { handleDragStart(idx); e.dataTransfer.effectAllowed = "move"; }}
+                      onDragEnter={() => handleDragEnter(idx)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => e.preventDefault()}
+                      style={{ 
+                          display: 'flex', alignItems: 'center', cursor: 'grab', 
+                          backgroundColor: 'rgba(243, 156, 18, 0.2)', 
+                          border: '1px dashed #f39c12', color: '#f39c12',
+                          padding: '8px 12px', borderRadius: '15px', fontSize: '0.95em', fontWeight: 'bold', transition: 'all 0.2s ease'
+                      }}>
+                      <span style={{ marginRight: '10px', cursor: 'grab', color: '#9ab', fontSize: '1.2em' }}>☰</span>
+                      <input type="checkbox" checked={true} onChange={() => handleToggleFuncaoPadrao(f)} style={{ marginRight: '8px', cursor: 'pointer' }} />
+                      {f}
+                  </label>
+                ))}
+                {funcoesDisponiveis.filter(f => !funcoesPadrao.includes(f)).map((f, idx) => (
+                  <label key={`inactive-${idx}`} style={{ 
+                    display: 'flex', alignItems: 'center', cursor: 'pointer', backgroundColor: '#3c414d', 
+                    border: '1px solid transparent', color: 'white', opacity: 0.6,
+                    padding: '8px 12px', borderRadius: '15px', fontSize: '0.95em', fontWeight: 'normal', transition: 'all 0.2s ease'
+                  }}>
+                    <input type="checkbox" checked={false} onChange={() => handleToggleFuncaoPadrao(f)} style={{ marginRight: '8px', cursor: 'pointer' }} />
+                    {f}
+                  </label>
+                ))}
+              </>
+            ) : (
+              funcoesDisponiveis.map((f, idx) => {
+                const isActive = funcoesPadrao.includes(f);
+                return (
+                  <label key={idx} style={{ 
+                    display: 'flex', alignItems: 'center', cursor: 'pointer', 
+                    backgroundColor: isActive ? 'rgba(243, 156, 18, 0.2)' : '#3c414d', 
+                    border: isActive ? '1px solid #f39c12' : '1px solid transparent',
+                    color: isActive ? '#f39c12' : 'white',
+                    padding: '8px 12px', borderRadius: '15px', fontSize: '0.95em', fontWeight: isActive ? 'bold' : 'normal', transition: 'all 0.2s ease'
+                  }}>
+                    <input type="checkbox" checked={isActive} onChange={() => handleToggleFuncaoPadrao(f)} style={{ marginRight: '8px', cursor: 'pointer' }} />
+                    {f}
+                  </label>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
 
       {/* --- LISTA DE MEMBROS (MANTIDA IGUAL) --- */}
       <div className="input-area">
@@ -423,8 +554,8 @@ function GestaoMembros() {
                   </div>
                 </div>
 
-                <button onClick={handleSalvarNovaFuncao} className="main-button" style={{ marginTop: '20px' }}>
-                  ➕ Salvar Nova Função
+                <button onClick={handleSalvarNovaFuncao} className="main-button" style={{ marginTop: '20px', opacity: isSavingFuncao ? 0.7 : 1 }} disabled={isSavingFuncao}>
+                  {isSavingFuncao ? '⏳ Salvando...' : '➕ Salvar Nova Função'}
                 </button>
               </div>
             </div>

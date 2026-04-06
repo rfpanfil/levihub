@@ -1,19 +1,19 @@
-// src/App.jsx
+// arquivo: frontend/src/App.jsx
 
 import React, { useState, useRef, useEffect } from 'react';
 import mammoth from 'mammoth';
-import NumberInput from './NumberInput';
-import ToggleSwitch from './ToggleSwitch';
-import DragDropOverlay from './DragDropOverlay';
-import GeradorEscala from './GeradorEscala';
-import LeviRoboto from './LeviRoboto';
-import Login from './Login';
-import GestaoMembros from './GestaoMembros';
-import GerenciarPerfil from './GerenciarPerfil';
-import GerenciarRepertorio from './GerenciarRepertorio';
-import AdminPanel from './AdminPanel';
+import NumberInput from './components/NumberInput';
+import ToggleSwitch from './components/ToggleSwitch';
+import DragDropOverlay from './components/DragDropOverlay';
+import GeradorEscala from './pages/GeradorEscala';
+import LeviRoboto from './pages/LeviRoboto';
+import Login from './pages/Login';
+import GestaoMembros from './pages/GestaoMembros';
+import GerenciarPerfil from './pages/GerenciarPerfil';
+import GerenciarRepertorio from './pages/GerenciarRepertorio';
+import AdminPanel from './pages/AdminPanel';
 // Importamos a lógica local para usar APENAS se a API falhar
-import { calcularSequenciaLocal, processarCifraCompleta } from './musicLogic';
+import { calcularSequenciaLocal, processarCifraCompleta } from './utils/musicLogic';
 import './App.css';
 
 
@@ -44,11 +44,17 @@ function App() {
   const dragCounter = useRef(0);
   const fileStatusRef = useRef(null);
 
-  const [appMode, setAppMode] = useState('transpositor');
+  // Memória da última aba acessada
+  const [appMode, setAppMode] = useState(() => localStorage.getItem('lastAppMode') || 'transpositor');
+  
+  useEffect(() => {
+    localStorage.setItem('lastAppMode', appMode);
+  }, [appMode]);
 
   // --- ESTADOS DE USUÁRIO ---
   const [user, setUser] = useState(null);
   const [isVisitor, setIsVisitor] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true); // NOVO ESTADO DE LOADING
 
   const carregarPerfilUsuario = async (token) => {
     try {
@@ -59,12 +65,20 @@ function App() {
       } else {
         handleLogout();
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsAuthLoading(false); // Libera a tela independentemente de sucesso ou erro
+    }
   };
 
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
-    if (savedToken) carregarPerfilUsuario(savedToken);
+    if (savedToken) {
+      carregarPerfilUsuario(savedToken);
+    } else {
+      setIsAuthLoading(false); // Se não tem token, libera a tela direto pro login
+    }
   }, []);
 
   const handleLoginAction = (userData) => {
@@ -292,7 +306,15 @@ function App() {
     { label: 'Diminuir', value: 'Diminuir' }
   ];
 
-  // --- LÓGICA DE BLOQUEIO (COLE AQUI) ---
+  // --- LÓGICA DE BLOQUEIO E LOADING ---
+  if (isAuthLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#282c34', color: '#61dafb', flexDirection: 'column' }}>
+        <h2>⏳ Carregando sistema...</h2>
+      </div>
+    );
+  }
+
   if (!user && !isVisitor) {
     return <Login onLogin={handleLoginAction} />;
   }
