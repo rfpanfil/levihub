@@ -180,7 +180,7 @@ function GeradorEscala() {
       if (regraTipo === 'dia_especifico') {
         if (indisponibilidades[`${regraMembro1}_${regraAlvo}`]) { setRegraError(`Impossível: ${membroNome} está de Falta.`); return; }
         const [d, m] = regraAlvo.split('-');
-        descricao = `${membroNome} PRECISA tocar no dia ${d.padStart(2, '0')}/${String(parseInt(m) + 1).padStart(2, '0')}`;
+        descricao = `${membroNome} PRECISA tocar/cantar no dia ${d.padStart(2, '0')}/${String(parseInt(m) + 1).padStart(2, '0')}`;
       } else if (regraTipo === 'tocar_com') {
         descricao = `${membroNome} PRECISA ser escalado(a) com ${equipa.find(m => m.id.toString() === regraAlvo)?.nome}`;
       } else if (regraTipo === 'tocar_com_no_dia') {
@@ -458,7 +458,7 @@ function GeradorEscala() {
                   }} style={{ padding: '8px', borderRadius: '5px' }}>
                   <option value="frequencia">🎯 Controlar Quantidade Mensal</option>
                   <option value="tocar_com">PRECISA ser escalado(a) com...</option>
-                  <option value="dia_especifico">PRECISA tocar no dia...</option>
+                  <option value="dia_especifico">PRECISA tocar/cantar no dia...</option>
                   <option value="tocar_com_no_dia">PRECISA ser escalado(a) com... no dia</option>
                 </select>
               </div>
