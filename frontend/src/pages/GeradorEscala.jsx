@@ -182,11 +182,11 @@ function GeradorEscala() {
         const [d, m] = regraAlvo.split('-');
         descricao = `${membroNome} PRECISA tocar no dia ${d.padStart(2, '0')}/${String(parseInt(m) + 1).padStart(2, '0')}`;
       } else if (regraTipo === 'tocar_com') {
-        descricao = `${membroNome} PRECISA tocar com ${equipa.find(m => m.id.toString() === regraAlvo)?.nome}`;
+        descricao = `${membroNome} PRECISA ser escalado(a) com ${equipa.find(m => m.id.toString() === regraAlvo)?.nome}`;
       } else if (regraTipo === 'tocar_com_no_dia') {
         if (indisponibilidades[`${regraMembro1}_${regraAlvoData}`] || indisponibilidades[`${regraAlvo}_${regraAlvoData}`]) { setRegraError(`Impossível: Alguém está de Falta.`); return; }
         const [d, m] = regraAlvoData.split('-');
-        descricao = `${membroNome} PRECISA tocar com ${equipa.find(m => m.id.toString() === regraAlvo)?.nome} no dia ${d.padStart(2, '0')}/${String(parseInt(m) + 1).padStart(2, '0')}`;
+        descricao = `${membroNome} PRECISA ser escalado(a) com ${equipa.find(m => m.id.toString() === regraAlvo)?.nome} no dia ${d.padStart(2, '0')}/${String(parseInt(m) + 1).padStart(2, '0')}`;
       }
     }
 
@@ -457,9 +457,9 @@ function GeradorEscala() {
                     setRegraMembro1(''); setRegraAlvo(''); setRegraAlvoData(''); setRegraFuncao(''); setRegraQuantidade(1); setRegraError(''); 
                   }} style={{ padding: '8px', borderRadius: '5px' }}>
                   <option value="frequencia">🎯 Controlar Quantidade Mensal</option>
-                  <option value="tocar_com">PRECISA tocar com...</option>
+                  <option value="tocar_com">PRECISA ser escalado(a) com...</option>
                   <option value="dia_especifico">PRECISA tocar no dia...</option>
-                  <option value="tocar_com_no_dia">PRECISA tocar com... no dia</option>
+                  <option value="tocar_com_no_dia">PRECISA ser escalado(a) com... no dia</option>
                 </select>
               </div>
 
