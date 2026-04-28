@@ -1,0 +1,187 @@
+# arquivo: api/routers/transpor.py
+# Lógica musical de transposição de acordes + endpoints do transpositor.
+
+import re
+import io
+import docx
+from fastapi import APIRouter, File, Form, UploadFile
+
+from api.models import (
+    TransposeCifraRequest, TransposeCifraResponse,
+    TransposeSequenceRequest, TransposeSequenceResponse,
+)
+
+router = APIRouter(tags=["Transpositor"])
+
+
+# =============================================================================
+# LÓGICA MUSICAL (funções puras — sem I/O)
+# =============================================================================
+
+MAPA_NOTAS = {
+    "C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3, "E": 4, "F": 5,
+    "F#": 6, "Gb": 6, "G": 7, "G#": 8, "Ab": 8, "A": 9, "A#": 10, "Bb": 10, "B": 11,
+    "E#": 5, "B#": 0, "Fb": 4, "Cb": 11,
+}
+MAPA_VALORES_NOTAS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+EXPLICACAO_TEORICA = {
+    "E#": "Mi sustenido (E#) é enarmônica de Fá (F).",
+    "B#": "Si sustenido (B#) é enarmônica de Dó (C).",
+    "Fb": "Fá bemol (Fb) é enarmônica de Mi (E).",
+    "Cb": "Dó bemol (Cb) é enarmônica de Si (B).",
+}
+
+
+def transpor_nota_individual(nota_str: str, semitons: int) -> str:
+    nota_key = next(
+        (key for key in MAPA_NOTAS if key.lower() == nota_str.lower()), None
+    )
+    if not nota_key:
+        return nota_str
+    valor_original = MAPA_NOTAS[nota_key]
+    novo_valor = (valor_original + semitons + 12) % 12
+    return MAPA_VALORES_NOTAS[novo_valor]
+
+
+def normalizar_nota(nota_str: str, explicacoes_set=None) -> str:
+    if nota_str.endswith("##"):
+        base = nota_str.replace("##", "")
+        base_key = next((k for k in MAPA_NOTAS if k.lower() == base.lower()), None)
+        if base_key is not None:
+            novo_valor = (MAPA_NOTAS[base_key] + 2) % 12
+            nova_nota = MAPA_VALORES_NOTAS[novo_valor]
+            if explicacoes_set is not None:
+                explicacoes_set.add(f"A nota {nota_str} é enarmônica de {nova_nota} (Duplo Sustenido).")
+            return nova_nota
+
+    if nota_str.endswith("bb"):
+        base = nota_str.replace("bb", "")
+        base_key = next((k for k in MAPA_NOTAS if k.lower() == base.lower()), None)
+        if base_key is not None:
+            novo_valor = (MAPA_NOTAS[base_key] - 2 + 12) % 12
+            nova_nota = MAPA_VALORES_NOTAS[novo_valor]
+            if explicacoes_set is not None:
+                explicacoes_set.add(f"A nota {nota_str} é enarmônica de {nova_nota} (Duplo Bemol).")
+            return nova_nota
+
+    return nota_str
+
+
+def transpor_acordes_sequencia(acordes_originais, acao, intervalo):
+    semitons = int(intervalo * 2) * (1 if acao == "Aumentar" else -1)
+    acordes_transpostos = []
+    explicacoes_entrada = set()
+
+    for acorde_original in acordes_originais:
+        match = re.match(r"^([A-G](?:##|bb|#|b)?)(.*)", acorde_original, re.IGNORECASE)
+        if not match:
+            acordes_transpostos.append(f"{acorde_original}?")
+            continue
+
+        nota_bruta, resto = match.groups()
+        nota_fundamental = normalizar_nota(nota_bruta, explicacoes_entrada)
+
+        if nota_fundamental == nota_bruta:
+            nota_key = next(
+                (k for k in EXPLICACAO_TEORICA if k.lower() == nota_fundamental.lower()), None
+            )
+            if nota_key:
+                explicacoes_entrada.add(EXPLICACAO_TEORICA[nota_key])
+
+        nova_fundamental = transpor_nota_individual(nota_fundamental, semitons)
+
+        if "/" in resto:
+            partes = resto.split("/")
+            qualidade = partes[0]
+            baixo_norm = normalizar_nota(partes[1], explicacoes_entrada)
+            novo_baixo = transpor_nota_individual(baixo_norm, semitons)
+            acorde_final = f"{nova_fundamental}{qualidade}/{novo_baixo}"
+        else:
+            acorde_final = f"{nova_fundamental}{resto}"
+
+        acordes_transpostos.append(acorde_final)
+
+    return acordes_transpostos, list(explicacoes_entrada)
+
+
+def is_chord_line(line: str) -> bool:
+    line = line.strip()
+    if not line:
+        return False
+    chord_pattern = re.compile(
+        r"^[A-G](?:##|bb|#|b)?(m|M|dim|aug|sus|add|maj|º|°|/|[-+])?(\d+)?(\(?[^)\s]*\)?)?(/[A-G](?:##|bb|#|b)?)?$"
+    )
+    words = line.replace("/:", "").replace("|", "").strip().split()
+    if not words:
+        return False
+    chord_count = sum(1 for word in words if chord_pattern.match(word))
+    return (chord_count / len(words)) >= 0.5
+
+
+def processar_cifra(texto_cifra: str, acao: str, intervalo: float) -> str:
+    semitons = int(intervalo * 2) * (1 if acao == "Aumentar" else -1)
+    padrao_acorde = r"(^|[^A-Ga-g#b])([A-G](?:##|bb|#|b)?)([^A-G\s,.\n\/]*)?(/[A-G](?:##|bb|#|b)?)?"
+
+    def replacer(match):
+        prefixo, nota, qualidade, baixo = match.groups()
+        prefixo = prefixo or ""
+        qualidade = qualidade or ""
+        nota_norm = normalizar_nota(nota)
+        nova_nota = transpor_nota_individual(nota_norm, semitons)
+        novo_baixo = ""
+        if baixo:
+            nota_baixo_norm = normalizar_nota(baixo.replace("/", ""))
+            novo_baixo = "/" + transpor_nota_individual(nota_baixo_norm, semitons)
+        return f"{prefixo}{nova_nota}{qualidade}{novo_baixo}"
+
+    linhas = texto_cifra.split("\n")
+    linhas_finais = [
+        re.sub(padrao_acorde, replacer, linha) if is_chord_line(linha) else linha
+        for linha in linhas
+    ]
+    return "\n".join(linhas_finais)
+
+
+async def ler_conteudo_arquivo(file: UploadFile) -> str:
+    content = await file.read()
+    if file.filename.endswith(".docx"):
+        try:
+            doc = docx.Document(io.BytesIO(content))
+            return "\n".join([p.text for p in doc.paragraphs])
+        except Exception as e:
+            return f"Erro ao ler arquivo .docx: {str(e)}"
+    return content.decode("utf-8")
+
+
+# =============================================================================
+# ENDPOINTS
+# =============================================================================
+
+@router.post("/transpose-sequence", response_model=TransposeSequenceResponse)
+async def transpose_sequence_endpoint(request: TransposeSequenceRequest):
+    transposed, expl = transpor_acordes_sequencia(
+        request.chords, request.action, request.interval
+    )
+    return {
+        "original_chords": request.chords,
+        "transposed_chords": transposed,
+        "explanations": expl,
+    }
+
+
+@router.post("/transpose-text", response_model=TransposeCifraResponse)
+async def transpose_text_endpoint(request: TransposeCifraRequest):
+    res = processar_cifra(request.cifra_text, request.action, request.interval)
+    return {"transposed_cifra": res}
+
+
+@router.post("/transpose-file", response_model=TransposeCifraResponse)
+async def transpose_file_endpoint(
+    file: UploadFile = File(...),
+    action: str = Form(...),
+    interval: float = Form(...),
+):
+    texto = await ler_conteudo_arquivo(file)
+    res = processar_cifra(texto, action, interval)
+    return {"transposed_cifra": res}

@@ -113,18 +113,16 @@ function AdminPanel() {
       } catch(e) {}
     }
 
-    // Transforma o array ["ceia", "lentas1"] numa string separada por vírgulas para a API
-    const categoriasStr = musicaGlobal.categorias.join(', ');
-
+    // Envia categorias como array (novo contrato da API)
     try {
       const res = await fetch(`${API_BASE_URL}/admin/musicas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ 
           nome_musica: musicaGlobal.nome_musica, 
-          artista: musicaGlobal.artista, // <-- NOVO CAMPO AQUI
+          artista: musicaGlobal.artista,
           tags: musicaGlobal.tags, 
-          categoria: categoriasStr, 
+          categorias: musicaGlobal.categorias,  // array direto
           link: linkLimpo 
         })
       });

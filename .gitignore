@@ -31,6 +31,8 @@ Thumbs.db
 venv/
 __pycache__/
 .env
+turso.txt
+levihub_dossie.md
 
 credentials.json
 

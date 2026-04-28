@@ -1,2 +1,9 @@
-.\venv\Scripts\Activate
-uvicorn api:app --reload
+# Comandos para iniciar o servidor LeviHub
+
+# --- DESENVOLVIMENTO (com hot-reload) ---
+# Execute da raiz do projeto (pasta levihub/):
+uvicorn api.main:app --reload
+
+# --- PRODUÇÃO (Render) ---
+# Start Command no painel do Render:
+uvicorn api.main:app --host 0.0.0.0 --port $PORT

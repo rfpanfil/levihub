@@ -92,9 +92,10 @@ function GerenciarRepertorio() {
   const iniciarEdicao = (musica) => {
     setIsEditing(true); setEditId(musica.id);
     setNomeMusica(musica.nome_musica);
-    setArtista(musica.artista || ''); // CARREGA O ARTISTA
+    setArtista(musica.artista || '');
     setTags(musica.tags); setLink(musica.link || '');
-    setCategoria(musica.categoria);
+    // API retorna categorias como array; usa a primeira para o campo de seleção
+    setCategoria(musica.categorias && musica.categorias.length > 0 ? musica.categorias[0] : '');
     setIsNovaCategoriaInline(false); setNovaCategoriaNomeInline('');
     setIsModalOpen(true);
   };
@@ -133,10 +134,9 @@ function GerenciarRepertorio() {
         }
       }
 
-      // 2. Salva a Música
+      // 2. Salva a Música — envia categorias como array (novo contrato da API)
       const linkLimpo = formatarLinkYouTube(link);
-      // INCLUI O ARTISTA NO ENVIO
-      const bodyData = { nome_musica: nomeMusica, artista, tags, categoria: catFinal, link: linkLimpo };
+      const bodyData = { nome_musica: nomeMusica, artista, tags, categorias: [catFinal], link: linkLimpo };
 
       const url = isEditing ? `${API_BASE_URL}/musicas/custom/${editId}` : `${API_BASE_URL}/musicas/custom`;
       const method = isEditing ? 'PUT' : 'POST';
@@ -210,7 +210,7 @@ function GerenciarRepertorio() {
     const termo = searchTerm.toLowerCase();
     const matchesSearch = m.nome_musica.toLowerCase().includes(termo) || m.tags.toLowerCase().includes(termo) || (m.categoria && m.categoria.toLowerCase().includes(termo));
     // Nova lógica: verifica se a categoria selecionada está CONTIDA na string de categorias da música
-    const matchesCat = filterCategory === '' || (m.categoria && m.categoria.includes(filterCategory));
+    const matchesCat = filterCategory === '' || (m.categorias && m.categorias.includes(filterCategory));
     return matchesSearch && matchesCat;
   });
 
@@ -269,7 +269,7 @@ function GerenciarRepertorio() {
                     {musica.nome_musica} {musica.artista && <span style={{ color: '#f39c12', fontSize: '0.85em', fontWeight: 'normal' }}> - {musica.artista}</span>}
                   </strong>
                   <div style={{ display: 'flex', gap: '5px', marginTop: '5px', flexWrap: 'wrap' }}>
-                    {musica.categoria && musica.categoria.split(',').map((cat, i) => (
+                    {musica.categorias && musica.categorias.map((cat, i) => (
                       <span key={i} style={{ fontSize: '0.7em', backgroundColor: '#4a505c', padding: '3px 8px', borderRadius: '10px', color: '#eafcff' }}>
                         {cat.trim()}
                       </span>
