@@ -198,8 +198,10 @@ async def forgot_password(
 
     user_id = res.rows[0][0]
     codigo = "".join(random.choices(string.digits, k=6))
+
+    # Escreve APENAS em token_recuperacao — sem tocar em verification_code
     await client.execute(
-        "UPDATE usuarios SET verification_code = ? WHERE id = ?", [codigo, user_id]
+        "UPDATE usuarios SET token_recuperacao = ? WHERE id = ?", [codigo, user_id]
     )
     background_tasks.add_task(enviar_email_recuperacao, req.email, codigo)
     return {"message": "Código de recuperação enviado!"}
@@ -210,21 +212,23 @@ async def reset_password(
     req: ResetPasswordRequest,
     client: libsql_client.Client = Depends(get_db),
 ):
+    # Lê token_recuperacao — coluna exclusiva do fluxo de recuperação
     res = await client.execute(
-        "SELECT id, verification_code FROM usuarios WHERE email = ?", [req.email]
+        "SELECT id, token_recuperacao FROM usuarios WHERE email = ?", [req.email]
     )
     if not res.rows:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
 
     user_id = res.rows[0][0]
-    code_db = res.rows[0][1]
+    token_db = res.rows[0][1]
 
-    if code_db != req.codigo.strip():
+    if not token_db or token_db != req.codigo.strip():
         raise HTTPException(status_code=400, detail="Código inválido ou expirado.")
 
     hashed_pwd = get_password_hash(req.nova_senha)
+    # Limpa token_recuperacao após uso bem-sucedido
     await client.execute(
-        "UPDATE usuarios SET senha = ?, verification_code = NULL WHERE id = ?",
+        "UPDATE usuarios SET senha = ?, token_recuperacao = NULL WHERE id = ?",
         [hashed_pwd, user_id],
     )
     return {"message": "Senha alterada com sucesso!"}

@@ -18,7 +18,8 @@ import './App.css';
 
 
 // URL da sua API no Render
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://levihub-api.onrender.com';
+import { API_BASE_URL } from './services/config';
+
 
 function App() {
   const [activeTab, setActiveTab] = useState('sequence');

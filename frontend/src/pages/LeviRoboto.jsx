@@ -1,7 +1,8 @@
 // arquivo: frontend/src/pages/LeviRoboto.jsx
 import React, { useState, useRef, useEffect } from 'react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+import { API_BASE_URL } from '../services/config';
+
 
 function LeviRoboto() {
   const defaultMessage = { 
@@ -125,12 +126,12 @@ function LeviRoboto() {
   const formatarMensagem = (text) => {
     // Procura por comandos EXATOS do bot, links http/https, OU texto entre **negrito**
     // ATUALIZADO: Agora lê de opcao1 até opcao9 dinamicamente para expansões futuras
-    const regex = /(\/(?:start|cancel|opcao[1-9])|https?:\/\/[^\s]+|\*\*.*?\*\*)/gi;
+    const regex = /(\/[1-8][^\n]*|\/(?:start|cancel|opcao[1-9])|https?:\/\/[^\s]+|\*\*.*?\*\*)/gi;
     const partes = text.split(regex);
     
     return partes.map((parte, index) => {
       // Se for um comando do bot:
-      if (parte.match(/^\/(?:start|cancel|opcao[1-9])$/i)) {
+      if (parte.match(/^\/(?:start|cancel|opcao[1-9]|[1-8])/i)) {
         return (
           <span 
             key={index} 
@@ -203,7 +204,10 @@ function LeviRoboto() {
          }, 600);
 
       } else {
-         addMessage('bot', `Bip... Bop... 🤖 Misericórdia! Não encontrei nenhuma palavra parecida com "${termoDeBusca}" no meu banco de dados 🙄`);
+         addMessage('bot', `Bip... Bop... 🤖 Misericórdia! Não encontrei nenhuma palavra parecida com "${termoDeBusca}" no meu banco de dados 😶`);
+         setTimeout(() => {
+           addMessage('bot', 'Mas não desanime! Tente uma palavra diferente ou escolha outra ação:\n/opcao1: Buscar com outra palavra-chave\n/opcao2: Listar músicas para o louvor\n/opcao3: Músicas temáticas\n/opcao4: Buscar por Artista\n/opcao5: Sugerir uma música\n/opcao6: Encerrar');
+         }, 600);
       }
     } catch (e) {
       addMessage('bot', 'Desculpe, ocorreu um erro de conexão com a API.');
@@ -248,7 +252,10 @@ function LeviRoboto() {
          }, 600);
 
       } else {
-         addMessage('bot', `Bip... Bop... 🤖 Misericórdia! Não encontrei nenhum artista parecido com "${termoDeBusca}" no meu banco de dados 🙄`);
+         addMessage('bot', `Bip... Bop... 🤖 Misericórdia! Não encontrei nenhum artista parecido com "${termoDeBusca}" no meu banco de dados 😶`);
+         setTimeout(() => {
+           addMessage('bot', 'Mas não desanime! Tente um nome diferente ou escolha outra ação:\n/opcao1: Busca por palavra-chave\n/opcao2: Listar músicas para o louvor\n/opcao3: Músicas temáticas\n/opcao4: Buscar novo Artista\n/opcao5: Sugerir música\n/opcao6: Encerrar');
+         }, 600);
       }
     } catch (e) {
       addMessage('bot', 'Desculpe, ocorreu um erro de conexão com a API.');
@@ -293,7 +300,10 @@ function LeviRoboto() {
          }, 600);
 
       } else {
-         addMessage('bot', `Bip... Bop... 🤖 Misericórdia! Não encontrei nenhuma música na categoria "${tema}" no meu banco de dados 🙄`);
+         addMessage('bot', `Bip... Bop... 🤖 Misericórdia! Não encontrei nenhuma música na categoria "${tema}" no meu banco de dados 😶`);
+         setTimeout(() => {
+           addMessage('bot', 'Mas não desanime! Tente outro tema ou escolha outra ação:\n/opcao1: Busca por palavra-chave\n/opcao2: Listar músicas para o louvor\n/opcao3: Escolher outro Tema\n/opcao4: Buscar por Artista\n/opcao5: Sugerir música\n/opcao6: Encerrar');
+         }, 600);
       }
     } catch (e) {
       addMessage('bot', 'Desculpe, ocorreu um erro de conexão com a API.');
@@ -379,7 +389,7 @@ function LeviRoboto() {
       }
       else if (command === '/opcao3') {
         setBotState('tematicas');
-        addMessage('bot', 'Ótima escolha! Qual tema você procura?\n\n1️⃣ Músicas para Ceia\n2️⃣ Músicas para Crianças\n3️⃣ Músicas de Natal\n4️⃣ Músicas para Casais / Dia dos Namorados\n5️⃣ Músicas para Festa Junina\n6️⃣ Músicas de Páscoa\n7️⃣ Músicas de Missões\n8️⃣ Voltar');
+        addMessage('bot', 'Ótima escolha! Qual tema você procura? (Clique ou digite o número)\n\n/1 Músicas para Ceia\n/2 Músicas para Crianças\n/3 Músicas de Natal\n/4 Músicas para Casais / Dia dos Namorados\n/5 Músicas para Festa Junina\n/6 Músicas de Páscoa\n/7 Músicas de Missões\n/8 Voltar');
       }
       else if (command === '/opcao4') {
         setBotState('esperando_artista');
@@ -399,15 +409,16 @@ function LeviRoboto() {
           await executarBuscaArtista(text);
         }
         else if (botState === 'tematicas') {
-          const txt = text.toLowerCase();
+          // Remove a barra inicial para aceitar tanto '1' (digitado) quanto '/1' (clicado)
+          const txt = text.toLowerCase().replace('/', '');
           if (txt === '1' || txt.includes('ceia')) {
             await executarBuscaCategoria('ceia');
           } else if (txt === '2' || txt.includes('criança') || txt.includes('infantil')) {
-            await executarBuscaCategoria('infantil');
+            await executarBuscaCategoria('infantis');
           } else if (txt === '3' || txt.includes('natal')) {
             await executarBuscaCategoria('natal');
           } else if (txt === '4' || txt.includes('casais') || txt.includes('amor') || txt.includes('namorado')) {
-            await executarBuscaCategoria('casamento');
+            await executarBuscaCategoria('casais');
           } else if (txt === '5' || txt.includes('junina')) {
             await executarBuscaCategoria('junina');
           } else if (txt === '6' || txt.includes('pascoa') || txt.includes('páscoa')) {
@@ -429,7 +440,7 @@ function LeviRoboto() {
           const data = await res.json();
           
           if (data.error) {
-              addMessage('bot', 'Tive um probleminha para salvar na planilha, mas anotei aqui! Obrigado.');
+              addMessage('bot', 'Ops! Tive um problema de conexão com a planilha e não consegui salvar sua sugestão agora. 😔 Tente novamente mais tarde!');
           } else {
               addMessage('bot', 'Sugestão enviada com sucesso! Obrigado por contribuir.');
           }

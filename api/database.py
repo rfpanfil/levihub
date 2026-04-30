@@ -195,6 +195,8 @@ async def run_migrations() -> None:
         "ALTER TABLE usuarios ADD COLUMN is_verified BOOLEAN DEFAULT 1",
         "ALTER TABLE usuarios ADD COLUMN verification_code TEXT",
         "ALTER TABLE usuarios ADD COLUMN role TEXT DEFAULT 'user'",
+        # Separa o token de recuperação de senha do código de verificação de conta
+        "ALTER TABLE usuarios ADD COLUMN token_recuperacao TEXT",
         "ALTER TABLE membros ADD COLUMN usuario_id INTEGER",
         "ALTER TABLE funcoes ADD COLUMN usuario_id INTEGER",
         "ALTER TABLE biblioteca_busca ADD COLUMN usuario_id INTEGER",
@@ -209,45 +211,77 @@ async def run_migrations() -> None:
             pass  # Coluna já existe — comportamento esperado
 
     # -------------------------------------------------------------------------
-    # MIGRAÇÃO ESTRUTURAL: funcoes — UNIQUE(nome) → UNIQUE(nome, usuario_id)
+    # MIGRAÇÃO ESTRUTURAL: funcoes — adiciona índices parciais UNIQUE(nome, usuario_id)
     # (Débito Técnico #2 — resolve o hack do espaço invisível)
     #
-    # SQLite não suporta DROP CONSTRAINT. Estratégia: recriar a tabela.
-    # Verificação de idempotência: checa se os índices parciais já existem.
+    # SEGURO: NÃO dropa nem recria a tabela. O SQLite permite criar índices
+    # diretamente na tabela existente, preservando todos os dados e as
+    # referências em membro_funcoes.
     # -------------------------------------------------------------------------
-    idx_check = await client.execute(
-        "SELECT name FROM sqlite_master WHERE type='index' AND name='funcoes_nome_usuario'"
-    )
-    if not idx_check.rows:
-        # Migração necessária: recria a tabela com schema correto
-        await client.execute("DROP TABLE IF EXISTS funcoes_nova")
-        await client.execute("""
-            CREATE TABLE funcoes_nova (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nome TEXT NOT NULL,
-                usuario_id INTEGER
-            )
-        """)
-        # Copia dados: TRIM espaços, INSERT OR IGNORE trata (nome, usuario_id) duplicados
-        await client.execute("""
-            INSERT OR IGNORE INTO funcoes_nova (id, nome, usuario_id)
-            SELECT id, TRIM(nome), usuario_id FROM funcoes
-        """)
-        await client.execute("DROP TABLE IF EXISTS funcoes")
-        await client.execute("ALTER TABLE funcoes_nova RENAME TO funcoes")
-        print("✅ Migração de funcoes concluída: constraint UNIQUE corrigida.")
 
     # Índices parciais (idempotentes via IF NOT EXISTS):
     # — Funções de usuário: UNIQUE(nome, usuario_id) para usuario_id IS NOT NULL
-    await client.execute("""
-        CREATE UNIQUE INDEX IF NOT EXISTS funcoes_nome_usuario
-        ON funcoes(nome, usuario_id) WHERE usuario_id IS NOT NULL
-    """)
+    try:
+        await client.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS funcoes_nome_usuario
+            ON funcoes(nome, usuario_id) WHERE usuario_id IS NOT NULL
+        """)
+    except Exception as e:
+        # Pode falhar se houver nomes duplicados herdados do hack do espaço.
+        # Nesse caso, limpa os duplicados mantendo apenas o primeiro registro.
+        print(f"⚠️ Índice funcoes_nome_usuario: limpando duplicados antes de criar. ({e})")
+        await client.execute("""
+            DELETE FROM funcoes
+            WHERE rowid NOT IN (
+                SELECT MIN(rowid) FROM funcoes
+                WHERE usuario_id IS NOT NULL
+                GROUP BY TRIM(nome), usuario_id
+            ) AND usuario_id IS NOT NULL
+        """)
+        await client.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS funcoes_nome_usuario
+            ON funcoes(nome, usuario_id) WHERE usuario_id IS NOT NULL
+        """)
+
     # — Funções globais: UNIQUE(nome) para usuario_id IS NULL
-    await client.execute("""
-        CREATE UNIQUE INDEX IF NOT EXISTS funcoes_nome_global
-        ON funcoes(nome) WHERE usuario_id IS NULL
+    try:
+        await client.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS funcoes_nome_global
+            ON funcoes(nome) WHERE usuario_id IS NULL
+        """)
+    except Exception as e:
+        print(f"⚠️ Índice funcoes_nome_global: limpando duplicados globais. ({e})")
+        await client.execute("""
+            DELETE FROM funcoes
+            WHERE rowid NOT IN (
+                SELECT MIN(rowid) FROM funcoes
+                WHERE usuario_id IS NULL
+                GROUP BY TRIM(nome)
+            ) AND usuario_id IS NULL
+        """)
+        await client.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS funcoes_nome_global
+            ON funcoes(nome) WHERE usuario_id IS NULL
+        """)
+
+    print("✅ Índices de funcoes verificados/criados com sucesso.")
+
+    # -------------------------------------------------------------------------
+    # REPARO DE INTEGRIDADE: remove entradas órfãs de membro_funcoes
+    # (membro_funcoes.funcao_id que não existem mais em funcoes)
+    # Pode ocorrer se migração anterior tiver sido destrutiva.
+    # -------------------------------------------------------------------------
+    orphans = await client.execute("""
+        SELECT COUNT(*) FROM membro_funcoes mf
+        WHERE NOT EXISTS (SELECT 1 FROM funcoes f WHERE f.id = mf.funcao_id)
     """)
+    orphan_count = orphans.rows[0][0] if orphans.rows else 0
+    if orphan_count > 0:
+        print(f"⚠️ Encontradas {orphan_count} referências órfãs em membro_funcoes. Removendo...")
+        await client.execute("""
+            DELETE FROM membro_funcoes
+            WHERE NOT EXISTS (SELECT 1 FROM funcoes f WHERE f.id = funcao_id)
+        """)
 
     # -------------------------------------------------------------------------
     # MIGRAÇÃO DE DADOS: CSV categoria → musica_categorias (one-time)

@@ -1,7 +1,8 @@
 // arquivo: frontend/src/pages/AdminPanel.jsx
 import React, { useState, useEffect } from 'react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+import { API_BASE_URL } from '../services/config';
+
 
 function AdminPanel() {
   const [usuarios, setUsuarios] = useState([]);

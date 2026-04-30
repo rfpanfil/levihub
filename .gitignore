@@ -33,7 +33,9 @@ __pycache__/
 .env
 turso.txt
 levihub_dossie.md
-
+levihub-db-backup.db
+levihub-db.db
+listar_categorias.py
 credentials.json
 
 __pycache__/
