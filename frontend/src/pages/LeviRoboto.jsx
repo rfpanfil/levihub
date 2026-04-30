@@ -5,11 +5,6 @@ import { API_BASE_URL } from '../services/config';
 
 
 function LeviRoboto() {
-  const defaultMessage = { 
-    sender: 'bot', 
-    text: 'Olá Abençoado(a)! Escolha uma das opções:\n\n/opcao1: Procurar músicas a partir de uma palavra chave\n\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n\n/opcao3: Músicas temáticas (Ceia, Natal, Infantis, etc.)\n\n/opcao4: Buscar por Artista ou Banda\n\n/opcao5: Sugerir uma música para o nosso banco de dados\n\n/opcao6: Encerrar\n\n(Ou use o menu ☰ abaixo)' 
-  };
-
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem('leviRobotoChat');
     if (saved) {
@@ -18,18 +13,21 @@ function LeviRoboto() {
         if (parsed && parsed.length > 0) return parsed;
       } catch (e) {}
     }
-    return [defaultMessage];
+    return [];
   });
 
   useEffect(() => {
-    localStorage.setItem('leviRobotoChat', JSON.stringify(messages));
+    if (messages.length > 0) {
+      localStorage.setItem('leviRobotoChat', JSON.stringify(messages));
+    }
   }, [messages]);
 
   const [inputValue, setInputValue] = useState('');
   const [botState, setBotState] = useState('idle'); 
   const [isLoading, setIsLoading] = useState(false);
   const [ultimaPalavra, setUltimaPalavra] = useState(''); 
-  const [ultimoTipoBusca, setUltimoTipoBusca] = useState('palavra'); // NOVO ESTADO
+  const [ultimoTipoBusca, setUltimoTipoBusca] = useState('palavra');
+  const [isContextLoaded, setIsContextLoaded] = useState(false);
   
   const [showCommandMenu, setShowCommandMenu] = useState(false);
 
@@ -64,23 +62,59 @@ function LeviRoboto() {
     const token = localStorage.getItem('token');
     if (token) {
       setIsLoggedIn(true);
-      fetch(`${API_BASE_URL}/usuario/me`, { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(res => res.json())
-        .then(data => {
-          if (data.usar_banco_padrao !== undefined) {
-            setUsarBancoPadrao(data.usar_banco_padrao);
-          }
-        })
-        .catch(() => {});
+      const headers = { 'Authorization': `Bearer ${token}` };
+
+      Promise.all([
+        // Preferência de banco (Global vs Pessoal)
+        fetch(`${API_BASE_URL}/usuario/me`, { headers }).then(res => res.json()).catch(() => ({})),
+        // Contexto da última busca (sincroniza entre dispositivos)
+        fetch(`${API_BASE_URL}/roboto/contexto`, { headers }).then(res => res.json()).catch(() => ({}))
+      ]).then(([userData, contextData]) => {
+        if (userData && userData.usar_banco_padrao !== undefined) {
+          setUsarBancoPadrao(userData.usar_banco_padrao);
+        }
+        if (contextData && contextData.ultima_busca) {
+          setUltimaPalavra(contextData.ultima_busca);
+        }
+        if (contextData && contextData.tipo_busca) {
+          setUltimoTipoBusca(contextData.tipo_busca);
+        }
+      }).finally(() => {
+        setIsContextLoaded(true);
+      });
+    } else {
+      setIsContextLoaded(true);
     }
   }, []);
+
+  // --- MENSAGEM INICIAL DINÂMICA ---
+  useEffect(() => {
+    if (isContextLoaded && messages.length === 0) {
+      const welcomeText = `Olá Abençoado(a)! Escolha uma das opções:\n\n/opcao1: Procurar músicas a partir de uma palavra chave\n\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n\n/opcao3: Músicas temáticas (Ceia, Natal, Infantis, etc.)\n\n/opcao4: Buscar por Artista ou Banda\n\n/opcao5: Sugerir uma música para o nosso banco de dados\n\n/opcao6: Encerrar${ultimaPalavra ? '\n\n/opcao7: Refazer última busca' : ''}\n\n(Ou use o menu ☰ abaixo)`;
+      setMessages([{ sender: 'bot', text: welcomeText }]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isContextLoaded]);
 
   const addMessage = (sender, text) => {
     setMessages(prev => {
       const newMessages = [...prev, { sender, text }];
-      // Trava de segurança: Mantém apenas as últimas 50 mensagens para não sobrecarregar
+      // Trava de segurança: Mantém apenas as últimas 50 mensagens
       return newMessages.length > 50 ? newMessages.slice(newMessages.length - 50) : newMessages;
     });
+  };
+
+  // --- PERSISTÊNCIA DO CONTEXTO DE BUSCA (fire-and-forget) ---
+  // Salva ultima_busca e tipo_busca no banco sem bloquear a UI.
+  // O histórico de mensagens (messages) permanece exclusivamente no localStorage.
+  const salvarContextoRoboto = (tipoBusca, termoDeBusca) => {
+    const token = localStorage.getItem('token');
+    if (!token) return; // visitantes não salvam contexto
+    fetch(`${API_BASE_URL}/roboto/contexto`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ultima_busca: termoDeBusca, tipo_busca: tipoBusca }),
+    }).catch(err => console.warn('[Roboto] Falha ao salvar contexto:', err));
   };
 
   const handleSelectCommand = (cmd) => {
@@ -170,8 +204,9 @@ function LeviRoboto() {
 
   // --- FUNÇÃO ISOLADA DE BUSCA (CURA O ERRO DE RECURSÃO INFINITA) ---
   const executarBusca = async (termoDeBusca) => {
-    setUltimaPalavra(termoDeBusca); 
-    setUltimoTipoBusca('palavra'); // AQUI ESTAVA FALTANDO! Agora ele sempre lembra que é palavra-chave.
+    setUltimaPalavra(termoDeBusca);
+    setUltimoTipoBusca('palavra');
+    salvarContextoRoboto('palavra', termoDeBusca); // persiste na nuvem
     
     try {
       const token = localStorage.getItem('token');
@@ -218,8 +253,9 @@ function LeviRoboto() {
 
   // --- NOVA FUNÇÃO DE BUSCA POR ARTISTA ---
   const executarBuscaArtista = async (termoDeBusca) => {
-    setUltimaPalavra(termoDeBusca); 
-    setUltimoTipoBusca('artista'); // Mantemos apenas a memória certa para esta função!
+    setUltimaPalavra(termoDeBusca);
+    setUltimoTipoBusca('artista');
+    salvarContextoRoboto('artista', termoDeBusca); // persiste na nuvem
     
     try {
       const token = localStorage.getItem('token');
@@ -266,8 +302,9 @@ function LeviRoboto() {
 
   // --- NOVA FUNÇÃO DE BUSCA POR CATEGORIA TEMÁTICA ---
   const executarBuscaCategoria = async (tema) => {
-    setUltimaPalavra(tema); 
-    setUltimoTipoBusca('categoria'); // Memória para refazer a busca na /opcao7
+    setUltimaPalavra(tema);
+    setUltimoTipoBusca('categoria');
+    salvarContextoRoboto('categoria', tema); // persiste na nuvem
     
     try {
       const token = localStorage.getItem('token');
@@ -333,7 +370,8 @@ function LeviRoboto() {
       }
       else if (command === '/start') {
         setBotState('idle');
-        addMessage('bot', 'Olá Abençoado(a)! Escolha uma das opções:\n\n/opcao1: Procurar músicas a partir de uma palavra chave\n\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n\n/opcao3: Músicas temáticas (Ceia, Natal, Infantis, etc.)\n\n/opcao4: Buscar por Artista ou Banda\n\n/opcao5: Sugerir uma música para o nosso banco de dados\n\n/opcao6: Encerrar');
+        const welcomeText = `Olá Abençoado(a)! Escolha uma das opções:\n\n/opcao1: Procurar músicas a partir de uma palavra chave\n\n/opcao2: Listar algumas músicas para planejar o louvor do dia\n\n/opcao3: Músicas temáticas (Ceia, Natal, Infantis, etc.)\n\n/opcao4: Buscar por Artista ou Banda\n\n/opcao5: Sugerir uma música para o nosso banco de dados\n\n/opcao6: Encerrar${ultimaPalavra ? '\n\n/opcao7: Refazer última busca' : ''}\n\n(Ou use o menu ☰ abaixo)`;
+        addMessage('bot', welcomeText);
       }
       else if (command === '/opcao6') {
         setBotState('idle');
@@ -503,12 +541,18 @@ function LeviRoboto() {
       <div className="chat-container">
         
         <div className="chat-messages" onClick={() => setShowCommandMenu(false)}>
-          {messages.map((msg, index) => (
-            <div key={index} className={`chat-bubble ${msg.sender === 'bot' ? 'bubble-bot' : 'bubble-user'}`}>
-              {/* MAGIA AQUI: Aplica o formatador em todo texto renderizado */}
-              {formatarMensagem(msg.text)}
+          {!isContextLoaded && messages.length === 0 ? (
+            <div className="chat-bubble bubble-bot" style={{ opacity: 0.7 }}>
+              <i>Conectando o cérebro... 🧠</i>
             </div>
-          ))}
+          ) : (
+            messages.map((msg, index) => (
+              <div key={index} className={`chat-bubble ${msg.sender === 'bot' ? 'bubble-bot' : 'bubble-user'}`}>
+                {/* MAGIA AQUI: Aplica o formatador em todo texto renderizado */}
+                {formatarMensagem(msg.text)}
+              </div>
+            ))
+          )}
           {isLoading && (
             <div className="chat-bubble bubble-bot" style={{ opacity: 0.7 }}>
               <i>Digitando...</i>

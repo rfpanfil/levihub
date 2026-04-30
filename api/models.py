@@ -128,3 +128,30 @@ class TransposeSequenceResponse(BaseModel):
     original_chords: List[str]
     transposed_chords: List[str]
     explanations: List[str]
+
+
+# =============================================================================
+# ESCALAS: DISPONIBILIDADES E VAGAS
+# =============================================================================
+
+class DisponibilidadesRequest(BaseModel):
+    mes: int
+    ano: int
+    # Ex: { "1_1-3-2026": True, "2_5-3-2026": True }
+    # Chave = f"{membro_id}_{formatDataKey(data)}", valor = True quando indisponível
+    indisponibilidades: dict
+
+class VagasConfigRequest(BaseModel):
+    mes: int
+    ano: int
+    # Ex: { "1-3-2026": [{ "id": "1", "label": "Voz e violão", "aceita": ["Voz e violão"] }] }
+    vagas_por_dia: dict
+
+
+# =============================================================================
+# ROBOTO: CONTEXTO DE BUSCA
+# =============================================================================
+
+class RobotoContextoRequest(BaseModel):
+    ultima_busca: str = ""
+    tipo_busca: str = "palavra"   # "palavra" | "artista" | "categoria"

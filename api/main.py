@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api import database
 from api.config import TURSO_URL, TURSO_TOKEN
-from api.routers import auth, usuario, equipe, musicas, transpor, categorias, admin
+from api.routers import auth, usuario, equipe, musicas, transpor, categorias, admin, escalas_config, roboto_config
 
 
 @asynccontextmanager
@@ -56,6 +56,8 @@ app.include_router(musicas.router)
 app.include_router(transpor.router)
 app.include_router(categorias.router)
 app.include_router(admin.router)
+app.include_router(escalas_config.router)
+app.include_router(roboto_config.router)
 
 
 if __name__ == "__main__":

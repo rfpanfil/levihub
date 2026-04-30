@@ -188,6 +188,46 @@ async def run_migrations() -> None:
     """)
 
     # -------------------------------------------------------------------------
+    # NOVAS TABELAS: persistência de configuração de escalas
+    # Uma linha por (usuario_id, mes_ano) com o payload JSON completo.
+    # O UNIQUE viabiliza o ON CONFLICT DO UPDATE (upsert) no router.
+    # -------------------------------------------------------------------------
+    await client.execute("""
+        CREATE TABLE IF NOT EXISTS escala_disponibilidades (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id  INTEGER NOT NULL,
+            mes_ano     TEXT NOT NULL,
+            dados       TEXT NOT NULL DEFAULT '{}',
+            UNIQUE(usuario_id, mes_ano)
+        )
+    """)
+
+    await client.execute("""
+        CREATE TABLE IF NOT EXISTS escala_vagas_config (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id  INTEGER NOT NULL,
+            mes_ano     TEXT NOT NULL,
+            dados       TEXT NOT NULL DEFAULT '{}',
+            UNIQUE(usuario_id, mes_ano)
+        )
+    """)
+
+    # -------------------------------------------------------------------------
+    # NOVA TABELA: roboto_contexto
+    # Persiste apenas o contexto de busca do LeviRoboto (última busca + tipo).
+    # O histórico de chat permanece estritamente no localStorage do cliente.
+    # UNIQUE(usuario_id) → uma linha por usuário, viabiliza upsert.
+    # -------------------------------------------------------------------------
+    await client.execute("""
+        CREATE TABLE IF NOT EXISTS roboto_contexto (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id   INTEGER NOT NULL UNIQUE,
+            ultima_busca TEXT    NOT NULL DEFAULT '',
+            tipo_busca   TEXT    NOT NULL DEFAULT 'palavra'
+        )
+    """)
+
+    # -------------------------------------------------------------------------
     # MIGRAÇÕES CUMULATIVAS (ALTER TABLE — tolerantes a falhas)
     # -------------------------------------------------------------------------
     _alter_migrations = [

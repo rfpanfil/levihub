@@ -73,6 +73,8 @@ function GeradorEscala() {
 
   useEffect(() => {
     if (catalogoVagas.length === 0 || funcoesPadraoUsuario.length === 0) return;
+
+    // 1. Calcula os dias do mês que caem no dia da semana alvo
     const diasEncontrados = [];
     const dataIteracao = new Date(ano, mes, 1);
     while (dataIteracao.getMonth() === parseInt(mes)) {
@@ -80,7 +82,9 @@ function GeradorEscala() {
       dataIteracao.setDate(dataIteracao.getDate() + 1);
     }
     setDatasEscala(diasEncontrados);
-    const novasVagas = {};
+
+    // 2. Monta o padrão de vagas (fallback local enquanto API carrega)
+    const vagasPadrao = {};
     diasEncontrados.forEach(d => {
       const key = formatDataKey(d);
       let vagasDoDia = catalogoVagas.filter(v => funcoesPadraoUsuario.includes(v.label));
@@ -92,30 +96,83 @@ function GeradorEscala() {
         if (iB !== -1) return 1;
         return a.label.localeCompare(b.label);
       });
-      novasVagas[key] = vagasDoDia;
+      vagasPadrao[key] = vagasDoDia;
     });
-    setVagasPorDia(novasVagas);
+
+    // 3. Aplica o padrão imediatamente (reset limpo)
+    setVagasPorDia(vagasPadrao);
     setIndisponibilidades({});
     setRegras([]);
     setEscalasGeradas([]);
     setOrdemMatriz([]);
+
+    // 4. Carrega dados persistidos da API e sobrescreve o padrão se existirem
+    const token = localStorage.getItem('token');
+    const headers = { 'Authorization': `Bearer ${token}` };
+    Promise.all([
+      fetch(`${API_BASE_URL}/escala/vagas?mes=${mes}&ano=${ano}`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE_URL}/escala/disponibilidades?mes=${mes}&ano=${ano}`, { headers }).then(r => r.json()),
+    ]).then(([vagasData, dispData]) => {
+      // Merge inteligente: só usa dias que ainda existem na datasEscala calculada
+      if (vagasData.vagas_por_dia && Object.keys(vagasData.vagas_por_dia).length > 0) {
+        const vagasMergeadas = {};
+        diasEncontrados.forEach(d => {
+          const key = formatDataKey(d);
+          vagasMergeadas[key] = vagasData.vagas_por_dia[key] ?? vagasPadrao[key];
+        });
+        setVagasPorDia(vagasMergeadas);
+      }
+      if (dispData.indisponibilidades && Object.keys(dispData.indisponibilidades).length > 0) {
+        setIndisponibilidades(dispData.indisponibilidades);
+      }
+    }).catch(err => console.warn('[Escala] Falha ao carregar configuração salva:', err));
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mes, ano, diaSemanaAlvo, catalogoVagas, funcoesPadraoUsuario]);
+
+  // =========================================================================
+  // HELPERS DE PERSISTÊNCIA (fire-and-forget — não bloqueiam a UI)
+  // =========================================================================
+
+  const salvarVagas = (novasVagas) => {
+    const token = localStorage.getItem('token');
+    fetch(`${API_BASE_URL}/escala/vagas`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mes, ano, vagas_por_dia: novasVagas }),
+    }).catch(err => console.warn('[Escala] Falha ao salvar vagas:', err));
+  };
+
+  const salvarDisponibilidades = (novasIndisponibilidades) => {
+    const token = localStorage.getItem('token');
+    fetch(`${API_BASE_URL}/escala/disponibilidades`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mes, ano, indisponibilidades: novasIndisponibilidades }),
+    }).catch(err => console.warn('[Escala] Falha ao salvar disponibilidades:', err));
+  };
 
   // =========================================================================
   // HANDLERS DE VAGAS
   // =========================================================================
 
+
   const adicionarVaga = (diaKey, vagaId) => {
     const vaga = catalogoVagas.find(v => v.id === vagaId);
     setVagasPorDia(prev => {
       if (prev[diaKey].some(v => v.id === vagaId)) return prev;
-      return { ...prev, [diaKey]: [...prev[diaKey], vaga] };
+      const novas = { ...prev, [diaKey]: [...prev[diaKey], vaga] };
+      salvarVagas(novas);
+      return novas;
     });
   };
 
   const removerVaga = (diaKey, vagaId) => {
-    setVagasPorDia(prev => ({ ...prev, [diaKey]: prev[diaKey].filter(v => v.id !== vagaId) }));
+    setVagasPorDia(prev => {
+      const novas = { ...prev, [diaKey]: prev[diaKey].filter(v => v.id !== vagaId) };
+      salvarVagas(novas);
+      return novas;
+    });
   };
 
   // =========================================================================
@@ -124,7 +181,11 @@ function GeradorEscala() {
 
   const toggleIndisponibilidade = (membroId, dataObj) => {
     const key = `${membroId}_${formatDataKey(dataObj)}`;
-    setIndisponibilidades(prev => ({ ...prev, [key]: !prev[key] }));
+    setIndisponibilidades(prev => {
+      const novas = { ...prev, [key]: !prev[key] };
+      salvarDisponibilidades(novas);
+      return novas;
+    });
   };
 
   const marcarTodosIndisponiveis = () => {
@@ -133,12 +194,14 @@ function GeradorEscala() {
       novas[`${membro.id}_${formatDataKey(d)}`] = true;
     }));
     setIndisponibilidades(novas);
+    salvarDisponibilidades(novas);
   };
 
   const marcarMembroIndisponivel = (membroId) => {
     setIndisponibilidades(prev => {
       const novas = { ...prev };
       datasEscala.forEach(d => { novas[`${membroId}_${formatDataKey(d)}`] = true; });
+      salvarDisponibilidades(novas);
       return novas;
     });
   };
@@ -147,12 +210,16 @@ function GeradorEscala() {
     setIndisponibilidades(prev => {
       const novas = { ...prev };
       datasEscala.forEach(d => { delete novas[`${membroId}_${formatDataKey(d)}`]; });
+      salvarDisponibilidades(novas);
       return novas;
     });
   };
 
-  // Limpa todas as indisponibilidades de uma vez
-  const marcarTodosDisponiveis = () => setIndisponibilidades({});
+  // Limpa todas as indisponibilidades e persiste o estado vazio
+  const marcarTodosDisponiveis = () => {
+    setIndisponibilidades({});
+    salvarDisponibilidades({});
+  };
 
   // =========================================================================
   // HANDLERS DE REGRAS (interface com PainelRegras semi-smart)
