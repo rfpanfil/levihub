@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 import libsql_client
 
@@ -16,7 +16,7 @@ from api.config import SECRET_KEY, ALGORITHM
 from api.database import get_db
 
 # --- Schemes OAuth2 ---
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 
@@ -58,11 +58,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 # =============================================================================
 
 async def get_current_user(
+    request: Request,
     token: str = Depends(oauth2_scheme),
     client: libsql_client.Client = Depends(get_db),
 ) -> dict:
     """
-    Dependency obrigatória. Valida o JWT e retorna o usuário logado.
+    Dependency obrigatória. Valida o JWT vindo do Cookie HttpOnly e retorna o usuário logado.
     Lança HTTP 401 se o token for inválido ou o usuário não existir.
     """
     credentials_exception = HTTPException(
@@ -70,6 +71,18 @@ async def get_current_user(
         detail="Não foi possível validar as credenciais",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    if not token:
+        token = request.cookies.get("access_token")
+    
+    if not token:
+        raise credentials_exception
+    else:
+        # FastAPI/Starlette pode colocar o valor do cookie entre aspas.
+        token = token.strip('"')
+        if token.startswith("Bearer "):
+            token = token.split(" ", 1)[1]
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
@@ -95,15 +108,24 @@ async def get_current_user(
 
 
 async def get_optional_user(
-    token: Optional[str] = Depends(oauth2_scheme_optional),
+    request: Request,
+    token: str = Depends(oauth2_scheme_optional),
     client: libsql_client.Client = Depends(get_db),
 ) -> Optional[dict]:
     """
-    Dependency opcional. Retorna o usuário logado se o token for válido,
-    ou None se não houver token (modo visitante). Não lança exceção.
+    Dependency opcional. Retorna o usuário logado se o cookie/token for válido,
+    ou None se não houver (modo visitante). Não lança exceção.
     """
     if not token:
+        token = request.cookies.get("access_token")
+    
+    if not token:
         return None
+    else:
+        token = token.strip('"')
+        if token.startswith("Bearer "):
+            token = token.split(" ", 1)[1]
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")

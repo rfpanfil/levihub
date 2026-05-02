@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { API_BASE_URL } from '../services/config';
+import { apiFetch } from '../services/api';
 
 
 function GerenciarRepertorio() {
@@ -35,17 +35,12 @@ function GerenciarRepertorio() {
   const [novaCategoriaNome, setNovaCategoriaNome] = useState('');
   const [editandoCategoriaId, setEditandoCategoriaId] = useState(null);
   const [editandoCategoriaNome, setEditandoCategoriaNome] = useState('');
-
   const carregarDados = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     setIsLoading(true);
     try {
-      const headers = { 'Authorization': `Bearer ${token}` };
       const [resMusicas, resCats] = await Promise.all([
-        fetch(`${API_BASE_URL}/musicas/custom`, { headers }),
-        fetch(`${API_BASE_URL}/categorias`, { headers })
+        apiFetch('/musicas/custom'),
+        apiFetch('/categorias')
       ]);
 
       if (resMusicas.ok) {
@@ -120,16 +115,14 @@ function GerenciarRepertorio() {
       mostrarMensagem("Preencha o nome e as tags.", "erro"); return;
     }
 
-    const token = localStorage.getItem('token');
-    
     try {
       // 1. Salva a categoria no banco de dados PRIMEIRO (se for nova inline)
       if (isNovaCategoriaInline) {
         const catExiste = categoriasObjetos.some(c => c.nome.toLowerCase() === catFinal.toLowerCase());
         if (!catExiste) {
-          await fetch(`${API_BASE_URL}/categorias`, {
+          await apiFetch('/categorias', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nome: catFinal })
           });
         }
@@ -139,11 +132,11 @@ function GerenciarRepertorio() {
       const linkLimpo = formatarLinkYouTube(link);
       const bodyData = { nome_musica: nomeMusica, artista, tags, categorias: [catFinal], link: linkLimpo };
 
-      const url = isEditing ? `${API_BASE_URL}/musicas/custom/${editId}` : `${API_BASE_URL}/musicas/custom`;
+      const url = isEditing ? `/musicas/custom/${editId}` : '/musicas/custom';
       const method = isEditing ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
-        method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(bodyData)
+      const res = await apiFetch(url, {
+        method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyData)
       });
 
       if (!res.ok) throw new Error();
@@ -155,21 +148,19 @@ function GerenciarRepertorio() {
 
   const handleExcluirMusica = async (id, nome) => {
     if (!window.confirm(`Tem a certeza que deseja excluir "${nome}"?`)) return;
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${API_BASE_URL}/musicas/custom/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await apiFetch(`/musicas/custom/${id}`, { method: 'DELETE' });
       if (res.ok) { mostrarMensagem("Música excluída!", "sucesso"); carregarDados(); }
     } catch (error) { mostrarMensagem("Erro ao excluir.", "erro"); }
   };
 
   // --- LÓGICA DE CATEGORIAS DO MODAL GERENCIADOR ---
   const handleSalvarNovaCategoria = async () => {
-    const token = localStorage.getItem('token');
     if (!novaCategoriaNome.trim()) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/categorias`, {
+      const res = await apiFetch('/categorias', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: novaCategoriaNome.trim() })
       });
       if (!res.ok) throw new Error();
@@ -181,9 +172,8 @@ function GerenciarRepertorio() {
 
   const handleExcluirCategoria = async (id) => {
     if (!window.confirm("Atenção! As músicas desta categoria ficarão 'Sem Categoria'. Continuar?")) return;
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${API_BASE_URL}/categorias/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await apiFetch(`/categorias/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
       mostrarMensagem("Categoria excluída!", "sucesso");
       carregarDados();
@@ -191,12 +181,11 @@ function GerenciarRepertorio() {
   };
 
   const handleSalvarEdicaoCategoria = async (id) => {
-    const token = localStorage.getItem('token');
     if (!editandoCategoriaNome.trim()) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/categorias/${id}`, {
+      const res = await apiFetch(`/categorias/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: editandoCategoriaNome.trim() })
       });
       if (!res.ok) throw new Error();

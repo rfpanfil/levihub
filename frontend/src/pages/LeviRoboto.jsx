@@ -1,7 +1,7 @@
 // arquivo: frontend/src/pages/LeviRoboto.jsx
 import React, { useState, useRef, useEffect } from 'react';
 
-import { API_BASE_URL } from '../services/config';
+import { apiFetch } from '../services/api';
 
 
 function LeviRoboto() {
@@ -59,16 +59,14 @@ function LeviRoboto() {
 
   // --- BUSCAR CONFIGURAÇÃO DO CÉREBRO AO ABRIR ---
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setIsLoggedIn(true);
-      const headers = { 'Authorization': `Bearer ${token}` };
-
-      Promise.all([
-        // Preferência de banco (Global vs Pessoal)
-        fetch(`${API_BASE_URL}/usuario/me`, { headers }).then(res => res.json()).catch(() => ({})),
+    Promise.all([
+      // Preferência de banco (Global vs Pessoal)
+      apiFetch('/usuario/me').then(res => {
+        if (res.ok) { setIsLoggedIn(true); return res.json(); }
+        return {};
+      }).catch(() => ({})),
         // Contexto da última busca (sincroniza entre dispositivos)
-        fetch(`${API_BASE_URL}/roboto/contexto`, { headers }).then(res => res.json()).catch(() => ({}))
+        apiFetch('/roboto/contexto').then(res => res.json()).catch(() => ({}))
       ]).then(([userData, contextData]) => {
         if (userData && userData.usar_banco_padrao !== undefined) {
           setUsarBancoPadrao(userData.usar_banco_padrao);
@@ -82,9 +80,6 @@ function LeviRoboto() {
       }).finally(() => {
         setIsContextLoaded(true);
       });
-    } else {
-      setIsContextLoaded(true);
-    }
   }, []);
 
   // --- MENSAGEM INICIAL DINÂMICA ---
@@ -108,11 +103,9 @@ function LeviRoboto() {
   // Salva ultima_busca e tipo_busca no banco sem bloquear a UI.
   // O histórico de mensagens (messages) permanece exclusivamente no localStorage.
   const salvarContextoRoboto = (tipoBusca, termoDeBusca) => {
-    const token = localStorage.getItem('token');
-    if (!token) return; // visitantes não salvam contexto
-    fetch(`${API_BASE_URL}/roboto/contexto`, {
+    apiFetch('/roboto/contexto', {
       method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ultima_busca: termoDeBusca, tipo_busca: tipoBusca }),
     }).catch(err => console.warn('[Roboto] Falha ao salvar contexto:', err));
   };
@@ -135,16 +128,15 @@ function LeviRoboto() {
 
   // --- FUNÇÃO PARA ALTERAR O CÉREBRO ---
   const handleToggleBanco = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!isLoggedIn) return;
     
     const novoValor = !usarBancoPadrao;
     setUsarBancoPadrao(novoValor); 
     
     try {
-      await fetch(`${API_BASE_URL}/usuario/config`, {
+      await apiFetch('/usuario/config', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usar_banco_padrao: novoValor })
       });
       
@@ -209,10 +201,7 @@ function LeviRoboto() {
     salvarContextoRoboto('palavra', termoDeBusca); // persiste na nuvem
     
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      const res = await fetch(`${API_BASE_URL}/musicas/buscar?q=${encodeURIComponent(termoDeBusca)}`, { headers });
+      const res = await apiFetch(`/musicas/buscar?q=${encodeURIComponent(termoDeBusca)}`);
       const data = await res.json();
       
       if (data.error) {
@@ -258,10 +247,7 @@ function LeviRoboto() {
     salvarContextoRoboto('artista', termoDeBusca); // persiste na nuvem
     
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      const res = await fetch(`${API_BASE_URL}/musicas/buscar_artista?q=${encodeURIComponent(termoDeBusca)}`, { headers });
+      const res = await apiFetch(`/musicas/buscar_artista?q=${encodeURIComponent(termoDeBusca)}`);
       const data = await res.json();
       
       if (data.error) {
@@ -307,11 +293,7 @@ function LeviRoboto() {
     salvarContextoRoboto('categoria', tema); // persiste na nuvem
     
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      // ATENÇÃO: Você precisará criar esta rota no seu backend!
-      const res = await fetch(`${API_BASE_URL}/musicas/buscar_categoria?q=${encodeURIComponent(tema)}`, { headers });
+      const res = await apiFetch(`/musicas/buscar_categoria?q=${encodeURIComponent(tema)}`);
       const data = await res.json();
       
       if (data.error) {
@@ -393,10 +375,8 @@ function LeviRoboto() {
       } 
       else if (command === '/opcao2') {
         setBotState('idle');
-        const token = localStorage.getItem('token');
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         
-        const res = await fetch(`${API_BASE_URL}/musicas/sortear`, { headers });
+        const res = await apiFetch('/musicas/sortear');
         const data = await res.json();
         
         if (data.error) {
@@ -470,7 +450,7 @@ function LeviRoboto() {
           }
         }
         else if (botState === 'esperando_sugestao') {
-          const res = await fetch(`${API_BASE_URL}/musicas/sugerir`, {
+          const res = await apiFetch('/musicas/sugerir', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ usuario: 'Usuário Web', sugestao: text })

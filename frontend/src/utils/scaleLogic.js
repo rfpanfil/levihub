@@ -1,7 +1,10 @@
 //arquivo: frontend/src/utils/scaleLogic.js
 
 export const gerarEscalas = (equipa, datasEscala, indisponibilidades, regras, vagasPorDia) => {
-  const formatDataKey = (d) => `${d.getDate()}-${d.getMonth()}-${d.getFullYear()}`;
+  const formatDataKey = (d) => {
+    if (!d || !(d instanceof Date)) return "";
+    return `${d.getDate()}-${d.getMonth()}-${d.getFullYear()}`;
+  };
   let resultadosUnicos = new Set();
   let resultadosObj = [];
 

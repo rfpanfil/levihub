@@ -1,7 +1,7 @@
 //arquivo: frontend/src/pages/Login.jsx
 import React, { useState } from 'react';
 
-import { API_BASE_URL } from '../services/config';
+import { apiFetch } from '../services/api';
 
 
 function Login({ onLogin }) {
@@ -47,7 +47,7 @@ function Login({ onLogin }) {
       params.append('username', email);
       params.append('password', password);
 
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await apiFetch('/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
@@ -58,8 +58,7 @@ function Login({ onLogin }) {
       const data = await response.json();
 
       if (response.ok) {
-        // Salva o token e avisa o App.jsx que estamos logados
-        localStorage.setItem('token', data.access_token);
+        // Token é gerido via Cookie HttpOnly a partir de agora
         onLogin(data); 
       } else {
         setError(data.detail || 'E-mail ou senha incorretos.');
@@ -86,7 +85,7 @@ function Login({ onLogin }) {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const response = await apiFetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -116,7 +115,7 @@ function Login({ onLogin }) {
     setMensagemSucesso('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+      const response = await apiFetch('/auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: verifyingEmail, codigo: verificationCode }),
@@ -143,7 +142,7 @@ function Login({ onLogin }) {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      const response = await apiFetch('/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -166,7 +165,7 @@ function Login({ onLogin }) {
     if (password !== confirmPassword) { setError('As senhas não coincidem!'); return; }
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      const response = await apiFetch('/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: verifyingEmail, codigo: verificationCode, nova_senha: password }),

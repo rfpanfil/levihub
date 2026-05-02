@@ -1,14 +1,32 @@
 // componente: ResultadoEscala.jsx
 // Apresentacional: exibe a matriz final com drag-and-drop, estatísticas e exportação.
 import React from 'react';
+import { useScale } from '../../context/ScaleContext';
 import { formatDataKey, formatDataDDMM } from '../../utils/escalaHelpers';
+import html2canvas from 'html2canvas';
 
-export default function ResultadoEscala({
-  escalasGeradas, escalaAtualIndex, setEscalaAtualIndex,
-  ordemMatriz, datasEscala, mes, ano, mesesNomes,
-  draggedRow, handleDragStartRow, handleDragEnterRow, handleDragEndRow,
-  handleTrocarMembro, handleImprimir, handleWhatsApp,
-}) {
+export default function ResultadoEscala() {
+  const {
+    escalasGeradas, escalaAtualIndex, setEscalaAtualIndex,
+    ordemMatriz, datasEscala, mes, ano, mesesNomes,
+    draggedRow, handleDragStartRow, handleDragEnterRow, handleDragEndRow,
+    handleTrocarMembro
+  } = useScale();
+
+  const handleImprimir = async () => {
+    const elemento = document.getElementById('escala-resultado-matriz');
+    if (!elemento) return;
+    const canvas = await html2canvas(elemento, { backgroundColor: '#282c34', scale: 2 });
+    const link = document.createElement('a');
+    link.download = `escala_${mesesNomes[mes]}_${ano}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  const handleWhatsApp = () => {
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Escala do mês ${mesesNomes[mes]}`)}`, '_blank');
+  };
+
   if (!escalasGeradas || escalasGeradas.length === 0) return null;
   const escalaAtual = escalasGeradas[escalaAtualIndex];
 
@@ -22,9 +40,9 @@ export default function ResultadoEscala({
         </div>
       </div>
 
-      <div id="escala-resultado-matriz" style={{ padding: '20px', backgroundColor: '#282c34', borderRadius: '8px', overflowX: 'auto', maxWidth: '100%' }}>
+      <div id="escala-resultado-matriz" className="w-full overflow-x-auto" style={{ padding: '20px', backgroundColor: '#282c34', borderRadius: '8px', WebkitOverflowScrolling: 'touch' }}>
         <h3 style={{ textAlign: 'center', color: 'white', marginTop: 0 }}>Escala de Louvor - {mesesNomes[mes]} / {ano}</h3>
-        <table className="escala-matrix" style={{ backgroundColor: '#282c34', width: '100%' }}>
+        <table className="escala-matrix w-full">
           <thead>
             <tr>
               <th style={{ backgroundColor: '#3c414d', borderBottom: '3px solid #61dafb' }}>Função</th>
@@ -40,7 +58,7 @@ export default function ResultadoEscala({
                 onDragOver={(e) => e.preventDefault()}
                 style={{ transition: 'background-color 0.2s', backgroundColor: draggedRow === index ? 'rgba(97, 218, 251, 0.1)' : 'transparent' }}
               >
-                <td style={{ backgroundColor: '#3c414d', fontWeight: 'bold', color: '#61dafb', cursor: 'grab' }}>
+                <td className="min-w-[150px]" style={{ backgroundColor: '#3c414d', fontWeight: 'bold', color: '#61dafb', cursor: 'grab' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ color: '#9ab', cursor: 'grab', fontSize: '1.2em' }} data-html2canvas-ignore="true">☰</span>
                     {vagaCatalogo.label}
@@ -49,10 +67,10 @@ export default function ResultadoEscala({
                 {datasEscala.map((d, colIndex) => {
                   const diaKey = formatDataKey(d);
                   const alocacao = escalaAtual[diaKey]?.find(a => a.vaga.label === vagaCatalogo.label);
-                  if (!alocacao) return <td key={colIndex} style={{ backgroundColor: '#2c3038', color: '#666', textAlign: 'center' }}>-</td>;
+                  if (!alocacao) return <td key={colIndex} className="min-w-[100px]" style={{ backgroundColor: '#2c3038', color: '#666', textAlign: 'center' }}>-</td>;
                   const pessoa = alocacao.membro.nome;
                   return (
-                    <td key={colIndex} style={{ textAlign: 'center', color: pessoa === '---' ? '#ff4b4b' : 'white', fontWeight: pessoa !== '---' ? 'bold' : 'normal' }}>
+                    <td key={colIndex} className="min-w-[100px]" style={{ textAlign: 'center', color: pessoa === '---' ? '#ff4b4b' : 'white', fontWeight: pessoa !== '---' ? 'bold' : 'normal' }}>
                       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
                         <span>{pessoa}</span>
                         <button onClick={() => handleTrocarMembro(diaKey, vagaCatalogo.label)} title="Substituir pessoa" data-html2canvas-ignore="true" style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6, fontSize: '1.1em', padding: 0 }}>🔄</button>

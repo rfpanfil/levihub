@@ -9,10 +9,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import timedelta
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Request
 import libsql_client
 
-from api.config import ACCESS_TOKEN_EXPIRE_MINUTES, SMTP_EMAIL, SMTP_PASSWORD
+from api.limiter import limiter
+from api.config import ACCESS_TOKEN_EXPIRE_MINUTES, SMTP_EMAIL, SMTP_PASSWORD, IS_PRODUCTION
 from api.database import get_db
 from api.models import (
     UserCreate, Token, VerifyRequest,
@@ -153,7 +154,10 @@ async def verify_email(
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit("5/minute")
 async def login_for_access_token(
+    request: Request,
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     client: libsql_client.Client = Depends(get_db),
 ):
@@ -180,7 +184,35 @@ async def login_for_access_token(
         data={"sub": str(user_id)},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
+    
+    # Configuração dinâmica de SameSite e Secure (IS_PRODUCTION)
+    samesite_policy = "none" if IS_PRODUCTION else "lax"
+    secure_flag = IS_PRODUCTION
+    
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=secure_flag,
+        samesite=samesite_policy,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    samesite_policy = "none" if IS_PRODUCTION else "lax"
+    secure_flag = IS_PRODUCTION
+    
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=secure_flag,
+        samesite=samesite_policy
+    )
+    return {"message": "Logout realizado com sucesso"}
 
 
 @router.post("/forgot-password")

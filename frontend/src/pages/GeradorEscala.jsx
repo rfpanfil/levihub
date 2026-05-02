@@ -1,327 +1,27 @@
 // arquivo: frontend/src/pages/GeradorEscala.jsx
-// SMART CONTAINER: mantém todo o estado e lógica de negócio.
-// A renderização foi delegada a 5 componentes apresentacionais.
-import React, { useState, useEffect } from 'react';
-import { gerarEscalas } from '../utils/scaleLogic';
+import React from 'react';
 import html2canvas from 'html2canvas';
-import { formatDataKey } from '../utils/escalaHelpers';
 
-import ConfiguracaoDatas     from '../components/GeradorEscala/ConfiguracaoDatas';
-import GestaoVagas           from '../components/GeradorEscala/GestaoVagas';
-import TabelaDisponibilidade  from '../components/GeradorEscala/TabelaDisponibilidade';
-import PainelRegras          from '../components/GeradorEscala/PainelRegras';
-import ResultadoEscala       from '../components/GeradorEscala/ResultadoEscala';
+import { ScaleProvider, useScale } from '../context/ScaleContext';
 
-import { API_BASE_URL } from '../services/config';
+import ConfiguracaoDatas from '../components/GeradorEscala/ConfiguracaoDatas';
+import GestaoVagas from '../components/GeradorEscala/GestaoVagas';
+import TabelaDisponibilidade from '../components/GeradorEscala/TabelaDisponibilidade';
+import PainelRegras from '../components/GeradorEscala/PainelRegras';
+import ResultadoEscala from '../components/GeradorEscala/ResultadoEscala';
 
-
-const mesesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const diasSemanaNomes = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-
-function GeradorEscala() {
-  // --- Estado: dados da equipa e catálogo ---
-  const [equipa, setEquipa] = useState([]);
-  const [catalogoVagas, setCatalogoVagas] = useState([]);
-  const [funcoesPadraoUsuario, setFuncoesPadraoUsuario] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // --- Estado: configuração do período ---
-  const dataAtual = new Date();
-  const [mes, setMes] = useState(dataAtual.getMonth());
-  const [ano, setAno] = useState(dataAtual.getFullYear());
-  const [diaSemanaAlvo, setDiaSemanaAlvo] = useState(0);
-  const [datasEscala, setDatasEscala] = useState([]);
-
-  // --- Estado: vagas, disponibilidades e regras ---
-  const [vagasPorDia, setVagasPorDia] = useState({});
-  const [indisponibilidades, setIndisponibilidades] = useState({});
-  const [regras, setRegras] = useState([]);
-
-  // --- Estado: resultado gerado e drag-and-drop ---
-  const [escalasGeradas, setEscalasGeradas] = useState([]);
-  const [escalaAtualIndex, setEscalaAtualIndex] = useState(0);
-  const [isGerando, setIsGerando] = useState(false);
-  const [ordemMatriz, setOrdemMatriz] = useState([]);
-  const [draggedRow, setDraggedRow] = useState(null);
-  const [swapMessage, setSwapMessage] = useState('');
-
-  // =========================================================================
-  // EFEITOS
-  // =========================================================================
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const headers = { 'Authorization': `Bearer ${token}` };
-    Promise.all([
-      fetch(`${API_BASE_URL}/equipe`, { headers }).then(r => r.json()),
-      fetch(`${API_BASE_URL}/funcoes`, { headers }).then(r => r.json()),
-      fetch(`${API_BASE_URL}/usuario/me`, { headers }).then(r => r.json()),
-    ]).then(([equipeData, funcoesData, perfilData]) => {
-      if (equipeData.equipe) setEquipa(equipeData.equipe);
-      if (perfilData && !perfilData.error) {
-        setFuncoesPadraoUsuario(perfilData.funcoes_padrao ? perfilData.funcoes_padrao.split(',') : []);
-      }
-      if (funcoesData.funcoes) {
-        const catalogo = funcoesData.funcoes
-          .map(f => ({ id: f.id.toString(), label: f.nome, aceita: [f.nome] }))
-          .sort((a, b) => a.label.localeCompare(b.label));
-        setCatalogoVagas(catalogo);
-      }
-      setIsLoading(false);
-    }).catch(err => { console.error(err); setIsLoading(false); });
-  }, []);
-
-  useEffect(() => {
-    if (catalogoVagas.length === 0 || funcoesPadraoUsuario.length === 0) return;
-
-    // 1. Calcula os dias do mês que caem no dia da semana alvo
-    const diasEncontrados = [];
-    const dataIteracao = new Date(ano, mes, 1);
-    while (dataIteracao.getMonth() === parseInt(mes)) {
-      if (dataIteracao.getDay() === parseInt(diaSemanaAlvo)) diasEncontrados.push(new Date(dataIteracao));
-      dataIteracao.setDate(dataIteracao.getDate() + 1);
-    }
-    setDatasEscala(diasEncontrados);
-
-    // 2. Monta o padrão de vagas (fallback local enquanto API carrega)
-    const vagasPadrao = {};
-    diasEncontrados.forEach(d => {
-      const key = formatDataKey(d);
-      let vagasDoDia = catalogoVagas.filter(v => funcoesPadraoUsuario.includes(v.label));
-      vagasDoDia.sort((a, b) => {
-        const iA = funcoesPadraoUsuario.indexOf(a.label);
-        const iB = funcoesPadraoUsuario.indexOf(b.label);
-        if (iA !== -1 && iB !== -1) return iA - iB;
-        if (iA !== -1) return -1;
-        if (iB !== -1) return 1;
-        return a.label.localeCompare(b.label);
-      });
-      vagasPadrao[key] = vagasDoDia;
-    });
-
-    // 3. Aplica o padrão imediatamente (reset limpo)
-    setVagasPorDia(vagasPadrao);
-    setIndisponibilidades({});
-    setRegras([]);
-    setEscalasGeradas([]);
-    setOrdemMatriz([]);
-
-    // 4. Carrega dados persistidos da API e sobrescreve o padrão se existirem
-    const token = localStorage.getItem('token');
-    const headers = { 'Authorization': `Bearer ${token}` };
-    Promise.all([
-      fetch(`${API_BASE_URL}/escala/vagas?mes=${mes}&ano=${ano}`, { headers }).then(r => r.json()),
-      fetch(`${API_BASE_URL}/escala/disponibilidades?mes=${mes}&ano=${ano}`, { headers }).then(r => r.json()),
-    ]).then(([vagasData, dispData]) => {
-      // Merge inteligente: só usa dias que ainda existem na datasEscala calculada
-      if (vagasData.vagas_por_dia && Object.keys(vagasData.vagas_por_dia).length > 0) {
-        const vagasMergeadas = {};
-        diasEncontrados.forEach(d => {
-          const key = formatDataKey(d);
-          vagasMergeadas[key] = vagasData.vagas_por_dia[key] ?? vagasPadrao[key];
-        });
-        setVagasPorDia(vagasMergeadas);
-      }
-      if (dispData.indisponibilidades && Object.keys(dispData.indisponibilidades).length > 0) {
-        setIndisponibilidades(dispData.indisponibilidades);
-      }
-    }).catch(err => console.warn('[Escala] Falha ao carregar configuração salva:', err));
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mes, ano, diaSemanaAlvo, catalogoVagas, funcoesPadraoUsuario]);
-
-  // =========================================================================
-  // HELPERS DE PERSISTÊNCIA (fire-and-forget — não bloqueiam a UI)
-  // =========================================================================
-
-  const salvarVagas = (novasVagas) => {
-    const token = localStorage.getItem('token');
-    fetch(`${API_BASE_URL}/escala/vagas`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mes, ano, vagas_por_dia: novasVagas }),
-    }).catch(err => console.warn('[Escala] Falha ao salvar vagas:', err));
-  };
-
-  const salvarDisponibilidades = (novasIndisponibilidades) => {
-    const token = localStorage.getItem('token');
-    fetch(`${API_BASE_URL}/escala/disponibilidades`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mes, ano, indisponibilidades: novasIndisponibilidades }),
-    }).catch(err => console.warn('[Escala] Falha ao salvar disponibilidades:', err));
-  };
-
-  // =========================================================================
-  // HANDLERS DE VAGAS
-  // =========================================================================
-
-
-  const adicionarVaga = (diaKey, vagaId) => {
-    const vaga = catalogoVagas.find(v => v.id === vagaId);
-    setVagasPorDia(prev => {
-      if (prev[diaKey].some(v => v.id === vagaId)) return prev;
-      const novas = { ...prev, [diaKey]: [...prev[diaKey], vaga] };
-      salvarVagas(novas);
-      return novas;
-    });
-  };
-
-  const removerVaga = (diaKey, vagaId) => {
-    setVagasPorDia(prev => {
-      const novas = { ...prev, [diaKey]: prev[diaKey].filter(v => v.id !== vagaId) };
-      salvarVagas(novas);
-      return novas;
-    });
-  };
-
-  // =========================================================================
-  // HANDLERS DE DISPONIBILIDADE
-  // =========================================================================
-
-  const toggleIndisponibilidade = (membroId, dataObj) => {
-    const key = `${membroId}_${formatDataKey(dataObj)}`;
-    setIndisponibilidades(prev => {
-      const novas = { ...prev, [key]: !prev[key] };
-      salvarDisponibilidades(novas);
-      return novas;
-    });
-  };
-
-  const marcarTodosIndisponiveis = () => {
-    const novas = {};
-    equipa.forEach(membro => datasEscala.forEach(d => {
-      novas[`${membro.id}_${formatDataKey(d)}`] = true;
-    }));
-    setIndisponibilidades(novas);
-    salvarDisponibilidades(novas);
-  };
-
-  const marcarMembroIndisponivel = (membroId) => {
-    setIndisponibilidades(prev => {
-      const novas = { ...prev };
-      datasEscala.forEach(d => { novas[`${membroId}_${formatDataKey(d)}`] = true; });
-      salvarDisponibilidades(novas);
-      return novas;
-    });
-  };
-
-  const desmarcarMembroIndisponivel = (membroId) => {
-    setIndisponibilidades(prev => {
-      const novas = { ...prev };
-      datasEscala.forEach(d => { delete novas[`${membroId}_${formatDataKey(d)}`]; });
-      salvarDisponibilidades(novas);
-      return novas;
-    });
-  };
-
-  // Limpa todas as indisponibilidades e persiste o estado vazio
-  const marcarTodosDisponiveis = () => {
-    setIndisponibilidades({});
-    salvarDisponibilidades({});
-  };
-
-  // =========================================================================
-  // HANDLERS DE REGRAS (interface com PainelRegras semi-smart)
-  // =========================================================================
-
-  const handleAdicionarRegra = (regraObj) => setRegras(prev => [...prev, regraObj]);
-  const removerRegra = (id) => setRegras(regras.filter(r => r.id !== id));
-
-  // Helper usado pelo PainelRegras via prop
-  const getDiasDisponiveisMembro = (membroId, funcaoAlvo) => {
-    if (!membroId) return 0;
-    const totalDias = datasEscala.length;
-    const faltas = datasEscala.filter(d => indisponibilidades[`${membroId}_${formatDataKey(d)}`]).length;
-    const alvoIsDobra = funcaoAlvo && funcaoAlvo.toLowerCase().includes('criança');
-    const vagasComprometidas = regras
-      .filter(r => r.tipo === 'frequencia' && r.membro1 === membroId.toString())
-      .filter(r => (r.funcao.toLowerCase().includes('criança')) === alvoIsDobra)
-      .reduce((sum, r) => sum + parseInt(r.quantidade), 0);
-    return totalDias - faltas - vagasComprometidas;
-  };
-
-  // =========================================================================
-  // HANDLERS DE RESULTADO / DRAG-AND-DROP
-  // =========================================================================
-
-  const handleDragStartRow = (index) => setDraggedRow(index);
-  const handleDragEnterRow = (index) => {
-    if (draggedRow === null || draggedRow === index) return;
-    const newOrdem = [...ordemMatriz];
-    const item = newOrdem.splice(draggedRow, 1)[0];
-    newOrdem.splice(index, 0, item);
-    setDraggedRow(index);
-    setOrdemMatriz(newOrdem);
-  };
-  const handleDragEndRow = () => setDraggedRow(null);
-
-  const handleGerarEscala = () => {
-    setIsGerando(true);
-    // setTimeout de 100ms apenas para deixar a UI mostrar o estado de loading
-    // antes do cálculo síncrono bloquear momentaneamente a thread.
-    setTimeout(() => {
-      const resultados = gerarEscalas(equipa, datasEscala, indisponibilidades, regras, vagasPorDia);
-      setEscalasGeradas(resultados);
-      setEscalaAtualIndex(0);
-      const vagasEmUso = catalogoVagas
-        .filter(v => datasEscala.some(d => vagasPorDia[formatDataKey(d)]?.some(va => va.id === v.id)))
-        .sort((a, b) => {
-          const iA = funcoesPadraoUsuario.indexOf(a.label);
-          const iB = funcoesPadraoUsuario.indexOf(b.label);
-          if (iA !== -1 && iB !== -1) return iA - iB;
-          if (iA !== -1) return -1;
-          if (iB !== -1) return 1;
-          return a.label.localeCompare(b.label);
-        });
-      setOrdemMatriz(vagasEmUso);
-      setIsGerando(false);
-      if (resultados.length > 0) window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-    }, 100);
-  };
-
-  const handleTrocarMembro = (diaKey, vagaLabel) => {
-    const escalaAtual = escalasGeradas[escalaAtualIndex];
-    const alocadosNesteDia = escalaAtual[diaKey];
-    const alocacaoIndex = alocadosNesteDia.findIndex(a => a.vaga.label === vagaLabel);
-    if (alocacaoIndex === -1) return;
-    const alocacaoAtual = alocadosNesteDia[alocacaoIndex];
-    const membroAtualId = alocacaoAtual.membro.id || null;
-
-    const isCandidatoValido = (membro, vaga) => {
-      if (indisponibilidades[`${membro.id}_${diaKey}`]) return false;
-      const temFuncao = membro.funcoes.some(f => vaga.aceita.some(a => a.toLowerCase() === f.toLowerCase()));
-      if (!temFuncao) return false;
-      const outrasAloc = alocadosNesteDia.filter(a => a.membro.id === membro.id && a.vaga.label !== vaga.label);
-      if (outrasAloc.length >= 2) return false;
-      if (outrasAloc.length === 1) {
-        const isMidiaOuSom = (l) => l.toLowerCase().includes('mídia') || l.toLowerCase().includes('som') || l.toLowerCase().includes('live');
-        const isCrianca = (l) => l.includes('Crianças');
-        const isAdultoMusical = (l) => !isCrianca(l) && !isMidiaOuSom(l);
-        const ehDobraValida = (isAdultoMusical(outrasAloc[0].vaga.label) && isCrianca(vaga.label)) ||
-                              (isCrianca(outrasAloc[0].vaga.label) && isAdultoMusical(vaga.label));
-        if (!ehDobraValida) return false;
-      }
-      return true;
-    };
-
-    const candidatos = equipa.filter(m => isCandidatoValido(m, alocacaoAtual.vaga) || m.id === membroAtualId);
-    candidatos.push({ id: null, nome: '---' });
-    const currentIndex = candidatos.findIndex(c => c.id === membroAtualId);
-    const proximoMembro = candidatos[(currentIndex + 1) % candidatos.length];
-
-    if (candidatos.length <= 2 && membroAtualId !== null && proximoMembro.id === null) {
-      setSwapMessage(`Apenas ${alocacaoAtual.membro.nome} está disponível para ${vagaLabel} neste dia.`);
-      setTimeout(() => setSwapMessage(''), 3000);
-    }
-
-    const novasEscalas = [...escalasGeradas];
-    novasEscalas[escalaAtualIndex] = {
-      ...novasEscalas[escalaAtualIndex],
-      [diaKey]: alocadosNesteDia.map((a, i) => i === alocacaoIndex ? { ...a, membro: proximoMembro } : a),
-    };
-    setEscalasGeradas(novasEscalas);
-  };
+function GeradorEscalaContent() {
+  const {
+    mesesNomes, equipa, catalogoVagas,
+    isLoading, mes, ano, datasEscala, vagasPorDia,
+    indisponibilidades, regras, escalasGeradas, escalaAtualIndex, isGerando,
+    ordemMatriz, draggedRow, swapMessage,
+    setEscalaAtualIndex, toggleIndisponibilidade, marcarTodosIndisponiveis,
+    marcarMembroIndisponivel, desmarcarMembroIndisponivel, marcarTodosDisponiveis,
+    handleAdicionarRegra, removerRegra, getDiasDisponiveisMembro,
+    handleDragStartRow, handleDragEnterRow, handleDragEndRow,
+    handleGerarEscala, handleTrocarMembro
+  } = useScale();
 
   const handleImprimir = async () => {
     const elemento = document.getElementById('escala-resultado-matriz');
@@ -337,64 +37,27 @@ function GeradorEscala() {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Escala do mês ${mesesNomes[mes]}`)}`, '_blank');
   };
 
-  // =========================================================================
-  // RENDER
-  // =========================================================================
-
   return (
     <div className="gerador-escala-container" style={{ position: 'relative' }}>
-
       {swapMessage && (
         <div style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#e74c3c', color: 'white', padding: '10px 20px', borderRadius: '8px', zIndex: 1000, boxShadow: '0 4px 10px rgba(0,0,0,0.5)' }}>
           ⚠️ {swapMessage}
         </div>
       )}
 
-      <ConfiguracaoDatas
-        mes={mes} setMes={setMes}
-        ano={ano} setAno={setAno}
-        diaSemanaAlvo={diaSemanaAlvo} setDiaSemanaAlvo={setDiaSemanaAlvo}
-        datasEscala={datasEscala}
-        mesesNomes={mesesNomes}
-        diasSemanaNomes={diasSemanaNomes}
-      />
+      {/* Na Etapa 1, ConfiguracaoDatas e GestaoVagas já consomem o Context diretamente! */}
+      <ConfiguracaoDatas />
 
       {isLoading ? (
         <p>A carregar base de dados...</p>
       ) : (
         <>
-          <GestaoVagas
-            datasEscala={datasEscala}
-            vagasPorDia={vagasPorDia}
-            catalogoVagas={catalogoVagas}
-            funcoesPadraoUsuario={funcoesPadraoUsuario}
-            diasSemanaNomes={diasSemanaNomes}
-            adicionarVaga={adicionarVaga}
-            removerVaga={removerVaga}
-          />
+          <GestaoVagas />
 
-          <TabelaDisponibilidade
-            equipa={equipa}
-            datasEscala={datasEscala}
-            indisponibilidades={indisponibilidades}
-            toggleIndisponibilidade={toggleIndisponibilidade}
-            marcarTodosIndisponiveis={marcarTodosIndisponiveis}
-            marcarTodosDisponiveis={marcarTodosDisponiveis}
-            marcarMembroIndisponivel={marcarMembroIndisponivel}
-            desmarcarMembroIndisponivel={desmarcarMembroIndisponivel}
-          />
+          {/* COMPONENTES AGORA CONSOMEM O CONTEXTO (Sem Props Drilling!) */}
+          <TabelaDisponibilidade />
 
-          <PainelRegras
-            regras={regras}
-            equipa={equipa}
-            catalogoVagas={catalogoVagas}
-            vagasPorDia={vagasPorDia}
-            datasEscala={datasEscala}
-            indisponibilidades={indisponibilidades}
-            getDiasDisponiveisMembro={getDiasDisponiveisMembro}
-            onAdicionarRegra={handleAdicionarRegra}
-            onRemoverRegra={removerRegra}
-          />
+          <PainelRegras />
 
           <div style={{ textAlign: 'center', marginTop: '30px' }}>
             <button className="main-button" onClick={handleGerarEscala} disabled={isGerando} style={{ padding: '15px 40px', fontSize: '1.2em' }}>
@@ -402,27 +65,17 @@ function GeradorEscala() {
             </button>
           </div>
 
-          <ResultadoEscala
-            escalasGeradas={escalasGeradas}
-            escalaAtualIndex={escalaAtualIndex}
-            setEscalaAtualIndex={setEscalaAtualIndex}
-            ordemMatriz={ordemMatriz}
-            datasEscala={datasEscala}
-            mes={mes}
-            ano={ano}
-            mesesNomes={mesesNomes}
-            draggedRow={draggedRow}
-            handleDragStartRow={handleDragStartRow}
-            handleDragEnterRow={handleDragEnterRow}
-            handleDragEndRow={handleDragEndRow}
-            handleTrocarMembro={handleTrocarMembro}
-            handleImprimir={handleImprimir}
-            handleWhatsApp={handleWhatsApp}
-          />
+          <ResultadoEscala />
         </>
       )}
     </div>
   );
 }
 
-export default GeradorEscala;
+export default function GeradorEscala() {
+  return (
+    <ScaleProvider>
+      <GeradorEscalaContent />
+    </ScaleProvider>
+  );
+}

@@ -1,23 +1,23 @@
 // componente: PainelRegras.jsx
 // Semi-Smart: gerencia internamente o estado do formulário de regras
-// (regraTipo, regraMembro1, etc.) e as validações.
-// Comunica o resultado ao pai via onAdicionarRegra(regraObj).
+// e as validações, usando o contexto global para os dados da escala.
 import React, { useState } from 'react';
+import { useScale } from '../../context/ScaleContext';
 import { formatDataKey, formatDataDDMM } from '../../utils/escalaHelpers';
 
-export default function PainelRegras({
-  // Dados contextuais (read-only)
-  regras,
-  equipa,
-  catalogoVagas,
-  vagasPorDia,
-  datasEscala,
-  indisponibilidades,
-  getDiasDisponiveisMembro,
-  // Callbacks para o container
-  onAdicionarRegra,
-  onRemoverRegra,
-}) {
+export default function PainelRegras() {
+  const {
+    regras,
+    equipa,
+    catalogoVagas,
+    vagasPorDia,
+    datasEscala,
+    indisponibilidades,
+    getDiasDisponiveisMembro,
+    handleAdicionarRegra: onAdicionarRegra,
+    removerRegra: onRemoverRegra,
+  } = useScale();
+
   // --- Estado interno do formulário de regras ---
   const [regraTipo, setRegraTipo] = useState('frequencia');
   const [regraMembro1, setRegraMembro1] = useState('');
@@ -146,10 +146,12 @@ export default function PainelRegras({
                 <option value="">Selecione o Membro...</option>
                 {equipa
                   .filter(m => {
+                    // Prevenção de erro: Garantir que funcoes é string/array antes de iterar
+                    const funcoesArr = Array.isArray(m.funcoes) ? m.funcoes : (m.funcoes ? m.funcoes.split(',') : []);
                     const temFuncao = regraFuncao
-                      ? m.funcoes.some(f => {
+                      ? funcoesArr.some(f => {
                           const vagaCat = catalogoVagas.find(v => v.label === regraFuncao);
-                          return vagaCat && vagaCat.aceita.some(a => a.toLowerCase() === f.toLowerCase());
+                          return vagaCat && vagaCat.aceita.some(a => a.toLowerCase() === f.trim().toLowerCase());
                         })
                       : false;
                     return temFuncao && getDiasDisponiveisMembro(m.id, regraFuncao) > 0;

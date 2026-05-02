@@ -9,6 +9,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
+from api.limiter import limiter
 
 from api import database
 from api.config import TURSO_URL, TURSO_TOKEN
@@ -36,11 +40,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# --- Rate Limiting ---
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # --- CORS ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",          # Desenvolvimento local
+        "http://127.0.0.1:5173",          # Desenvolvimento local (IP)
         "https://levihub.vercel.app",     # Produção (Vercel)
     ],
     allow_credentials=True,

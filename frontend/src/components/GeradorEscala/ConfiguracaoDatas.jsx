@@ -1,17 +1,18 @@
 // componente: ConfiguracaoDatas.jsx
-// Apresentacional puro: renderiza os controles de configuração do período (mês/ano/dia)
-// e a listagem de pills com as datas encontradas.
 import React from 'react';
+import { useScale } from '../../context/ScaleContext';
 import { formatDataDDMM } from '../../utils/escalaHelpers';
 
-export default function ConfiguracaoDatas({
-  mes, setMes,
-  ano, setAno,
-  diaSemanaAlvo, setDiaSemanaAlvo,
-  datasEscala,
-  mesesNomes,
-  diasSemanaNomes,
-}) {
+export default function ConfiguracaoDatas() {
+  const {
+    mes, setMes,
+    ano, setAno,
+    diaSemanaAlvo, setDiaSemanaAlvo,
+    datasEscala,
+    mesesNomes,
+    diasSemanaNomes,
+  } = useScale();
+
   return (
     <div className="controls" style={{ marginBottom: '30px' }}>
       <h2>📅 Configuração do Mês</h2>

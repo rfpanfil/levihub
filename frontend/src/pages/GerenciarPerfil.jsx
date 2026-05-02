@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { API_BASE_URL } from '../services/config';
+import { apiFetch } from '../services/api';
 
 
 function GerenciarPerfil() {
@@ -16,12 +16,8 @@ function GerenciarPerfil() {
   const [novaSenha, setNovaSenha] = useState('');
 
   const carregarDados = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    setIsLoading(true);
     try {
-      const resPerfil = await fetch(`${API_BASE_URL}/usuario/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const resPerfil = await apiFetch('/usuario/me');
       if (resPerfil.ok) {
         const dataPerfil = await resPerfil.json();
         setPerfil(dataPerfil);
@@ -44,7 +40,6 @@ function GerenciarPerfil() {
 
   const handleSalvarCredenciais = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
     
     if (!novoEmail.trim() && !novaSenha.trim()) {
       mostrarMensagem("Preencha pelo menos um campo para atualizar.", "erro");
@@ -56,9 +51,9 @@ function GerenciarPerfil() {
     if (novaSenha.trim()) payload.nova_senha = novaSenha.trim();
 
     try {
-      const res = await fetch(`${API_BASE_URL}/usuario/credenciais`, {
+      const res = await apiFetch('/usuario/credenciais', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const data = await res.json();

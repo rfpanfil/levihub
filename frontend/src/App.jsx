@@ -17,8 +17,7 @@ import { calcularSequenciaLocal, processarCifraCompleta } from './utils/musicLog
 import './App.css';
 
 
-// URL da sua API no Render
-import { API_BASE_URL } from './services/config';
+import { apiFetch } from './services/api';
 
 
 function App() {
@@ -57,14 +56,15 @@ function App() {
   const [isVisitor, setIsVisitor] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true); // NOVO ESTADO DE LOADING
 
-  const carregarPerfilUsuario = async (token) => {
+  const carregarPerfilUsuario = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/usuario/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await apiFetch('/usuario/me');
       if (res.ok) {
         const data = await res.json();
-        setUser({ token, ...data }); // Salva o token + role + email
+        setUser(data);
       } else {
-        handleLogout();
+        setUser(null);
+        setIsVisitor(false);
       }
     } catch (e) {
       console.error(e);
@@ -74,26 +74,24 @@ function App() {
   };
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    if (savedToken) {
-      carregarPerfilUsuario(savedToken);
-    } else {
-      setIsAuthLoading(false); // Se não tem token, libera a tela direto pro login
-    }
+    carregarPerfilUsuario();
   }, []);
 
   const handleLoginAction = (userData) => {
     if (userData === null) {
       setIsVisitor(true);
     } else {
-      localStorage.setItem('token', userData.access_token);
-      carregarPerfilUsuario(userData.access_token);
+      carregarPerfilUsuario();
       setIsVisitor(false);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
+  const handleLogout = async () => {
+    try {
+      await apiFetch('/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.error("Erro no logout remoto", e);
+    }
     setUser(null);
     setIsVisitor(false);
   };
@@ -149,7 +147,7 @@ function App() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos max
 
-      const response = await fetch(`${API_BASE_URL}/transpose-sequence`, {
+      const response = await apiFetch('/transpose-sequence', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chords, action, interval }),
@@ -201,13 +199,13 @@ function App() {
         formData.append('action', action);
         formData.append('interval', interval);
 
-        response = await fetch(`${API_BASE_URL}/transpose-file`, {
+        response = await apiFetch('/transpose-file', {
           method: 'POST',
           body: formData,
           signal: controller.signal
         });
       } else {
-        response = await fetch(`${API_BASE_URL}/transpose-text`, {
+        response = await apiFetch('/transpose-text', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cifra_text: cifraText, action, interval }),

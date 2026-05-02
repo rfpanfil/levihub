@@ -1,7 +1,7 @@
 // arquivo: frontend/src/pages/GestaoMembros.jsx
 import React, { useState, useEffect } from 'react';
 
-import { API_BASE_URL } from '../services/config';
+import { apiFetch } from '../services/api';
 
 
 function GestaoMembros() {
@@ -56,19 +56,17 @@ function GestaoMembros() {
   
   const handleDragEnd = async () => {
     setDraggedItemIndex(null);
-    const token = localStorage.getItem('token');
     const stringPadrao = funcoesPadrao.join(',');
     try {
-      await fetch(`${API_BASE_URL}/usuario/config`, {
+      await apiFetch('/usuario/config', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ funcoes_padrao: stringPadrao })
       });
     } catch (error) {}
   };
 
   const handleToggleFuncaoPadrao = async (funcaoNome) => {
-    const token = localStorage.getItem('token');
     const novoArray = funcoesPadrao.includes(funcaoNome)
       ? funcoesPadrao.filter(f => f !== funcaoNome)
       : [...funcoesPadrao, funcaoNome];
@@ -76,9 +74,9 @@ function GestaoMembros() {
     const stringPadrao = novoArray.join(',');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/usuario/config`, {
+      const res = await apiFetch('/usuario/config', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ funcoes_padrao: stringPadrao })
       });
       if (res.ok) setFuncoesPadrao(novoArray);
@@ -86,17 +84,12 @@ function GestaoMembros() {
   };
 
   const carregarDados = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return; 
-
     setIsLoading(true);
     try {
-      const headers = { 'Authorization': `Bearer ${token}` };
-      
       const [resEquipe, resFuncoes, resPerfil] = await Promise.all([
-        fetch(`${API_BASE_URL}/equipe?apenas_ativos=false`, { headers }), 
-        fetch(`${API_BASE_URL}/funcoes`, { headers }),
-        fetch(`${API_BASE_URL}/usuario/me`, { headers })
+        apiFetch('/equipe?apenas_ativos=false'), 
+        apiFetch('/funcoes'),
+        apiFetch('/usuario/me')
       ]);
       
       const dataEquipe = await resEquipe.json();
@@ -144,8 +137,6 @@ function GestaoMembros() {
     const nomeFuncao = novaFuncaoInline.trim();
     if (!nomeFuncao) return;
     
-    const token = localStorage.getItem('token');
-    
     // 1. Verifica se já existe para evitar duplicidade
     if (funcoesDisponiveis.some(f => f.toLowerCase() === nomeFuncao.toLowerCase())) {
         if (!funcoesSelecionadas.includes(nomeFuncao)) {
@@ -162,9 +153,9 @@ function GestaoMembros() {
 
     try {
       // 3. Salva no banco de dados em segundo plano
-      const res = await fetch(`${API_BASE_URL}/funcoes`, {
+      const res = await apiFetch('/funcoes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: nomeFuncao, membros_ids: [] })
       });
       const data = await res.json();
@@ -180,18 +171,17 @@ function GestaoMembros() {
 
   const handleSalvar = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
     if (!nome.trim()) { mostrarMensagem("O nome é obrigatório!", "erro"); return; }
 
     const payload = { nome, telefone, email, status, funcoes: funcoesSelecionadas };
 
     try {
-      const url = isEditing ? `${API_BASE_URL}/equipe/${editId}` : `${API_BASE_URL}/equipe`;
+      const url = isEditing ? `/equipe/${editId}` : '/equipe';
       const method = isEditing ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method, 
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+        headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify(payload)
       });
       const data = await res.json();
@@ -215,10 +205,9 @@ function GestaoMembros() {
 
   const handleExcluir = async (id) => {
     if (!window.confirm("Tem a certeza que deseja excluir este membro permanentemente?")) return;
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${API_BASE_URL}/equipe/${id}`, { 
-        method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+      const res = await apiFetch(`/equipe/${id}`, { 
+        method: 'DELETE'
       });
       const data = await res.json();
       if (res.ok && !data.error) {
@@ -236,14 +225,13 @@ function GestaoMembros() {
   };
 
   const handleSalvarNovaFuncao = async () => {
-    const token = localStorage.getItem('token');
     if (!novaFuncaoNome.trim()) { mostrarMensagem("O nome da função não pode estar vazio.", "erro"); return; }
     
     setIsSavingFuncao(true); // LIGA O LOADING
     try {
-      const res = await fetch(`${API_BASE_URL}/funcoes`, {
+      const res = await apiFetch('/funcoes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: novaFuncaoNome.trim(), membros_ids: novaFuncaoMembrosSelecionados })
       });
       const data = await res.json();
@@ -264,10 +252,9 @@ function GestaoMembros() {
 
   const handleExcluirFuncao = async (id) => {
     if (!window.confirm("Excluir esta função vai removê-la de todos os membros. Continuar?")) return;
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${API_BASE_URL}/funcoes/${id}`, { 
-        method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+      const res = await apiFetch(`/funcoes/${id}`, { 
+        method: 'DELETE'
       });
       const data = await res.json();
       if (res.ok && !data.error) {
@@ -278,12 +265,11 @@ function GestaoMembros() {
   };
 
   const handleSalvarEdicaoFuncao = async (id) => {
-    const token = localStorage.getItem('token');
     if (!editandoFuncaoNome.trim()) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/funcoes/${id}`, {
+      const res = await apiFetch(`/funcoes/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: editandoFuncaoNome.trim() })
       });
       const data = await res.json();

@@ -1,18 +1,19 @@
 // componente: GestaoVagas.jsx
-// Apresentacional puro: para cada dia da escala, exibe as vagas ativas
-// e os controles de adição/remoção de funções.
 import React from 'react';
+import { useScale } from '../../context/ScaleContext';
 import { formatDataKey, formatDataDDMM } from '../../utils/escalaHelpers';
 
-export default function GestaoVagas({
-  datasEscala,
-  vagasPorDia,
-  catalogoVagas,
-  funcoesPadraoUsuario,
-  diasSemanaNomes,
-  adicionarVaga,
-  removerVaga,
-}) {
+export default function GestaoVagas() {
+  const {
+    datasEscala,
+    vagasPorDia,
+    catalogoVagas,
+    funcoesPadraoUsuario,
+    diasSemanaNomes,
+    adicionarVaga,
+    removerVaga,
+  } = useScale();
+
   return (
     <div className="input-area" style={{ overflowX: 'auto' }}>
       <h2>⚙️ Vagas e Funções por Dia</h2>

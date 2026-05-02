@@ -1,7 +1,7 @@
 // arquivo: frontend/src/pages/AdminPanel.jsx
 import React, { useState, useEffect } from 'react';
 
-import { API_BASE_URL } from '../services/config';
+import { apiFetch } from '../services/api';
 
 
 function AdminPanel() {
@@ -35,12 +35,8 @@ function AdminPanel() {
   ];
 
   const carregarUsuarios = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/usuarios`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await apiFetch('/admin/usuarios');
       if (res.ok) {
         const data = await res.json();
         setUsuarios(data.usuarios);
@@ -61,13 +57,12 @@ function AdminPanel() {
   };
 
   const salvarEdicao = async (id) => {
-    const token = localStorage.getItem('token');
     try {
       const bodyData = { email: editEmail, role: editRole };
       if (editSenha.trim() !== '') bodyData.senha = editSenha;
 
-      const res = await fetch(`${API_BASE_URL}/admin/usuarios/${id}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(bodyData)
+      const res = await apiFetch(`/admin/usuarios/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyData)
       });
       if (res.ok) {
         mostrarMensagem("Usuário atualizado!", "sucesso");
@@ -78,9 +73,8 @@ function AdminPanel() {
 
   const excluirUsuario = async (id, email) => {
     if (!window.confirm(`ATENÇÃO: Excluir o usuário ${email} apagará todo o repertório e equipe dele. Continuar?`)) return;
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/usuarios/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await apiFetch(`/admin/usuarios/${id}`, { method: 'DELETE' });
       if (res.ok) { mostrarMensagem("Usuário excluído!", "sucesso"); carregarUsuarios(); } 
       else mostrarMensagem("Erro ao excluir.", "erro");
     } catch (err) { mostrarMensagem("Erro de conexão.", "erro"); }
@@ -98,8 +92,6 @@ function AdminPanel() {
 
   const handleSalvarMusicaGlobal = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
-    
     if (musicaGlobal.categorias.length === 0) {
       mostrarMensagem("Selecione pelo menos uma categoria.", "erro");
       return;
@@ -114,11 +106,10 @@ function AdminPanel() {
       } catch(e) {}
     }
 
-    // Envia categorias como array (novo contrato da API)
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/musicas`, {
+      const res = await apiFetch('/admin/musicas', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           nome_musica: musicaGlobal.nome_musica, 
           artista: musicaGlobal.artista,

@@ -11,6 +11,10 @@ try:
 except ImportError:
     pass  # Produção: variáveis já são injetadas pelo ambiente (Render)
 
+# --- Ambiente ---
+# Assume produção se ENVIRONMENT for "production", caso contrário é desenvolvimento local.
+IS_PRODUCTION: bool = os.getenv("ENVIRONMENT", "development").lower() == "production"
+
 # --- Banco de Dados (Turso) ---
 TURSO_URL: str = os.getenv("TURSO_DATABASE_URL", "")
 TURSO_TOKEN: str = os.getenv("TURSO_AUTH_TOKEN", "")
