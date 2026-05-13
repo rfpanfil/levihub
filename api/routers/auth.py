@@ -185,16 +185,12 @@ async def login_for_access_token(
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     
-    # Configuração dinâmica de SameSite e Secure (IS_PRODUCTION)
-    samesite_policy = "none" if IS_PRODUCTION else "lax"
-    secure_flag = IS_PRODUCTION
-    
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=secure_flag,
-        samesite=samesite_policy,
+        secure=True,
+        samesite="none",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
@@ -203,14 +199,11 @@ async def login_for_access_token(
 
 @router.post("/logout")
 async def logout(response: Response):
-    samesite_policy = "none" if IS_PRODUCTION else "lax"
-    secure_flag = IS_PRODUCTION
-    
     response.delete_cookie(
         key="access_token",
         httponly=True,
-        secure=secure_flag,
-        samesite=samesite_policy
+        secure=True,
+        samesite="none"
     )
     return {"message": "Logout realizado com sucesso"}
 

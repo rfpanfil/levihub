@@ -6,6 +6,7 @@
 #   Desenvolvimento: uvicorn api.main:app --reload
 #   Produção (Render): uvicorn api.main:app --host 0.0.0.0 --port $PORT
 
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,8 +50,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",          # Desenvolvimento local
+        "http://localhost:5174",          # Desenvolvimento local (alternativa)
         "http://127.0.0.1:5173",          # Desenvolvimento local (IP)
         "https://levihub.vercel.app",     # Produção (Vercel)
+        os.getenv("FRONTEND_URL", ""),
     ],
     allow_credentials=True,
     allow_methods=["*"],
