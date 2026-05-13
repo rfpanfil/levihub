@@ -5,6 +5,7 @@ python-multipart
 python-docx
 libsql-client
 gspread
+slowapi
 oauth2client
 passlib[bcrypt]
 python-jose[cryptography]
