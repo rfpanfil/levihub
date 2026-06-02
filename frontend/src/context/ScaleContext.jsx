@@ -99,7 +99,8 @@ export const ScaleProvider = ({ children }) => {
     Promise.all([
       apiFetch(`/escala/vagas?mes=${mes}&ano=${ano}`).then(r => r.json()),
       apiFetch(`/escala/disponibilidades?mes=${mes}&ano=${ano}`).then(r => r.json()),
-    ]).then(([vagasData, dispData]) => {
+      apiFetch(`/escala/regras?mes=${mes}&ano=${ano}`).then(r => r.json()),
+    ]).then(([vagasData, dispData, regrasData]) => {
       if (vagasData.vagas_por_dia && Object.keys(vagasData.vagas_por_dia).length > 0) {
         const vagasMergeadas = {};
         diasEncontrados.forEach(d => {
@@ -110,6 +111,9 @@ export const ScaleProvider = ({ children }) => {
       }
       if (dispData.indisponibilidades && Object.keys(dispData.indisponibilidades).length > 0) {
         setIndisponibilidades(dispData.indisponibilidades);
+      }
+      if (regrasData && regrasData.regras && regrasData.regras.length > 0) {
+        setRegras(regrasData.regras);
       }
     }).catch(err => console.warn('[Escala] Falha ao carregar configuração salva:', err));
 
@@ -134,6 +138,14 @@ export const ScaleProvider = ({ children }) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mes, ano, indisponibilidades: novasIndisponibilidades }),
     }).catch(err => console.warn('[Escala] Falha ao salvar disponibilidades:', err));
+  };
+
+  const salvarRegras = (novasRegras) => {
+    apiFetch('/escala/regras', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mes, ano, regras: novasRegras }),
+    }).catch(err => console.warn('[Escala] Falha ao salvar regras:', err));
   };
 
   // =========================================================================
@@ -207,8 +219,20 @@ export const ScaleProvider = ({ children }) => {
   // HANDLERS DE REGRAS
   // =========================================================================
 
-  const handleAdicionarRegra = (regraObj) => setRegras(prev => [...prev, regraObj]);
-  const removerRegra = (id) => setRegras(regras.filter(r => r.id !== id));
+  const handleAdicionarRegra = (regraObj) => {
+    setRegras(prev => {
+      const novas = [...prev, regraObj];
+      salvarRegras(novas);
+      return novas;
+    });
+  };
+  const removerRegra = (id) => {
+    setRegras(prev => {
+      const novas = prev.filter(r => r.id !== id);
+      salvarRegras(novas);
+      return novas;
+    });
+  };
 
   const getDiasDisponiveisMembro = (membroId, funcaoAlvo) => {
     if (!membroId) return 0;
@@ -288,7 +312,11 @@ export const ScaleProvider = ({ children }) => {
       }
     }
 
-    const candidatos = equipa.filter(m => isCandidatoValido(m, alocacaoAtual.vaga) || m.id === membroAtualId);
+    const candidatos = equipa.filter(m => {
+      if (m.id === membroAtualId) return true;
+      const isUnavailable = indisponibilidades[`${m.id}_${diaKey}`];
+      return !isUnavailable && isCandidatoValido(m, alocacaoAtual.vaga);
+    });
     candidatos.push({ id: null, nome: '---' });
     const currentIndex = candidatos.findIndex(c => c.id === membroAtualId);
     const proximoMembro = candidatos[(currentIndex + 1) % candidatos.length];

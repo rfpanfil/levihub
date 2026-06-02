@@ -147,6 +147,12 @@ class VagasConfigRequest(BaseModel):
     # Ex: { "1-3-2026": [{ "id": "1", "label": "Voz e violão", "aceita": ["Voz e violão"] }] }
     vagas_por_dia: dict
 
+class RegrasConfigRequest(BaseModel):
+    mes: int
+    ano: int
+    regras: list
+
+
 
 # =============================================================================
 # ROBOTO: CONTEXTO DE BUSCA

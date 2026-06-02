@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends
 import libsql_client
 
 from api.database import get_db
-from api.models import DisponibilidadesRequest, VagasConfigRequest
+from api.models import DisponibilidadesRequest, VagasConfigRequest, RegrasConfigRequest
 from api.security import get_current_user
 
 router = APIRouter(tags=["Escalas Config"])
@@ -123,5 +123,58 @@ async def save_vagas_config(
             [current_user["id"], mes_ano, dados_json],
         )
         return {"message": "Configuração de vagas salva com sucesso!"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# =============================================================================
+# REGRAS ESPECÍFICAS
+# =============================================================================
+
+@router.get("/escala/regras")
+async def get_regras_config(
+    mes: int,
+    ano: int,
+    current_user: dict = Depends(get_current_user),
+    client: libsql_client.Client = Depends(get_db),
+):
+    """Retorna as regras configuradas no mês para o usuário logado."""
+    try:
+        mes_ano = f"{mes}-{ano}"
+        result = await client.execute(
+            "SELECT dados FROM escala_regras_config WHERE usuario_id = ? AND mes_ano = ?",
+            [current_user["id"], mes_ano],
+        )
+        if result.rows:
+            regras = json.loads(result.rows[0][0])
+        else:
+            regras = []
+        return {"regras": regras}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/escala/regras")
+async def save_regras_config(
+    payload: RegrasConfigRequest,
+    current_user: dict = Depends(get_current_user),
+    client: libsql_client.Client = Depends(get_db),
+):
+    """
+    Salva (upsert) as regras de um mês.
+    """
+    try:
+        mes_ano = f"{payload.mes}-{payload.ano}"
+        dados_json = json.dumps(payload.regras)
+
+        await client.execute(
+            """
+            INSERT INTO escala_regras_config (usuario_id, mes_ano, dados)
+            VALUES (?, ?, ?)
+            ON CONFLICT(usuario_id, mes_ano) DO UPDATE SET dados = excluded.dados
+            """,
+            [current_user["id"], mes_ano, dados_json],
+        )
+        return {"message": "Regras salvas com sucesso!"}
     except Exception as e:
         return {"error": str(e)}

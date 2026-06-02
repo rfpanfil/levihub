@@ -212,6 +212,16 @@ async def run_migrations() -> None:
         )
     """)
 
+    await client.execute("""
+        CREATE TABLE IF NOT EXISTS escala_regras_config (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id  INTEGER NOT NULL,
+            mes_ano     TEXT NOT NULL,
+            dados       TEXT NOT NULL DEFAULT '[]',
+            UNIQUE(usuario_id, mes_ano)
+        )
+    """)
+
     # -------------------------------------------------------------------------
     # NOVA TABELA: roboto_contexto
     # Persiste apenas o contexto de busca do LeviRoboto (última busca + tipo).
