@@ -57,6 +57,8 @@ class MembroRequest(BaseModel):
 class FuncaoRequest(BaseModel):
     nome: str
     membros_ids: Optional[List[int]] = []
+    permitidas_acumular: Optional[List[str]] = []
+    obrigatorias_acumular: Optional[List[str]] = []
 
 
 # =============================================================================

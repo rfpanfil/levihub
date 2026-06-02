@@ -56,7 +56,13 @@ export const ScaleProvider = ({ children }) => {
       }
       if (funcoesData.funcoes) {
         const catalogo = funcoesData.funcoes
-          .map(f => ({ id: f.id.toString(), label: f.nome, aceita: [f.nome] }))
+          .map(f => ({ 
+              id: f.id.toString(), 
+              label: f.nome, 
+              aceita: [f.nome],
+              permitidas_acumular: f.permitidas_acumular || [],
+              obrigatorias_acumular: f.obrigatorias_acumular || []
+          }))
           .sort((a, b) => a.label.localeCompare(b.label));
         setCatalogoVagas(catalogo);
       }
@@ -315,7 +321,27 @@ export const ScaleProvider = ({ children }) => {
     const candidatos = equipa.filter(m => {
       if (m.id === membroAtualId) return true;
       const isUnavailable = indisponibilidades[`${m.id}_${diaKey}`];
-      return !isUnavailable && isCandidatoValido(m, alocacaoAtual.vaga);
+      if (isUnavailable || !isCandidatoValido(m, alocacaoAtual.vaga)) return false;
+      
+      const alocacoesDoMembroHoje = alocadosNesteDia.filter(a => a.membro && a.membro.id === m.id);
+      if (alocacoesDoMembroHoje.length >= 2) return false;
+      if (alocacoesDoMembroHoje.length === 1) {
+        const vagaExistente = alocacoesDoMembroHoje[0].vaga;
+        const vagaAtual = alocacaoAtual.vaga;
+        
+        const permitidasAtual = vagaAtual.permitidas_acumular || [];
+        const obrigatoriasAtual = vagaAtual.obrigatorias_acumular || [];
+        const permitidasExistente = vagaExistente.permitidas_acumular || [];
+        const obrigatoriasExistente = vagaExistente.obrigatorias_acumular || [];
+
+        const ehObrigatorio = obrigatoriasAtual.includes(vagaExistente.label) || obrigatoriasExistente.includes(vagaAtual.label);
+        const ehPermitido = permitidasAtual.includes(vagaExistente.label) || permitidasExistente.includes(vagaAtual.label);
+
+        if (!ehObrigatorio && !ehPermitido) {
+          return false;
+        }
+      }
+      return true;
     });
     candidatos.push({ id: null, nome: '---' });
     const currentIndex = candidatos.findIndex(c => c.id === membroAtualId);

@@ -115,20 +115,20 @@ export const gerarEscalas = (equipa, datasEscala, indisponibilidades, regras, va
           
           if (alocacoesDoMembro.length >= 2) return false; // Ninguém faz 3 coisas
 
-          // 3. Se já tem 1 função hoje, a troca só é permitida se for pro par Criança + Adulto Musical
+          // 3. Verifica configurações de acúmulo se já tem 1 função
           if (alocacoesDoMembro.length === 1) {
-            const vagaExistente = alocacoesDoMembro[0].vaga.label;
-            const labelAtual = vagaAtual.label;
+            const vagaExistente = alocacoesDoMembro[0].vaga;
+            
+            const permitidasAtual = vagaAtual.permitidas_acumular || [];
+            const obrigatoriasAtual = vagaAtual.obrigatorias_acumular || [];
+            const permitidasExistente = vagaExistente.permitidas_acumular || [];
+            const obrigatoriasExistente = vagaExistente.obrigatorias_acumular || [];
 
-            const isMidiaOuSom = (label) => label.toLowerCase().includes('mídia') || label.toLowerCase().includes('som') || label.toLowerCase().includes('live');
-            const isCrianca = (label) => label.includes('Crianças');
-            const isAdultoMusical = (label) => !isCrianca(label) && !isMidiaOuSom(label);
+            const ehObrigatorio = obrigatoriasAtual.includes(vagaExistente.label) || obrigatoriasExistente.includes(vagaAtual.label);
+            const ehPermitido = permitidasAtual.includes(vagaExistente.label) || permitidasExistente.includes(vagaAtual.label);
 
-            const ehDobraValida = (isAdultoMusical(vagaExistente) && isCrianca(labelAtual)) || 
-                                  (isCrianca(vagaExistente) && isAdultoMusical(labelAtual));
-
-            if (!ehDobraValida) {
-              return false; // Bloqueia Mídia+Musical, Mídia+Crianças, ou Duas de Adulto
+            if (!ehObrigatorio && !ehPermitido) {
+              return false; // Bloqueia se nenhuma das funções permitir ou obrigar a outra
             }
           }
 
@@ -158,9 +158,26 @@ export const gerarEscalas = (equipa, datasEscala, indisponibilidades, regras, va
           if (bFalta > 0 && aFalta <= 0) return 1;  // B precisa da vaga pra bater a meta
           if (aFalta > 0 && bFalta > 0) return bFalta - aFalta; // Quem precisa de mais vagas agora, ganha
 
-          // 2. PRIORIDADE DE DOBRA: Prioriza quem já está tocando no culto hoje
-          const aFazDobra = alocadosNesteDia.some(aloc => aloc.membro && aloc.membro.id === a.id);
-          const bFazDobra = alocadosNesteDia.some(aloc => aloc.membro && aloc.membro.id === b.id);
+          // 2. PRIORIDADE DE DOBRA OBRIGATÓRIA E DEPOIS PERMITIDA
+          const aAlocacaoExistente = alocadosNesteDia.find(aloc => aloc.membro && aloc.membro.id === a.id);
+          const bAlocacaoExistente = alocadosNesteDia.find(aloc => aloc.membro && aloc.membro.id === b.id);
+          
+          const aObrigatoria = aAlocacaoExistente && (
+            (vaga.obrigatorias_acumular || []).includes(aAlocacaoExistente.vaga.label) || 
+            (aAlocacaoExistente.vaga.obrigatorias_acumular || []).includes(vaga.label)
+          );
+          
+          const bObrigatoria = bAlocacaoExistente && (
+            (vaga.obrigatorias_acumular || []).includes(bAlocacaoExistente.vaga.label) || 
+            (bAlocacaoExistente.vaga.obrigatorias_acumular || []).includes(vaga.label)
+          );
+
+          if (aObrigatoria && !bObrigatoria) return -1;
+          if (!aObrigatoria && bObrigatoria) return 1;
+
+          // Se não é obrigatória, quem já está no culto (permitido) tem prioridade leve
+          const aFazDobra = !!aAlocacaoExistente;
+          const bFazDobra = !!bAlocacaoExistente;
           
           if (aFazDobra && !bFazDobra) return -1; 
           if (!aFazDobra && bFazDobra) return 1;  

@@ -3,6 +3,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 import libsql_client
+import json
 
 from api.database import get_db
 from api.models import MembroRequest, FuncaoRequest
@@ -142,17 +143,29 @@ async def get_funcoes(
 ):
     try:
         query = """
-            SELECT id, TRIM(nome) as nome_funcao FROM funcoes
+            SELECT id, TRIM(nome) as nome_funcao, permitidas_acumular, obrigatorias_acumular FROM funcoes
             WHERE usuario_id = ? OR usuario_id IS NULL
             UNION
-            SELECT f.id, TRIM(f.nome) as nome_funcao FROM funcoes f
+            SELECT f.id, TRIM(f.nome) as nome_funcao, f.permitidas_acumular, f.obrigatorias_acumular FROM funcoes f
             JOIN membro_funcoes mf ON f.id = mf.funcao_id
             JOIN membros m ON mf.membro_id = m.id
             WHERE m.usuario_id = ?
             ORDER BY nome_funcao
         """
         result = await client.execute(query, [current_user["id"], current_user["id"]])
-        funcoes = [{"id": row[0], "nome": row[1]} for row in result.rows]
+        funcoes = []
+        for row in result.rows:
+            try: permitidas = json.loads(row[2]) if row[2] else []
+            except: permitidas = []
+            
+            try: obrigatorias = json.loads(row[3]) if row[3] else []
+            except: obrigatorias = []
+
+            funcoes.append({
+                "id": row[0], "nome": row[1],
+                "permitidas_acumular": permitidas,
+                "obrigatorias_acumular": obrigatorias
+            })
         return {"funcoes": funcoes}
     except Exception as e:
         return {"error": str(e)}
@@ -167,11 +180,13 @@ async def add_funcao(
     try:
         user_id = current_user["id"]
         nome_limpo = funcao.nome.strip()
+        permitidas_str = json.dumps(funcao.permitidas_acumular or [])
+        obrigatorias_str = json.dumps(funcao.obrigatorias_acumular or [])
 
         try:
             res = await client.execute(
-                "INSERT INTO funcoes (nome, usuario_id) VALUES (?, ?)",
-                [nome_limpo, user_id],
+                "INSERT INTO funcoes (nome, usuario_id, permitidas_acumular, obrigatorias_acumular) VALUES (?, ?, ?, ?)",
+                [nome_limpo, user_id, permitidas_str, obrigatorias_str],
             )
             funcao_id = res.last_insert_rowid
         except Exception:
@@ -224,9 +239,11 @@ async def update_funcao(
 ):
     try:
         nome_limpo = funcao.nome.strip()
+        permitidas_str = json.dumps(funcao.permitidas_acumular or [])
+        obrigatorias_str = json.dumps(funcao.obrigatorias_acumular or [])
         await client.execute(
-            "UPDATE funcoes SET nome = ? WHERE id = ? AND (usuario_id = ? OR usuario_id IS NULL)",
-            [nome_limpo, funcao_id, current_user["id"]],
+            "UPDATE funcoes SET nome = ?, permitidas_acumular = ?, obrigatorias_acumular = ? WHERE id = ? AND (usuario_id = ? OR usuario_id IS NULL)",
+            [nome_limpo, permitidas_str, obrigatorias_str, funcao_id, current_user["id"]],
         )
         return {"message": "Função atualizada!"}
     except Exception as e:

@@ -144,7 +144,9 @@ async def run_migrations() -> None:
         CREATE TABLE IF NOT EXISTS funcoes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
-            usuario_id INTEGER
+            usuario_id INTEGER,
+            permitidas_acumular TEXT DEFAULT '[]',
+            obrigatorias_acumular TEXT DEFAULT '[]'
         )
     """)
 
@@ -249,6 +251,8 @@ async def run_migrations() -> None:
         "ALTER TABLE usuarios ADD COLUMN token_recuperacao TEXT",
         "ALTER TABLE membros ADD COLUMN usuario_id INTEGER",
         "ALTER TABLE funcoes ADD COLUMN usuario_id INTEGER",
+        "ALTER TABLE funcoes ADD COLUMN permitidas_acumular TEXT DEFAULT '[]'",
+        "ALTER TABLE funcoes ADD COLUMN obrigatorias_acumular TEXT DEFAULT '[]'",
         "ALTER TABLE biblioteca_busca ADD COLUMN usuario_id INTEGER",
         "ALTER TABLE biblioteca_busca ADD COLUMN link TEXT DEFAULT ''",
         "ALTER TABLE biblioteca_busca ADD COLUMN categoria TEXT DEFAULT ''",

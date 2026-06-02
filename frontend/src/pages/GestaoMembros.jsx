@@ -30,8 +30,14 @@ function GestaoMembros() {
   const [isFuncoesModalOpen, setIsFuncoesModalOpen] = useState(false);
   const [novaFuncaoNome, setNovaFuncaoNome] = useState('');
   const [novaFuncaoMembrosSelecionados, setNovaFuncaoMembrosSelecionados] = useState([]);
+  const [novaFuncaoPermitidas, setNovaFuncaoPermitidas] = useState([]);
+  const [novaFuncaoObrigatorias, setNovaFuncaoObrigatorias] = useState([]);
+  
   const [editandoFuncaoId, setEditandoFuncaoId] = useState(null);
   const [editandoFuncaoNome, setEditandoFuncaoNome] = useState('');
+  const [editandoFuncaoPermitidas, setEditandoFuncaoPermitidas] = useState([]);
+  const [editandoFuncaoObrigatorias, setEditandoFuncaoObrigatorias] = useState([]);
+  
   const [isSavingFuncao, setIsSavingFuncao] = useState(false); // NOVO: LOADING DE SALVAR
 
   // --- NOVOS ESTADOS: ORDENAÇÃO E FUNÇÕES PADRÃO ---
@@ -232,12 +238,19 @@ function GestaoMembros() {
       const res = await apiFetch('/funcoes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: novaFuncaoNome.trim(), membros_ids: novaFuncaoMembrosSelecionados })
+        body: JSON.stringify({ 
+            nome: novaFuncaoNome.trim(), 
+            membros_ids: novaFuncaoMembrosSelecionados,
+            permitidas_acumular: novaFuncaoPermitidas,
+            obrigatorias_acumular: novaFuncaoObrigatorias
+        })
       });
       const data = await res.json();
       if (res.ok && !data.error) {
         setNovaFuncaoNome('');
         setNovaFuncaoMembrosSelecionados([]);
+        setNovaFuncaoPermitidas([]);
+        setNovaFuncaoObrigatorias([]);
         mostrarMensagem("Função criada com sucesso!", "sucesso");
         carregarDados();
       } else {
@@ -270,7 +283,11 @@ function GestaoMembros() {
       const res = await apiFetch(`/funcoes/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: editandoFuncaoNome.trim() })
+        body: JSON.stringify({ 
+            nome: editandoFuncaoNome.trim(),
+            permitidas_acumular: editandoFuncaoPermitidas,
+            obrigatorias_acumular: editandoFuncaoObrigatorias
+        })
       });
       const data = await res.json();
       if (res.ok && !data.error) {
@@ -502,21 +519,55 @@ function GestaoMembros() {
                 <h3>Funções Existentes</h3>
                 <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
                   {funcoesObjetos.map(f => (
-                    <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#282c34', padding: '10px', marginBottom: '8px', borderRadius: '5px', border: '1px solid #4a505c' }}>
+                    <div key={f.id} style={{ backgroundColor: '#282c34', padding: '15px', marginBottom: '15px', borderRadius: '5px', border: '1px solid #4a505c' }}>
                       {editandoFuncaoId === f.id ? (
-                        <div style={{ display: 'flex', gap: '5px', width: '100%' }}>
-                          <input type="text" value={editandoFuncaoNome} onChange={e => setEditandoFuncaoNome(e.target.value)} style={{ flex: 1, padding: '5px', borderRadius: '3px', border: '1px solid #61dafb', backgroundColor: '#1e2229', color: 'white' }} />
-                          <button onClick={() => handleSalvarEdicaoFuncao(f.id)} style={{ backgroundColor: '#2ecc71', border: 'none', borderRadius: '3px', padding: '5px 10px', cursor: 'pointer', color: 'white' }}>OK</button>
-                          <button onClick={() => setEditandoFuncaoId(null)} style={{ backgroundColor: '#e74c3c', border: 'none', borderRadius: '3px', padding: '5px 10px', cursor: 'pointer', color: 'white' }}>X</button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                          <div style={{ display: 'flex', gap: '5px' }}>
+                            <input type="text" value={editandoFuncaoNome} onChange={e => setEditandoFuncaoNome(e.target.value)} style={{ flex: 1, padding: '5px', borderRadius: '3px', border: '1px solid #61dafb', backgroundColor: '#1e2229', color: 'white' }} />
+                            <button onClick={() => handleSalvarEdicaoFuncao(f.id)} style={{ backgroundColor: '#2ecc71', border: 'none', borderRadius: '3px', padding: '5px 10px', cursor: 'pointer', color: 'white' }}>OK</button>
+                            <button onClick={() => setEditandoFuncaoId(null)} style={{ backgroundColor: '#e74c3c', border: 'none', borderRadius: '3px', padding: '5px 10px', cursor: 'pointer', color: 'white' }}>X</button>
+                          </div>
+                          <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                            <div style={{ flex: 1, minWidth: '150px' }}>
+                                <label style={{ fontSize: '0.85em', color: '#9ab' }}>Permite acumular com:</label>
+                                <div style={{ maxHeight: '100px', overflowY: 'auto', backgroundColor: '#1e2229', padding: '5px', borderRadius: '3px', border: '1px solid #4a505c', marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                    {funcoesDisponiveis.filter(nome => nome !== editandoFuncaoNome).map(nome => (
+                                        <label key={nome} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '0.8em' }}>
+                                            <input type="checkbox" checked={editandoFuncaoPermitidas.includes(nome)} onChange={() => setEditandoFuncaoPermitidas(prev => prev.includes(nome) ? prev.filter(n => n !== nome) : [...prev, nome])} style={{ marginRight: '5px' }} />
+                                            {nome}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            <div style={{ flex: 1, minWidth: '150px' }}>
+                                <label style={{ fontSize: '0.85em', color: '#f39c12' }}>Obriga acumular com:</label>
+                                <div style={{ maxHeight: '100px', overflowY: 'auto', backgroundColor: '#1e2229', padding: '5px', borderRadius: '3px', border: '1px solid #4a505c', marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                    {funcoesDisponiveis.filter(nome => nome !== editandoFuncaoNome).map(nome => (
+                                        <label key={nome} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '0.8em' }}>
+                                            <input type="checkbox" checked={editandoFuncaoObrigatorias.includes(nome)} onChange={() => setEditandoFuncaoObrigatorias(prev => prev.includes(nome) ? prev.filter(n => n !== nome) : [...prev, nome])} style={{ marginRight: '5px' }} />
+                                            {nome}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                          </div>
                         </div>
                       ) : (
-                        <>
-                          <span style={{ fontWeight: 'bold' }}>{f.nome}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '1.1em' }}>{f.nome}</div>
+                            {f.permitidas_acumular && f.permitidas_acumular.length > 0 && (
+                                <div style={{ fontSize: '0.8em', color: '#9ab', marginTop: '4px' }}>Permite: {f.permitidas_acumular.join(', ')}</div>
+                            )}
+                            {f.obrigatorias_acumular && f.obrigatorias_acumular.length > 0 && (
+                                <div style={{ fontSize: '0.8em', color: '#f39c12', marginTop: '2px' }}>Obriga: {f.obrigatorias_acumular.join(', ')}</div>
+                            )}
+                          </div>
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={() => { setEditandoFuncaoId(f.id); setEditandoFuncaoNome(f.nome); }} style={{ background: 'none', border: 'none', color: '#61dafb', cursor: 'pointer', fontSize: '1.2em' }} title="Editar">✏️</button>
+                            <button onClick={() => { setEditandoFuncaoId(f.id); setEditandoFuncaoNome(f.nome); setEditandoFuncaoPermitidas(f.permitidas_acumular || []); setEditandoFuncaoObrigatorias(f.obrigatorias_acumular || []); }} style={{ background: 'none', border: 'none', color: '#61dafb', cursor: 'pointer', fontSize: '1.2em' }} title="Editar">✏️</button>
                             <button onClick={() => handleExcluirFuncao(f.id)} style={{ background: 'none', border: 'none', color: '#ff4b4b', cursor: 'pointer', fontSize: '1.2em' }} title="Excluir">🗑️</button>
                           </div>
-                        </>
+                        </div>
                       )}
                     </div>
                   ))}
@@ -531,7 +582,7 @@ function GestaoMembros() {
                 
                 <div style={{ marginTop: '20px' }}>
                   <label>Atrelar Membros a esta Função (Opcional)</label>
-                  <div style={{ maxHeight: '200px', overflowY: 'auto', backgroundColor: '#1e2229', padding: '10px', borderRadius: '5px', border: '1px solid #4a505c', marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ maxHeight: '150px', overflowY: 'auto', backgroundColor: '#1e2229', padding: '10px', borderRadius: '5px', border: '1px solid #4a505c', marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {membros.map(m => (
                       <label key={m.id} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '0.9em' }}>
                         <input type="checkbox" checked={novaFuncaoMembrosSelecionados.includes(m.id)} onChange={() => handleToggleMembroNovaFuncao(m.id)} style={{ marginRight: '10px' }} />
@@ -539,6 +590,31 @@ function GestaoMembros() {
                       </label>
                     ))}
                   </div>
+                </div>
+
+                <div style={{ marginTop: '20px', display: 'flex', gap: '15px' }}>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.9em', color: '#9ab' }}>Permite acumular com:</label>
+                        <div style={{ maxHeight: '120px', overflowY: 'auto', backgroundColor: '#1e2229', padding: '5px', borderRadius: '5px', border: '1px solid #4a505c', marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            {funcoesDisponiveis.map(nome => (
+                                <label key={nome} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '0.85em' }}>
+                                    <input type="checkbox" checked={novaFuncaoPermitidas.includes(nome)} onChange={() => setNovaFuncaoPermitidas(prev => prev.includes(nome) ? prev.filter(n => n !== nome) : [...prev, nome])} style={{ marginRight: '5px' }} />
+                                    {nome}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.9em', color: '#f39c12' }}>Obriga acumular com:</label>
+                        <div style={{ maxHeight: '120px', overflowY: 'auto', backgroundColor: '#1e2229', padding: '5px', borderRadius: '5px', border: '1px solid #4a505c', marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            {funcoesDisponiveis.map(nome => (
+                                <label key={nome} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '0.85em' }}>
+                                    <input type="checkbox" checked={novaFuncaoObrigatorias.includes(nome)} onChange={() => setNovaFuncaoObrigatorias(prev => prev.includes(nome) ? prev.filter(n => n !== nome) : [...prev, nome])} style={{ marginRight: '5px' }} />
+                                    {nome}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 <button onClick={handleSalvarNovaFuncao} className="main-button" style={{ marginTop: '20px', opacity: isSavingFuncao ? 0.7 : 1 }} disabled={isSavingFuncao}>
