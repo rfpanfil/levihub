@@ -263,7 +263,8 @@ export const ScaleProvider = ({ children }) => {
 
   const isCandidatoValido = (membro, vaga) => {
     if (!membro.funcoes) return false;
-    const funcoesMembro = membro.funcoes.split(',').map(f => f.trim().toLowerCase());
+    const funcoesArray = Array.isArray(membro.funcoes) ? membro.funcoes : membro.funcoes.split(',');
+    const funcoesMembro = funcoesArray.map(f => f.trim().toLowerCase());
     return vaga.aceita.some(f => funcoesMembro.includes(f.toLowerCase()));
   };
 
