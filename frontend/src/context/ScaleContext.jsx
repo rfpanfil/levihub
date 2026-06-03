@@ -106,7 +106,8 @@ export const ScaleProvider = ({ children }) => {
       apiFetch(`/escala/vagas?mes=${mes}&ano=${ano}`).then(r => r.json()),
       apiFetch(`/escala/disponibilidades?mes=${mes}&ano=${ano}`).then(r => r.json()),
       apiFetch(`/escala/regras?mes=${mes}&ano=${ano}`).then(r => r.json()),
-    ]).then(([vagasData, dispData, regrasData]) => {
+      apiFetch(`/escala/matriz?mes=${mes}&ano=${ano}`).then(r => r.json()),
+    ]).then(([vagasData, dispData, regrasData, matrizData]) => {
       if (vagasData.vagas_por_dia && Object.keys(vagasData.vagas_por_dia).length > 0) {
         const vagasMergeadas = {};
         diasEncontrados.forEach(d => {
@@ -134,6 +135,13 @@ export const ScaleProvider = ({ children }) => {
       if (regrasData && regrasData.regras && regrasData.regras.length > 0) {
         setRegras(regrasData.regras);
       }
+      if (matrizData && matrizData.escalas_geradas && matrizData.escalas_geradas.length > 0) {
+        setEscalasGeradas(matrizData.escalas_geradas);
+        setOrdemMatriz(matrizData.ordem_matriz || []);
+      } else {
+        setEscalasGeradas([]);
+        setOrdemMatriz([]);
+      }
     }).catch(err => console.warn('[Escala] Falha ao carregar configuração salva:', err));
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,6 +158,16 @@ export const ScaleProvider = ({ children }) => {
       body: JSON.stringify({ mes, ano, vagas_por_dia: novasVagas }),
     }).catch(err => console.warn('[Escala] Falha ao salvar vagas:', err));
   };
+
+  useEffect(() => {
+    if (escalasGeradas.length > 0) {
+        apiFetch('/escala/matriz', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mes, ano, escalas_geradas: escalasGeradas, ordem_matriz: ordemMatriz }),
+        }).catch(err => console.warn('[Escala] Falha ao salvar matriz:', err));
+    }
+  }, [escalasGeradas, ordemMatriz, mes, ano]);
 
   const salvarDisponibilidades = (novasIndisponibilidades) => {
     apiFetch('/escala/disponibilidades', {

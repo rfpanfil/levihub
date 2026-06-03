@@ -178,3 +178,57 @@ async def save_regras_config(
         return {"message": "Regras salvas com sucesso!"}
     except Exception as e:
         return {"error": str(e)}
+
+# =============================================================================
+# MATRIZ (ESCALA GERADA)
+# =============================================================================
+
+@router.get("/escala/matriz")
+async def get_matriz_config(
+    mes: int,
+    ano: int,
+    current_user: dict = Depends(get_current_user),
+    client: libsql_client.Client = Depends(get_db),
+):
+    """Retorna a escala gerada e a ordem das vagas salvas no mês."""
+    try:
+        mes_ano = f"{mes}-{ano}"
+        result = await client.execute(
+            "SELECT dados FROM escala_matriz_config WHERE usuario_id = ? AND mes_ano = ?",
+            [current_user["id"], mes_ano],
+        )
+        if result.rows:
+            dados = json.loads(result.rows[0][0])
+            return dados
+        else:
+            return {"escalas_geradas": [], "ordem_matriz": []}
+    except Exception as e:
+        return {"error": str(e)}
+
+@router.post("/escala/matriz")
+async def save_matriz_config(
+    payload: MatrizConfigRequest,
+    current_user: dict = Depends(get_current_user),
+    client: libsql_client.Client = Depends(get_db),
+):
+    """
+    Salva (upsert) a escala gerada de um mês.
+    """
+    try:
+        mes_ano = f"{payload.mes}-{payload.ano}"
+        dados_json = json.dumps({
+            "escalas_geradas": payload.escalas_geradas,
+            "ordem_matriz": payload.ordem_matriz
+        })
+
+        await client.execute(
+            """
+            INSERT INTO escala_matriz_config (usuario_id, mes_ano, dados)
+            VALUES (?, ?, ?)
+            ON CONFLICT(usuario_id, mes_ano) DO UPDATE SET dados = excluded.dados
+            """,
+            [current_user["id"], mes_ano, dados_json],
+        )
+        return {"message": "Escala gerada salva com sucesso!"}
+    except Exception as e:
+        return {"error": str(e)}

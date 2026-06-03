@@ -154,6 +154,12 @@ class RegrasConfigRequest(BaseModel):
     ano: int
     regras: list
 
+class MatrizConfigRequest(BaseModel):
+    mes: int
+    ano: int
+    escalas_geradas: list
+    ordem_matriz: list
+
 
 
 # =============================================================================
