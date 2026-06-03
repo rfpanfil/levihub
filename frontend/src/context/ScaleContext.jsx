@@ -111,7 +111,20 @@ export const ScaleProvider = ({ children }) => {
         const vagasMergeadas = {};
         diasEncontrados.forEach(d => {
           const key = formatDataKey(d);
-          vagasMergeadas[key] = vagasData.vagas_por_dia[key] ?? vagasPadrao[key];
+          const vagasSalvas = vagasData.vagas_por_dia[key];
+          if (vagasSalvas) {
+            // Hidrata as vagas salvas com as configurações mais recentes de acúmulo do catálogo
+            vagasMergeadas[key] = vagasSalvas.map(vSalva => {
+              const vagaCatalogo = catalogoVagas.find(c => c.label === vSalva.label);
+              return vagaCatalogo ? { 
+                ...vSalva, 
+                permitidas_acumular: vagaCatalogo.permitidas_acumular,
+                obrigatorias_acumular: vagaCatalogo.obrigatorias_acumular
+              } : vSalva;
+            });
+          } else {
+            vagasMergeadas[key] = vagasPadrao[key];
+          }
         });
         setVagasPorDia(vagasMergeadas);
       }
