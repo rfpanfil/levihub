@@ -135,6 +135,9 @@ export const ScaleProvider = ({ children }) => {
       if (regrasData && regrasData.regras && regrasData.regras.length > 0) {
         setRegras(regrasData.regras);
       }
+      if (matrizData && matrizData.error) {
+        alert("Erro no backend ao carregar a matriz: " + matrizData.error);
+      }
       if (matrizData && matrizData.escalas_geradas && matrizData.escalas_geradas.length > 0) {
         setEscalasGeradas(matrizData.escalas_geradas);
         setOrdemMatriz(matrizData.ordem_matriz || []);
@@ -165,7 +168,16 @@ export const ScaleProvider = ({ children }) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ mes, ano, escalas_geradas: escalasGeradas, ordem_matriz: ordemMatriz }),
-        }).catch(err => console.warn('[Escala] Falha ao salvar matriz:', err));
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                alert("Erro no backend ao salvar a matriz: " + data.error);
+            } else if (data.detail) {
+                alert("Erro de validação no backend: " + JSON.stringify(data.detail));
+            }
+        })
+        .catch(err => alert('[Escala] Falha na requisição ao salvar matriz: ' + err.message));
     }
   }, [escalasGeradas, ordemMatriz, mes, ano]);
 
