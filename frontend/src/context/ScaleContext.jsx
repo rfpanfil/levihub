@@ -141,9 +141,11 @@ export const ScaleProvider = ({ children }) => {
       if (matrizData && matrizData.escalas_geradas && matrizData.escalas_geradas.length > 0) {
         setEscalasGeradas(matrizData.escalas_geradas);
         setOrdemMatriz(matrizData.ordem_matriz || []);
+        setEscalaAtualIndex(matrizData.escala_atual_index || 0);
       } else {
         setEscalasGeradas([]);
         setOrdemMatriz([]);
+        setEscalaAtualIndex(0);
       }
     }).catch(err => console.warn('[Escala] Falha ao carregar configuração salva:', err));
 
@@ -167,7 +169,12 @@ export const ScaleProvider = ({ children }) => {
         apiFetch('/escala/matriz', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mes, ano, escalas_geradas: escalasGeradas, ordem_matriz: ordemMatriz }),
+            body: JSON.stringify({ 
+                mes, ano, 
+                escalas_geradas: escalasGeradas, 
+                ordem_matriz: ordemMatriz,
+                escala_atual_index: escalaAtualIndex 
+            }),
         })
         .then(res => res.json())
         .then(data => {
@@ -179,7 +186,7 @@ export const ScaleProvider = ({ children }) => {
         })
         .catch(err => alert('[Escala] Falha na requisição ao salvar matriz: ' + err.message));
     }
-  }, [escalasGeradas, ordemMatriz, mes, ano]);
+  }, [escalasGeradas, ordemMatriz, escalaAtualIndex, mes, ano]);
 
   const salvarDisponibilidades = (novasIndisponibilidades) => {
     apiFetch('/escala/disponibilidades', {

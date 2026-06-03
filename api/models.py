@@ -159,6 +159,7 @@ class MatrizConfigRequest(BaseModel):
     ano: int
     escalas_geradas: list
     ordem_matriz: list
+    escala_atual_index: int = 0
 
 
 

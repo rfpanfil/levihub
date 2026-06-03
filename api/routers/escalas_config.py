@@ -218,7 +218,8 @@ async def save_matriz_config(
         mes_ano = f"{payload.mes}-{payload.ano}"
         dados_json = json.dumps({
             "escalas_geradas": payload.escalas_geradas,
-            "ordem_matriz": payload.ordem_matriz
+            "ordem_matriz": payload.ordem_matriz,
+            "escala_atual_index": payload.escala_atual_index
         })
 
         await client.execute(
