@@ -517,7 +517,7 @@ function GestaoMembros() {
               {/* Coluna 1: Lista de Funções */}
               <div style={{ flex: 1, minWidth: '300px' }}>
                 <h3>Funções Existentes</h3>
-                <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
+                <div style={{ maxHeight: '600px', overflowY: 'auto', paddingRight: '10px' }}>
                   {funcoesObjetos.map(f => (
                     <div key={f.id} style={{ backgroundColor: '#282c34', padding: '15px', marginBottom: '15px', borderRadius: '5px', border: '1px solid #4a505c' }}>
                       {editandoFuncaoId === f.id ? (
@@ -563,8 +563,8 @@ function GestaoMembros() {
                                 <div style={{ fontSize: '0.8em', color: '#f39c12', marginTop: '2px' }}>Obriga: {f.obrigatorias_acumular.join(', ')}</div>
                             )}
                           </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={() => { setEditandoFuncaoId(f.id); setEditandoFuncaoNome(f.nome); setEditandoFuncaoPermitidas(f.permitidas_acumular || []); setEditandoFuncaoObrigatorias(f.obrigatorias_acumular || []); }} style={{ background: 'none', border: 'none', color: '#61dafb', cursor: 'pointer', fontSize: '1.2em' }} title="Editar">✏️</button>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                            <button onClick={() => { setEditandoFuncaoId(f.id); setEditandoFuncaoNome(f.nome); setEditandoFuncaoPermitidas([...(f.permitidas_acumular || [])]); setEditandoFuncaoObrigatorias([...(f.obrigatorias_acumular || [])]); }} style={{ background: 'none', border: 'none', color: '#61dafb', cursor: 'pointer', fontSize: '1.2em' }} title="Editar">✏️</button>
                             <button onClick={() => handleExcluirFuncao(f.id)} style={{ background: 'none', border: 'none', color: '#ff4b4b', cursor: 'pointer', fontSize: '1.2em' }} title="Excluir">🗑️</button>
                           </div>
                         </div>
