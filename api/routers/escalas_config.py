@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends
 import libsql_client
 
 from api.database import get_db
-from api.models import DisponibilidadesRequest, VagasConfigRequest, RegrasConfigRequest
+from api.models import DisponibilidadesRequest, VagasConfigRequest, RegrasConfigRequest, MatrizConfigRequest
 from api.security import get_current_user
 
 router = APIRouter(tags=["Escalas Config"])
