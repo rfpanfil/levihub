@@ -12,7 +12,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",
     "@tanstack/react-query-devtools": "^5.101.2",
-    "framer-motion": "^12.23.12",
+    "framer-motion": "^12.42.2",
     "html2canvas": "^1.4.1",
     "lucide-react": "^1.22.0",
     "mammoth": "^1.11.0",
