@@ -1,13 +1,27 @@
-fastapi
+# API e Core
+fastapi>=0.110.0
+starlette>=1.3.1
 uvicorn[standard]
 pydantic
-python-multipart
+
+# Utilitários e Integrações
+python-multipart>=0.0.31
 python-docx
-libsql-client
 gspread
+
+# Banco de Dados
+libsql-client
+aiohttp>=3.14.1
+
+# Segurança e Auth
 slowapi
-oauth2client
 passlib[bcrypt]
 python-jose[cryptography]
+cryptography>=48.0.1
+
+# Outros / Cloud
 python-dotenv
 cloudinary
+urllib3>=2.7.0
+idna>=3.15
+oauth2client
