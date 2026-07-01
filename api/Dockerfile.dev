@@ -1,6 +1,9 @@
-FROM python:3.14-slim
+FROM python:3.12-alpine
 
 WORKDIR /app
+
+# Instala os compiladores C no Alpine para não quebrar o bcrypt, cryptography e libsql
+RUN apk add --no-cache gcc musl-dev libffi-dev g++ python3-dev
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
