@@ -41,7 +41,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-@app.get("/ping", tags=["Health"])
+@app.api_route("/ping", methods=["GET", "HEAD"], tags=["Health"])
 def ping():
     """Rota para o UptimeRobot manter o servidor Render acordado."""
     return {"status": "ok"}
