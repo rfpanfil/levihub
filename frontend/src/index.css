@@ -1,75 +1,144 @@
-/* arquivo: frontend/src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /* Cores - Dark Mode Nativo & Vibrante */
+  --color-primary: #E11D48;
+  --color-on-primary: #FFFFFF;
+  --color-secondary: #FB7185;
+  --color-accent: #2563EB;
+  
+  --color-background: #09090b; /* zinc-950 (Fundo escuro profundo) */
+  --color-foreground: #fafafa;
+  --color-muted: #27272a;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-destructive: #ef4444;
+  --color-ring: #E11D48;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Espaçamentos */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Efeitos Especiais Glassmorphism */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,0.6);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  display: flex; /* Habilita o modo flexbox */
-  justify-content: center; /* Centraliza o conteúdo horizontalmente */
-  min-width: 320px;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  
+  /* Efeito de background vibrante sutil para o Glassmorphism */
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(225, 29, 72, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(37, 99, 235, 0.08), transparent 25%);
+  background-attachment: fixed;
 }
 
-#root {
-  width: 100%; /* Garante que a raiz ocupe a largura disponível */
+a {
+  color: var(--color-secondary);
+  text-decoration: none;
+  transition: all 200ms ease;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+a:hover {
+  color: var(--color-primary);
 }
 
+/* Base Buttons Pro Max */
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
 }
 
-/*button:focus,
-#button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}*/
+/* Glassmorphism Classes Globais */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-md);
+  border-radius: 16px;
+  transition: all 300ms ease;
+}
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+.glass-panel:hover {
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  border: none;
+  transition: all 200ms ease;
+  box-shadow: 0 4px 14px 0 rgba(225, 29, 72, 0.39);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(225, 29, 72, 0.23);
+  opacity: 0.9;
+}
+
+.btn-primary:disabled {
+  background: var(--color-muted);
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 200ms ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(225, 29, 72, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Inputs Pro Max */
+.input-glass {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--glass-border);
+  color: var(--color-foreground);
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-family: inherit;
+  transition: all 200ms ease;
+  width: 100%;
+}
+
+.input-glass:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.2);
+  background: rgba(0, 0, 0, 0.4);
 }

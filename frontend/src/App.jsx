@@ -15,6 +15,7 @@ import GerenciarRepertorio from './pages/GerenciarRepertorio';
 import AdminPanel from './pages/AdminPanel';
 // Importamos a lógica local para usar APENAS se a API falhar
 import { calcularSequenciaLocal, processarCifraCompleta } from './utils/musicLogic';
+import { Music, Calendar, Users, Bot, Guitar, UserCircle, Settings, LogOut, Menu, KeyRound } from 'lucide-react';
 import './App.css';
 
 
@@ -309,17 +310,28 @@ function App() {
   }
 
   return (
-    <div className="App" onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={handleDrop}>
+    <div className="AppLayout" onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={handleDrop}>
       {isDragging && <DragDropOverlay />}
 
-      {/* Botão de Sair no topo */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
-        <button onClick={handleLogout} className="nav-btn" style={{ padding: '5px 15px', fontSize: '0.8em', borderColor: '#ff4b4b', color: '#ff4b4b' }}>
-          Sair / Trocar Conta
-        </button>
-      </div>
-
-      <h1>Sistema de Louvor</h1>
+      {/* --- TOP BAR (Desktop e Mobile) --- */}
+      <header className="top-bar glass-panel">
+        <div className="logo-area">
+          <Music className="logo-icon" size={24} />
+          <span className="logo-text">LeviHub</span>
+        </div>
+        <div className="top-actions">
+          {!isVisitor && (
+            <button onClick={handleLogout} className="top-btn-logout">
+              <LogOut size={18} /> <span className="hide-on-mobile">Sair</span>
+            </button>
+          )}
+          {isVisitor && (
+            <button onClick={() => setAppMode('login')} className="top-btn-login">
+              <KeyRound size={18} /> <span className="hide-on-mobile">Entrar</span>
+            </button>
+          )}
+        </div>
+      </header>
       
       {/* Banner de aviso para visitantes */}
       {isVisitor && (
@@ -328,63 +340,74 @@ function App() {
         </div>
       )}
 
-      {/* --- MENU PRINCIPAL ATUALIZADO --- */}
-      <div className="main-nav" style={{ flexWrap: 'wrap' }}>
+      {/* --- NAVEGAÇÃO PRINCIPAL (Bottom Nav no Mobile / Sidebar no Desktop) --- */}
+      <nav className="app-navigation glass-panel">
         <button
-          className={appMode === 'transpositor' ? 'nav-btn active' : 'nav-btn'}
-          onClick={() => setAppMode('transpositor')}
+          className={`nav-item ${appMode === 'transpositor' ? 'active' : ''}`}
+          onClick={() => { setAppMode('transpositor'); }}
         >
-          🎵 Transpositor
-        </button>
-        <button
-          className={appMode === 'escala' ? 'nav-btn active' : 'nav-btn'}
-          onClick={() => setAppMode('escala')}
-        >
-          📅 Gerador de Escalas
-        </button>
-        <button
-          className={appMode === 'membros' ? 'nav-btn active' : 'nav-btn'}
-          onClick={() => setAppMode('membros')}
-        >
-          👥 Gestão de Membros
-        </button>
-        <button
-          className={appMode === 'repertorio' ? 'nav-btn active' : 'nav-btn'}
-          onClick={() => setAppMode('repertorio')}
-        >
-          🤖 Levi Roboto
+          <Music size={22} />
+          <span>Transpositor</span>
         </button>
         
-        {/* NOVOS BOTÕES (Só aparecem se NÃO for visitante) */}
-        {!isVisitor && (
-          <>
-            <button
-              className={appMode === 'meu_repertorio' ? 'nav-btn active' : 'nav-btn'}
-              onClick={() => setAppMode('meu_repertorio')}
-              style={{ borderColor: '#f39c12', color: appMode === 'meu_repertorio' ? '#1e2229' : '#f39c12', backgroundColor: appMode === 'meu_repertorio' ? '#f39c12' : 'transparent' }}
-            >
-              🎸 Meu Repertório
-            </button>
-            <button
-              className={appMode === 'perfil' ? 'nav-btn active' : 'nav-btn'}
-              onClick={() => setAppMode('perfil')}
-              style={{ borderColor: '#2ecc71', color: appMode === 'perfil' ? '#1e2229' : '#2ecc71', backgroundColor: appMode === 'perfil' ? '#2ecc71' : 'transparent' }}
-            >
-              👤 Perfil
-            </button>
+        <button
+          className={`nav-item ${appMode === 'escala' ? 'active' : ''}`}
+          onClick={() => { setAppMode('escala'); }}
+        >
+          <Calendar size={22} />
+          <span>Escalas</span>
+        </button>
 
-            {user?.role === 'admin' && (
-              <button
-                className={appMode === 'admin' ? 'nav-btn active' : 'nav-btn'}
-                onClick={() => setAppMode('admin')}
-                style={{ borderColor: '#e74c3c', color: appMode === 'admin' ? '#1e2229' : '#e74c3c', backgroundColor: appMode === 'admin' ? '#e74c3c' : 'transparent' }}
-              >
-                🛠️ Painel Admin
-              </button>
-            )}
-          </>
+        {isVisitor && (
+          <button
+            className={`nav-item ${appMode === 'repertorio' ? 'active' : ''}`}
+            onClick={() => { setAppMode('repertorio'); }}
+          >
+            <Bot size={22} />
+            <span>Levi Roboto</span>
+          </button>
         )}
-      </div>
+
+        {!isVisitor && (
+          <button
+            className={`nav-item ${appMode === 'meu_repertorio' ? 'active' : ''}`}
+            onClick={() => { setAppMode('meu_repertorio'); }}
+          >
+            <Guitar size={22} />
+            <span>Repertório</span>
+          </button>
+        )}
+
+        {!isVisitor && (
+          <button className={`nav-item ${appMode === 'repertorio' ? 'active' : ''}`} onClick={() => { setAppMode('repertorio'); }}>
+            <Bot size={22} />
+            <span>Levi Roboto</span>
+          </button>
+        )}
+        
+        <button className={`nav-item ${appMode === 'membros' ? 'active' : ''}`} onClick={() => { setAppMode('membros'); }}>
+          <Users size={22} />
+          <span>Membros</span>
+        </button>
+        
+        {!isVisitor && (
+          <button className={`nav-item ${appMode === 'perfil' ? 'active' : ''}`} onClick={() => { setAppMode('perfil'); }}>
+            <UserCircle size={22} />
+            <span>Perfil</span>
+          </button>
+        )}
+        
+        {!isVisitor && user?.role === 'admin' && (
+          <button className={`nav-item ${appMode === 'admin' ? 'active' : ''}`} onClick={() => { setAppMode('admin'); }}>
+            <Settings size={22} />
+            <span>Admin</span>
+          </button>
+        )}
+      </nav>
+
+      {/* --- ÁREA PRINCIPAL DE CONTEÚDO --- */}
+      <main className="AppMain">
+
 
       {/* --- LÓGICA DE ALTERNÂNCIA DE TELAS --- */}
       {appMode === 'transpositor' && (
@@ -560,6 +583,8 @@ function App() {
 
       {error && <p style={{ color: '#ff4b4b', textAlign: 'center', marginTop: '15px' }}>{error}</p>}
 
+      </main>
+      
       <footer className="app-footer">
         <p>Desenvolvido para a Glória de Deus.<br />Copyright &copy; {new Date().getFullYear()} <a href="https://about.me/panfil" target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Rafael Panfil</a></p>
       </footer>

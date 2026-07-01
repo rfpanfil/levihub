@@ -12,7 +12,8 @@ function GerenciarRepertorio() {
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
 
   // Estados de Pesquisa e Filtro
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchNome, setSearchNome] = useState('');
+  const [searchTag, setSearchTag] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
 
   // Estados do Modal de Música
@@ -197,11 +198,16 @@ function GerenciarRepertorio() {
 
   // Lógica de Filtragem
   const musicasFiltradas = musicasCustom.filter(m => {
-    const termo = searchTerm.toLowerCase();
-    const matchesSearch = m.nome_musica.toLowerCase().includes(termo) || m.tags.toLowerCase().includes(termo) || (m.categoria && m.categoria.toLowerCase().includes(termo));
+    const nomeTerm = searchNome.toLowerCase();
+    const tagTerm = searchTag.toLowerCase();
+    
+    const matchesNome = m.nome_musica.toLowerCase().includes(nomeTerm) || (m.artista && m.artista.toLowerCase().includes(nomeTerm));
+    const matchesTag = tagTerm === '' || m.tags.toLowerCase().includes(tagTerm);
+    
     // Nova lógica: verifica se a categoria selecionada está CONTIDA na string de categorias da música
     const matchesCat = filterCategory === '' || (m.categorias && m.categorias.includes(filterCategory));
-    return matchesSearch && matchesCat;
+    
+    return matchesNome && matchesTag && matchesCat;
   });
 
   const inputStyle = { width: '100%', boxSizing: 'border-box', padding: '10px', borderRadius: '5px', backgroundColor: '#282c34', color: 'white', border: '1px solid #4a505c', marginTop: '5px' };
@@ -229,9 +235,13 @@ function GerenciarRepertorio() {
 
       {/* --- BARRA DE PESQUISA E FILTRO --- */}
       <div className="input-area" style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'flex-end', marginBottom: '20px' }}>
-        <div style={{ flex: 2, minWidth: '200px' }}>
-          <label>🔍 Buscar Música ou Tag</label>
-          <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Ex: Jesus, adoração..." style={inputStyle} />
+        <div style={{ flex: 2, minWidth: '180px' }}>
+          <label>🔍 Buscar por Música / Artista</label>
+          <input type="text" value={searchNome} onChange={e => setSearchNome(e.target.value)} placeholder="Ex: Jesus, Adoração..." style={inputStyle} />
+        </div>
+        <div style={{ flex: 2, minWidth: '150px' }}>
+          <label>🏷️ Buscar por Tag</label>
+          <input type="text" value={searchTag} onChange={e => setSearchTag(e.target.value)} placeholder="Ex: animada, ceia" style={inputStyle} />
         </div>
         <div style={{ flex: 1, minWidth: '150px' }}>
           <label>📂 Filtrar por Categoria</label>
