@@ -112,7 +112,11 @@ def is_chord_line(line: str) -> bool:
     chord_pattern = re.compile(
         r"^[A-G](?:##|bb|#|b)?(m|M|dim|aug|sus|add|maj|º|°|/|[-+])?(\d+)?(\(?[^)\s]*\)?)?(/[A-G](?:##|bb|#|b)?)?$"
     )
-    words = line.replace("/:", "").replace("|", "").strip().split()
+    # Remove marcações que podem sujar a contagem
+    clean_line = line.replace("/:", "").replace(":/", "").replace("|", "")
+    clean_line = clean_line.replace("(", "").replace(")", "").strip()
+    words = clean_line.split()
+    
     if not words:
         return False
     chord_count = sum(1 for word in words if chord_pattern.match(word))
@@ -135,11 +139,26 @@ def processar_cifra(texto_cifra: str, acao: str, intervalo: float) -> str:
             novo_baixo = "/" + transpor_nota_individual(nota_baixo_norm, semitons)
         return f"{prefixo}{nova_nota}{qualidade}{novo_baixo}"
 
+    def processar_linha(linha: str) -> str:
+        # Fatiamento inteligente: separa a linha em blocos por Tab ou 3+ espaços seguidos
+        partes = re.split(r'(\s{3,}|\t+)', linha)
+        if len(partes) == 1:
+            # Avalia a linha toda normalmente
+            return re.sub(padrao_acorde, replacer, linha) if is_chord_line(linha) else linha
+        
+        # Avalia cada bloco fatiado individualmente
+        nova_linha = []
+        for p in partes:
+            if p.isspace():
+                nova_linha.append(p)
+            elif is_chord_line(p):
+                nova_linha.append(re.sub(padrao_acorde, replacer, p))
+            else:
+                nova_linha.append(p)
+        return "".join(nova_linha)
+
     linhas = texto_cifra.split("\n")
-    linhas_finais = [
-        re.sub(padrao_acorde, replacer, linha) if is_chord_line(linha) else linha
-        for linha in linhas
-    ]
+    linhas_finais = [processar_linha(linha) for linha in linhas]
     return "\n".join(linhas_finais)
 
 
@@ -176,12 +195,67 @@ async def transpose_text_endpoint(request: TransposeCifraRequest):
     return {"transposed_cifra": res}
 
 
-@router.post("/transpose-file", response_model=TransposeCifraResponse)
+from fastapi.responses import StreamingResponse
+
+@router.post("/transpose-file")
 async def transpose_file_endpoint(
     file: UploadFile = File(...),
     action: str = Form(...),
     interval: float = Form(...),
 ):
-    texto = await ler_conteudo_arquivo(file)
+    content = await file.read()
+    
+    if file.filename.endswith(".docx"):
+        try:
+            doc = docx.Document(io.BytesIO(content))
+            
+            for paragraph in doc.paragraphs:
+                original_text = paragraph.text
+                if not original_text.strip():
+                    continue
+                
+                # Aproveitamos o processar_cifra que agora tem inteligência de fatiamento
+                new_text = processar_cifra(original_text, action, interval)
+                
+                # Se houve mudança de cifras, aplicamos no parágrafo mantendo o estilo nativo
+                if new_text != original_text:
+                    bold = italic = font_name = font_size = rgb = None
+                    if paragraph.runs:
+                        first_run = paragraph.runs[0]
+                        bold = first_run.bold
+                        italic = first_run.italic
+                        font_name = first_run.font.name
+                        font_size = first_run.font.size
+                        rgb = first_run.font.color.rgb if first_run.font.color else None
+                        
+                    paragraph.clear()
+                    new_run = paragraph.add_run(new_text)
+                    new_run.bold = bold
+                    new_run.italic = italic
+                    if font_name:
+                        new_run.font.name = font_name
+                    if font_size:
+                        new_run.font.size = font_size
+                    if rgb:
+                        new_run.font.color.rgb = rgb
+                        
+            # Salva o arquivo em buffer de memória
+            buffer = io.BytesIO()
+            doc.save(buffer)
+            buffer.seek(0)
+            
+            headers = {
+                "Content-Disposition": f'attachment; filename="Transposto_{file.filename}"'
+            }
+            return StreamingResponse(
+                buffer, 
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                headers=headers
+            )
+        except Exception as e:
+            return {"transposed_cifra": f"Erro interno DOCX: {str(e)}"}
+            
+    # Tratamento normal de .txt
+    texto = content.decode("utf-8")
     res = processar_cifra(texto, action, interval)
     return {"transposed_cifra": res}

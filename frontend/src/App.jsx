@@ -207,6 +207,26 @@ function App() {
       clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error('Falha na API');
+      
+      // Verifica se a resposta é um arquivo (DOCX)
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/vnd.openxmlformats")) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Transposto_${selectedFile.name}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        setTransposedCifra("🎉 Arquivo DOCX transposto e baixado com sucesso! Verifique a sua pasta de downloads.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Se for JSON normal (texto)
       const data = await response.json();
       setTransposedCifra(data.transposed_cifra);
 
