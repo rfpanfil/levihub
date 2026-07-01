@@ -23,7 +23,7 @@ cryptography>=48.0.1
 python-dotenv>=1.2.2
 cloudinary
 urllib3>=2.7.0
-idna>=3.15
+idna>=3.18
 oauth2client
 
 # Subdependências (Transitivas) forçadas por segurança
