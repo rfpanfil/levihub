@@ -5,7 +5,7 @@ uvicorn[standard]
 pydantic
 
 # Utilitários e Integrações
-python-multipart>=0.0.31
+python-multipart>=0.0.32
 python-docx
 gspread
 
