@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import mammoth from 'mammoth';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NumberInput from './components/NumberInput';
 import ToggleSwitch from './components/ToggleSwitch';
 import DragDropOverlay from './components/DragDropOverlay';
@@ -51,37 +52,26 @@ function App() {
     localStorage.setItem('lastAppMode', appMode);
   }, [appMode]);
 
-  // --- ESTADOS DE USUÁRIO ---
-  const [user, setUser] = useState(null);
+  const queryClient = useQueryClient();
   const [isVisitor, setIsVisitor] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(true); // NOVO ESTADO DE LOADING
 
-  const carregarPerfilUsuario = async () => {
-    try {
+  // --- BUSCA DO USUÁRIO VIA REACT QUERY ---
+  const { data: user, isLoading: isAuthLoading } = useQuery({
+    queryKey: ['usuario'],
+    queryFn: async () => {
       const res = await apiFetch('/usuario/me');
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data);
-      } else {
-        setUser(null);
-        setIsVisitor(false);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsAuthLoading(false); // Libera a tela independentemente de sucesso ou erro
-    }
-  };
-
-  useEffect(() => {
-    carregarPerfilUsuario();
-  }, []);
+      if (!res.ok) throw new Error('Não autenticado');
+      return res.json();
+    },
+    retry: false,
+    staleTime: 1000 * 60 * 60, // 1 hora
+  });
 
   const handleLoginAction = (userData) => {
     if (userData === null) {
       setIsVisitor(true);
     } else {
-      carregarPerfilUsuario();
+      queryClient.invalidateQueries(['usuario']); // Força recarregamento da query
       setIsVisitor(false);
     }
   };
@@ -92,7 +82,7 @@ function App() {
     } catch (e) {
       console.error("Erro no logout remoto", e);
     }
-    setUser(null);
+    queryClient.setQueryData(['usuario'], null); // Limpa o cache
     setIsVisitor(false);
   };
 

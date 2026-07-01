@@ -257,6 +257,7 @@ async def run_migrations() -> None:
         "ALTER TABLE usuarios ADD COLUMN is_verified BOOLEAN DEFAULT 1",
         "ALTER TABLE usuarios ADD COLUMN verification_code TEXT",
         "ALTER TABLE usuarios ADD COLUMN role TEXT DEFAULT 'user'",
+        "ALTER TABLE usuarios ADD COLUMN slugs TEXT DEFAULT '[]'",
         # Separa o token de recuperação de senha do código de verificação de conta
         "ALTER TABLE usuarios ADD COLUMN token_recuperacao TEXT",
         "ALTER TABLE membros ADD COLUMN usuario_id INTEGER",

@@ -30,3 +30,8 @@ SMTP_PASSWORD: str | None = os.getenv("SMTP_PASSWORD")
 
 # --- Google Sheets (Sugestões) ---
 GOOGLE_CREDENTIALS: str | None = os.getenv("GOOGLE_CREDENTIALS")
+
+# --- Cloudinary ---
+CLOUDINARY_CLOUD_NAME: str | None = os.getenv("CLOUDINARY_CLOUD_NAME")
+CLOUDINARY_API_KEY: str | None = os.getenv("CLOUDINARY_API_KEY")
+CLOUDINARY_API_SECRET: str | None = os.getenv("CLOUDINARY_API_SECRET")

@@ -38,5 +38,8 @@ levihub-db.db
 listar_categorias.py
 credentials.json
 
+arquitetura_modelo.md
+comandos docker.txt
+
 __pycache__/
 *.pyc

@@ -10,3 +10,4 @@ oauth2client
 passlib[bcrypt]
 python-jose[cryptography]
 python-dotenv
+cloudinary

@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.101.2",
+    "@tanstack/react-query-devtools": "^5.101.2",
     "framer-motion": "^12.23.12",
     "html2canvas": "^1.4.1",
     "mammoth": "^1.11.0",

@@ -17,7 +17,7 @@ from api.limiter import limiter
 
 from api import database
 from api.config import TURSO_URL, TURSO_TOKEN
-from api.routers import auth, usuario, equipe, musicas, transpor, categorias, admin, escalas_config, roboto_config
+from api.routers import auth, usuario, equipe, musicas, transpor, categorias, admin, escalas_config, roboto_config, upload
 
 
 @asynccontextmanager
@@ -40,6 +40,11 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan,
 )
+
+@app.get("/ping", tags=["Health"])
+def ping():
+    """Rota para o UptimeRobot manter o servidor Render acordado."""
+    return {"status": "ok"}
 
 # --- Rate Limiting ---
 app.state.limiter = limiter
@@ -70,6 +75,7 @@ app.include_router(categorias.router)
 app.include_router(admin.router)
 app.include_router(escalas_config.router)
 app.include_router(roboto_config.router)
+app.include_router(upload.router)
 
 
 if __name__ == "__main__":

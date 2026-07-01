@@ -92,7 +92,7 @@ async def get_current_user(
         raise credentials_exception
 
     result = await client.execute(
-        "SELECT id, email, usar_banco_padrao, role FROM usuarios WHERE id = ?",
+        "SELECT id, email, usar_banco_padrao, role, slugs FROM usuarios WHERE id = ?",
         [user_id],
     )
     if not result.rows:
@@ -104,6 +104,7 @@ async def get_current_user(
         "email": user[1],
         "usar_banco_padrao": user[2],
         "role": user[3] if len(user) > 3 and user[3] else "user",
+        "slugs": user[4] if len(user) > 4 and user[4] else "[]",
     }
 
 
