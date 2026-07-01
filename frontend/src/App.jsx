@@ -215,7 +215,15 @@ function App() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Transposto_${selectedFile.name}`;
+        
+        let actionText = action === 'Aumentar' ? 'Acima' : 'Abaixo';
+        let intervalText = interval.toString().replace('.', ',');
+        let prefix = `Transposto_${intervalText}_Tom_${actionText}_`;
+        if (interval > 1) {
+            prefix = `Transposto_${intervalText}_Tons_${actionText}_`;
+        }
+        
+        a.download = `${prefix}${selectedFile.name}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

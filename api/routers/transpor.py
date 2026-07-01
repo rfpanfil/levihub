@@ -110,34 +110,50 @@ def is_chord_line(line: str) -> bool:
     if not line:
         return False
     chord_pattern = re.compile(
-        r"^[A-G](?:##|bb|#|b)?(m|M|dim|aug|sus|add|maj|º|°|/|[-+])?(\d+)?(\(?[^)\s]*\)?)?(/[A-G](?:##|bb|#|b)?)?$"
+        r"^[A-G](?:##|bb|#|b)?(?:m|M|dim|aug|sus|add|maj|º|°)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]+\))?(?:/[A-G](?:##|bb|#|b)?)?$"
     )
-    # Remove marcações que podem sujar a contagem
-    clean_line = line.replace("/:", "").replace(":/", "").replace("|", "")
-    clean_line = clean_line.replace("(", "").replace(")", "").strip()
+    # Removemos pontuações grudadas
+    clean_line = line.replace("(", "").replace(")", "").strip()
+    clean_line = re.sub(r'[,.]', '', clean_line)
     words = clean_line.split()
     
     if not words:
         return False
-    chord_count = sum(1 for word in words if chord_pattern.match(word))
-    return (chord_count / len(words)) >= 0.5
+        
+    markers = {"1ª:", "2ª:", "3ª:", "1x", "2x", "3x", "4x", "intro:", "tom:", "final:", "refrão", "refrão:", "ponte", "ponte:", ":/", "/:", "-", "|"}
+    valid_words = [w for w in words if w.lower() not in markers]
+    
+    if not valid_words:
+        return False
+        
+    chord_count = sum(1 for word in valid_words if chord_pattern.match(word))
+    return (chord_count / len(valid_words)) > 0.5
 
 
 def processar_cifra(texto_cifra: str, acao: str, intervalo: float) -> str:
     semitons = int(intervalo * 2) * (1 if acao == "Aumentar" else -1)
-    padrao_acorde = r"(^|[^A-Ga-g#b])([A-G](?:##|bb|#|b)?)([^A-G\s,.\n\/]*)?(/[A-G](?:##|bb|#|b)?)?"
+    padrao_acorde = r"(^|[\s(])([A-G](?:##|bb|#|b)?(?:m|M|dim|aug|sus|add|maj|º|°)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]+\))?(?:/[A-G](?:##|bb|#|b)?)?)(\s|$|\)|,)"
 
     def replacer(match):
-        prefixo, nota, qualidade, baixo = match.groups()
+        prefixo, acorde, sufixo = match.groups()
         prefixo = prefixo or ""
-        qualidade = qualidade or ""
-        nota_norm = normalizar_nota(nota)
-        nova_nota = transpor_nota_individual(nota_norm, semitons)
-        novo_baixo = ""
-        if baixo:
-            nota_baixo_norm = normalizar_nota(baixo.replace("/", ""))
-            novo_baixo = "/" + transpor_nota_individual(nota_baixo_norm, semitons)
-        return f"{prefixo}{nova_nota}{qualidade}{novo_baixo}"
+        sufixo = sufixo or ""
+        
+        # O acorde pode ter baixo, vamos transpor separadamente
+        if "/" in acorde:
+            base, baixo = acorde.split("/", 1)
+            base_nota = normalizar_nota(base)
+            base_transposta = transpor_nota_individual(base_nota, semitons)
+            
+            baixo_nota = normalizar_nota(baixo)
+            baixo_transposto = transpor_nota_individual(baixo_nota, semitons)
+            
+            novo_acorde = f"{base_transposta}/{baixo_transposto}"
+        else:
+            nota_norm = normalizar_nota(acorde)
+            novo_acorde = transpor_nota_individual(nota_norm, semitons)
+            
+        return f"{prefixo}{novo_acorde}{sufixo}"
 
     def processar_linha(linha: str) -> str:
         # Fatiamento inteligente: separa a linha em blocos por Tab ou 3+ espaços seguidos
