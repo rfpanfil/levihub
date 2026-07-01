@@ -16,12 +16,20 @@ aiohttp>=3.14.1
 # Segurança e Auth
 slowapi
 passlib[bcrypt]
-PyJWT
+PyJWT>=2.11.0
 cryptography>=48.0.1
 
 # Outros / Cloud
-python-dotenv
+python-dotenv>=1.2.2
 cloudinary
 urllib3>=2.7.0
 idna>=3.15
 oauth2client
+
+# Subdependências (Transitivas) forçadas por segurança
+h11>=0.16.0
+lxml>=6.1.0
+pyasn1>=0.6.2
+zipp>=3.19.1
+requests>=2.32.2
+pygments>=2.20.0
