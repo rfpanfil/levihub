@@ -45,3 +45,6 @@ mobile-app-ui-design README.md
 
 __pycache__/
 *.pyc
+
+# Logs de Segurança Local
+snyk-log.txt
