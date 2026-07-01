@@ -1,3 +1,14 @@
+# ==============================================================================
+# ⚠️ ATENÇÃO DESENVOLVEDORES: ESTE É UM ARQUIVO DE BACKUP (OBSOLETO)
+# ==============================================================================
+# O sistema backend foi refatorado para uma arquitetura modular moderna.
+# O novo ponto de entrada da API é: api/main.py
+# As lógicas e rotas estão divididas na pasta: api/routers/
+# 
+# NÃO adicione código novo aqui. Este arquivo foi mantido APENAS para 
+# consulta histórica (Monolito antigo).
+# ==============================================================================
+#
 # arquivo: api/api.py
 # VERSÃO ATUALIZADA (Transpositor + Banco de Dados da Escala no Turso)
 
