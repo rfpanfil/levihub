@@ -132,12 +132,11 @@ def is_chord_line(line: str) -> bool:
 
 def processar_cifra(texto_cifra: str, acao: str, intervalo: float) -> str:
     semitons = int(intervalo * 2) * (1 if acao == "Aumentar" else -1)
-    padrao_acorde = r"(^|[\s(])([A-G](?:##|bb|#|b)?(?:m|M|dim|aug|sus|add|maj|º|°)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]+\))?(?:/[A-G](?:##|bb|#|b)?)?)(\s|$|\)|,)"
+    padrao_acorde = r"(^|[\s(])([A-G](?:##|bb|#|b)?(?:m|M|dim|aug|sus|add|maj|º|°)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]+\))?(?:/[A-G](?:##|bb|#|b)?)?)(?=\s|$|\)|,)"
 
     def replacer(match):
-        prefixo, acorde, sufixo = match.groups()
+        prefixo, acorde = match.groups()
         prefixo = prefixo or ""
-        sufixo = sufixo or ""
         
         # O acorde pode ter baixo, vamos transpor separadamente
         if "/" in acorde:
@@ -153,7 +152,7 @@ def processar_cifra(texto_cifra: str, acao: str, intervalo: float) -> str:
             nota_norm = normalizar_nota(acorde)
             novo_acorde = transpor_nota_individual(nota_norm, semitons)
             
-        return f"{prefixo}{novo_acorde}{sufixo}"
+        return f"{prefixo}{novo_acorde}"
 
     def processar_linha(linha: str) -> str:
         # Fatiamento inteligente: separa a linha em blocos por Tab ou 3+ espaços seguidos
@@ -226,34 +225,18 @@ async def transpose_file_endpoint(
             doc = docx.Document(io.BytesIO(content))
             
             for paragraph in doc.paragraphs:
-                original_text = paragraph.text
-                if not original_text.strip():
+                # Se o parágrafo inteiro não mudou de acordo com a nossa regra, pulamos ele inteiro para economizar tempo.
+                if not paragraph.text.strip():
                     continue
-                
-                # Aproveitamos o processar_cifra que agora tem inteligência de fatiamento
-                new_text = processar_cifra(original_text, action, interval)
-                
-                # Se houve mudança de cifras, aplicamos no parágrafo mantendo o estilo nativo
-                if new_text != original_text:
-                    bold = italic = font_name = font_size = rgb = None
-                    if paragraph.runs:
-                        first_run = paragraph.runs[0]
-                        bold = first_run.bold
-                        italic = first_run.italic
-                        font_name = first_run.font.name
-                        font_size = first_run.font.size
-                        rgb = first_run.font.color.rgb if first_run.font.color else None
-                        
-                    paragraph.clear()
-                    new_run = paragraph.add_run(new_text)
-                    new_run.bold = bold
-                    new_run.italic = italic
-                    if font_name:
-                        new_run.font.name = font_name
-                    if font_size:
-                        new_run.font.size = font_size
-                    if rgb:
-                        new_run.font.color.rgb = rgb
+                    
+                # Aplicamos a transposição run por run. Isso preserva formatações diferentes na mesma linha!
+                for run in paragraph.runs:
+                    if not run.text.strip():
+                        continue
+                    
+                    new_run_text = processar_cifra(run.text, action, interval)
+                    if new_run_text != run.text:
+                        run.text = new_run_text
                         
             # Salva o arquivo em buffer de memória
             buffer = io.BytesIO()
