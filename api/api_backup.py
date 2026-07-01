@@ -1,0 +1,1164 @@
+# arquivo: api/api.py
+# VERSÃO ATUALIZADA (Transpositor + Banco de Dados da Escala no Turso)
+
+from fastapi import FastAPI, File, UploadFile, Form
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+import re
+import docx
+import io
+from typing import List, Optional
+import os
+import libsql_client
+import random
+import difflib
+import gspread
+import json
+from datetime import datetime, timedelta
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+import bcrypt  # <-- SUBSTITUÍMOS O PASSLIB PELO BCRYPT NATIVO
+import jwt
+from fastapi import Depends, HTTPException, status
+from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+from fastapi import BackgroundTasks # NOVO: Para enviar o email sem travar a tela
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import string
+
+# Isso faz o Python ler o arquivo .env invisível no seu computador
+load_dotenv()
+
+# --- Configuração do Banco de Dados Turso ---
+TURSO_URL = os.getenv("TURSO_DATABASE_URL")
+TURSO_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
+
+def get_db_client():
+    return libsql_client.create_client(url=TURSO_URL, auth_token=TURSO_TOKEN)
+
+# --- Configuração de Segurança (JWT e Senhas) ---
+SECRET_KEY = os.getenv("SECRET_KEY", "uma_chave_secreta_super_segura_aqui_para_desenvolvimento")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # Token dura 7 dias logado
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+def get_password_hash(password: str):
+    # Usa o bcrypt nativo para gerar senhas compatíveis e à prova de falhas
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str):
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta if expires_delta else timedelta(minutes=15))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Não foi possível validar as credenciais",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None: raise credentials_exception
+    except jwt.PyJWTError: raise credentials_exception
+    
+    client = get_db_client()
+    try:
+        # AGORA BUSCA A ROLE (CARGO) TAMBÉM
+        result = await client.execute("SELECT id, email, usar_banco_padrao, role FROM usuarios WHERE id = ?", [user_id])
+        if not result.rows: raise credentials_exception
+        user = result.rows[0]
+        return {"id": user[0], "email": user[1], "usar_banco_padrao": user[2], "role": user[3] if len(user)>3 and user[3] else 'user'}
+    finally:
+        await client.close()
+
+# --- Modelos de Dados ---
+class UserCreate(BaseModel):
+    email: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class FuncaoRequest(BaseModel):
+    nome: str
+    membros_ids: Optional[List[int]] = []
+
+class MembroRequest(BaseModel):
+    nome: str
+    telefone: Optional[str] = ""
+    email: Optional[str] = ""
+    status: Optional[str] = "ativo"
+    funcoes: List[str] = []
+
+class TransposeCifraRequest(BaseModel):
+    cifra_text: str
+    action: str
+    interval: float
+
+class TransposeCifraResponse(BaseModel):
+    transposed_cifra: str
+
+class TransposeSequenceRequest(BaseModel):
+    chords: List[str]
+    action: str
+    interval: float
+
+class TransposeSequenceResponse(BaseModel):
+    original_chords: List[str]
+    transposed_chords: List[str]
+    explanations: List[str]
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    client = get_db_client()
+    await client.execute('''
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            senha TEXT NOT NULL,
+            usar_banco_padrao BOOLEAN DEFAULT 1
+        )
+    ''')
+    # --- NOVA TABELA DE CATEGORIAS FASE 4 ---
+    await client.execute('''
+        CREATE TABLE IF NOT EXISTS categorias_repertorio (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            usuario_id INTEGER
+        )
+    ''')
+    
+    # --- NOVA COLUNA FASE 5 (PADRÃO DE ESCALA) ---
+    try: await client.execute("ALTER TABLE usuarios ADD COLUMN funcoes_padrao TEXT DEFAULT 'Mídia,Voz e violão,Voz 1,Voz 2,Voz 3'")
+    except: pass
+    
+    # --- NOVAS COLUNAS DE SEGURANÇA ---
+    # DEFAULT 1 salva a sua conta antiga. Novas contas serão forçadas a 0 no ato do cadastro.
+    try: await client.execute("ALTER TABLE usuarios ADD COLUMN is_verified BOOLEAN DEFAULT 1")
+    except: pass
+    try: await client.execute("ALTER TABLE usuarios ADD COLUMN verification_code TEXT")
+    except: pass
+    
+    tabelas = ["membros", "funcoes", "biblioteca_busca"]
+    for tabela in tabelas:
+        try: await client.execute(f"ALTER TABLE {tabela} ADD COLUMN usuario_id INTEGER")
+        except Exception: pass 
+        
+    try: await client.execute("ALTER TABLE biblioteca_busca ADD COLUMN link TEXT DEFAULT ''")
+    except: pass
+    try: await client.execute("ALTER TABLE biblioteca_busca ADD COLUMN categoria TEXT DEFAULT 'agitadas1'")
+    except: pass
+    try: await client.execute("ALTER TABLE biblioteca_busca ADD COLUMN artista TEXT DEFAULT ''")
+    except: pass
+
+    await client.close()
+    yield
+app = FastAPI(lifespan=lifespan)
+
+# --- Configuração CORS (AJUSTADA PARA VERCEL E LOCAL) ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173", # Para testes locais
+        "https://levihub.vercel.app", # ADICIONE AQUI O SEU ENDEREÇO DO VERCEL
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ==========================================================
+# ROTAS DE AUTENTICAÇÃO, EMAILS E USUÁRIOS
+# ==========================================================
+
+def enviar_email_verificacao(destinatario: str, codigo: str):
+    remetente = os.getenv("SMTP_EMAIL")
+    senha = os.getenv("SMTP_PASSWORD")
+    if not remetente or not senha:
+        print(f"AVISO: Email não configurado no .env. O código para {destinatario} é: {codigo}")
+        return
+
+    msg = MIMEMultipart()
+    msg['From'] = remetente
+    msg['To'] = destinatario
+    msg['Subject'] = "Verifique a sua conta no LeviHub 🎸"
+
+    body = f"""Olá Abençoado(a)!
+    
+Bem-vindo ao LeviHub! O seu código de verificação é:
+
+{codigo}
+
+Insira este código na tela de cadastro para ativar a sua conta.
+
+Deus abençoe!"""
+    
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        # Burlar verificação SSL local para não travar no computador de desenvolvimento
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(remetente, senha)
+            server.sendmail(remetente, destinatario, msg.as_string())
+            print(f"E-mail de verificação enviado para {destinatario}")
+    except Exception as e:
+        print(f"Erro ao enviar email: {e}")
+
+@app.post("/auth/register")
+async def register_user(user: UserCreate, background_tasks: BackgroundTasks):
+    client = get_db_client()
+    try:
+        # Verifica se o e-mail já existe
+        check = await client.execute("SELECT id, is_verified FROM usuarios WHERE email = ?", [user.email])
+        
+        if check.rows:
+            user_id = check.rows[0][0]
+            is_verified = check.rows[0][1]
+            
+            if is_verified:
+                # Conta já existe e está ativa
+                raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado. Por favor, faça login.")
+            else:
+                # Conta existe mas NÃO foi verificada. Atualiza a senha e reenvia o código!
+                hashed_pwd = get_password_hash(user.password)
+                codigo_verificacao = ''.join(random.choices(string.digits, k=6))
+                
+                await client.execute(
+                    "UPDATE usuarios SET senha = ?, verification_code = ? WHERE id = ?",
+                    [hashed_pwd, codigo_verificacao, user_id]
+                )
+                
+                background_tasks.add_task(enviar_email_verificacao, user.email, codigo_verificacao)
+                return {"message": "Conta pendente encontrada. Novo código de verificação enviado!", "email": user.email}
+        
+        # Se não existe no banco, cria uma conta totalmente nova
+        hashed_pwd = get_password_hash(user.password)
+        codigo_verificacao = ''.join(random.choices(string.digits, k=6))
+        
+        res = await client.execute(
+            "INSERT INTO usuarios (email, senha, usar_banco_padrao, is_verified, verification_code) VALUES (?, ?, 1, 0, ?)",
+            [user.email, hashed_pwd, codigo_verificacao]
+        )
+        
+        background_tasks.add_task(enviar_email_verificacao, user.email, codigo_verificacao)
+        
+        return {"message": "Usuário criado. Verifique o seu e-mail.", "email": user.email}
+    finally: 
+        await client.close()
+
+class VerifyRequest(BaseModel):
+    email: str
+    codigo: str
+
+@app.post("/auth/verify")
+async def verify_email(req: VerifyRequest):
+    client = get_db_client()
+    try:
+        res = await client.execute("SELECT id, verification_code FROM usuarios WHERE email = ?", [req.email])
+        if not res.rows: raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+        
+        user_id = res.rows[0][0]
+        code_db = res.rows[0][1]
+        
+        if code_db != req.codigo.strip():
+            raise HTTPException(status_code=400, detail="Código inválido ou expirado.")
+            
+        await client.execute("UPDATE usuarios SET is_verified = 1, verification_code = NULL WHERE id = ?", [user_id])
+        return {"message": "Email verificado com sucesso! Já pode fazer o login."}
+    finally: await client.close()
+
+@app.post("/auth/login", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    client = get_db_client()
+    try:
+        result = await client.execute("SELECT id, senha, is_verified FROM usuarios WHERE email = ?", [form_data.username])
+        if not result.rows: raise HTTPException(status_code=401, detail="Email ou senha incorretos")
+        
+        user_db = result.rows[0]
+        user_id = user_db[0]
+        hashed_pwd = user_db[1]
+        is_verified = user_db[2]
+        
+        if not verify_password(form_data.password, hashed_pwd):
+            raise HTTPException(status_code=401, detail="Email ou senha incorretos")
+            
+        if not is_verified:
+            raise HTTPException(status_code=403, detail="E-mail não verificado. Procure o código na sua caixa de entrada.")
+        
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(data={"sub": str(user_id)}, expires_delta=access_token_expires)
+        return {"access_token": access_token, "token_type": "bearer"}
+    finally: await client.close()
+
+
+# --- NOVOS MODELOS PARA RECUPERAÇÃO DE SENHA ---
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    codigo: str
+    nova_senha: str
+
+# --- ROTA 1: SOLICITAR RECUPERAÇÃO ---
+@app.post("/auth/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, background_tasks: BackgroundTasks):
+    client = get_db_client()
+    try:
+        # Verifica se o usuário existe
+        res = await client.execute("SELECT id FROM usuarios WHERE email = ?", [req.email])
+        if not res.rows:
+            # Por segurança, não confirmamos se o e-mail existe ou não para evitar varredura de usuários
+            return {"message": "Se o e-mail estiver cadastrado, um código será enviado."}
+        
+        user_id = res.rows[0][0]
+        codigo = ''.join(random.choices(string.digits, k=6))
+        
+        # Salva o código no banco (reutilizando a coluna verification_code)
+        await client.execute("UPDATE usuarios SET verification_code = ? WHERE id = ?", [codigo, user_id])
+        
+        # Envia o e-mail em segundo plano
+        background_tasks.add_task(enviar_email_recuperacao, req.email, codigo)
+        
+        return {"message": "Código de recuperação enviado!"}
+    finally: await client.close()
+
+# --- FUNÇÃO DE E-MAIL DE RECUPERAÇÃO ---
+def enviar_email_recuperacao(destinatario: str, codigo: str):
+    remetente = os.getenv("SMTP_EMAIL")
+    senha = os.getenv("SMTP_PASSWORD")
+    if not remetente or not senha: return
+
+    msg = MIMEMultipart()
+    msg['From'] = remetente
+    msg['To'] = destinatario
+    msg['Subject'] = "Recuperação de Senha - LeviHub 🎸"
+
+    body = f"Você solicitou a recuperação de senha. Seu código é:\n\n{codigo}\n\nSe não foi você, ignore este e-mail."
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(remetente, senha)
+            server.sendmail(remetente, destinatario, msg.as_string())
+    except Exception as e: print(f"Erro ao enviar: {e}")
+
+# --- ROTA 2: VALIDAR CÓDIGO E DEFINIR NOVA SENHA ---
+@app.post("/auth/reset-password")
+async def reset_password(req: ResetPasswordRequest):
+    client = get_db_client()
+    try:
+        res = await client.execute("SELECT id, verification_code FROM usuarios WHERE email = ?", [req.email])
+        if not res.rows: raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+        
+        user_id = res.rows[0][0]
+        code_db = res.rows[0][1]
+        
+        if code_db != req.codigo.strip():
+            raise HTTPException(status_code=400, detail="Código inválido ou expirado.")
+            
+        hashed_pwd = get_password_hash(req.nova_senha)
+        await client.execute("UPDATE usuarios SET senha = ?, verification_code = NULL WHERE id = ?", [hashed_pwd, user_id])
+        return {"message": "Senha alterada com sucesso!"}
+    finally: await client.close()
+
+
+# ==========================================================
+# ROTAS NOVAS: ESCALA DE LOUVOR E GESTÃO DE MEMBROS (MULTI-TENANT)
+# ==========================================================
+
+@app.get("/equipe")
+async def get_equipe(apenas_ativos: bool = True, current_user: dict = Depends(get_current_user)):
+    """Retorna apenas os membros vinculados ao usuário logado."""
+    client = get_db_client()
+    try:
+        user_id = current_user["id"]
+        query = '''
+            SELECT m.id, m.nome, m.telefone, m.email, m.status, GROUP_CONCAT(TRIM(f.nome)) as funcoes
+            FROM membros m
+            LEFT JOIN membro_funcoes mf ON m.id = mf.membro_id
+            LEFT JOIN funcoes f ON mf.funcao_id = f.id
+            WHERE m.usuario_id = ?
+        '''
+        if apenas_ativos: query += " AND m.status = 'ativo' "
+        query += " GROUP BY m.id ORDER BY m.nome"
+        
+        result = await client.execute(query, [user_id])
+        equipe = []
+        for row in result.rows:
+            funcoes_lista = row[5].split(',') if row[5] else []
+            equipe.append({
+                "id": row[0], "nome": row[1], "telefone": row[2] or "",
+                "email": row[3] or "", "status": row[4] or "ativo", "funcoes": funcoes_lista
+            })
+        return {"equipe": equipe}
+    except Exception as e: return {"error": str(e)}
+    finally: await client.close()
+
+@app.post("/equipe")
+async def add_membro(membro: MembroRequest, current_user: dict = Depends(get_current_user)):
+    client = get_db_client()
+    try:
+        user_id = current_user["id"]
+        res = await client.execute(
+            "INSERT INTO membros (nome, telefone, email, status, usuario_id) VALUES (?, ?, ?, ?, ?)",
+            [membro.nome, membro.telefone, membro.email, membro.status, user_id]
+        )
+        membro_id = res.last_insert_rowid
+        
+        for f in membro.funcoes:
+            # Aceita a função se for sua OU se for uma função sem dono (NULL)
+            f_res = await client.execute("SELECT id FROM funcoes WHERE TRIM(nome) = ? AND (usuario_id = ? OR usuario_id IS NULL)", [f.strip(), user_id])
+            if f_res.rows:
+                await client.execute("INSERT INTO membro_funcoes (membro_id, funcao_id) VALUES (?, ?)", [membro_id, f_res.rows[0][0]])
+        return {"message": "Membro adicionado com sucesso!", "id": membro_id}
+    except Exception as e: return {"error": str(e)}
+    finally: await client.close()
+
+@app.put("/equipe/{membro_id}")
+async def update_membro(membro_id: int, membro: MembroRequest, current_user: dict = Depends(get_current_user)):
+    client = get_db_client()
+    try:
+        user_id = current_user["id"]
+        check = await client.execute("SELECT id FROM membros WHERE id = ? AND usuario_id = ?", [membro_id, user_id])
+        if not check.rows: raise HTTPException(status_code=403, detail="Você não tem permissão para editar este membro.")
+
+        await client.execute(
+            "UPDATE membros SET nome = ?, telefone = ?, email = ?, status = ? WHERE id = ?",
+            [membro.nome, membro.telefone, membro.email, membro.status, membro_id]
+        )
+        
+        await client.execute("DELETE FROM membro_funcoes WHERE membro_id = ?", [membro_id])
+        for f in membro.funcoes:
+            # Aceita a função se for sua OU se for uma função sem dono (NULL)
+            f_res = await client.execute("SELECT id FROM funcoes WHERE TRIM(nome) = ? AND (usuario_id = ? OR usuario_id IS NULL)", [f.strip(), user_id])
+            if f_res.rows:
+                await client.execute("INSERT INTO membro_funcoes (membro_id, funcao_id) VALUES (?, ?)", [membro_id, f_res.rows[0][0]])
+        return {"message": "Membro atualizado com sucesso!"}
+    except Exception as e: return {"error": str(e)}
+    finally: await client.close()
+
+@app.delete("/equipe/{membro_id}")
+async def delete_membro(membro_id: int, current_user: dict = Depends(get_current_user)):
+    client = get_db_client()
+    try:
+        await client.execute("DELETE FROM membros WHERE id = ? AND usuario_id = ?", [membro_id, current_user["id"]])
+        return {"message": "Membro excluído com sucesso!"}
+    except Exception as e: return {"error": str(e)}
+    finally: await client.close()
+
+# --- ROTAS DE FUNÇÕES (CRUD MULTI-TENANT INTELIGENTE) ---
+
+@app.get("/funcoes")
+async def get_funcoes(current_user: dict = Depends(get_current_user)):
+    client = get_db_client()
+    try:
+        # Busca funções suas, funções sem dono E também funções de outras contas
+        # que já estejam atreladas aos membros da sua equipe atual!
+        query = """
+            SELECT id, TRIM(nome) as nome_funcao FROM funcoes 
+            WHERE usuario_id = ? OR usuario_id IS NULL
+            UNION
+            SELECT f.id, TRIM(f.nome) as nome_funcao FROM funcoes f
+            JOIN membro_funcoes mf ON f.id = mf.funcao_id
+            JOIN membros m ON mf.membro_id = m.id
+            WHERE m.usuario_id = ?
+            ORDER BY nome_funcao
+        """
+        result = await client.execute(query, [current_user["id"], current_user["id"]])
+        funcoes = [{"id": row[0], "nome": row[1]} for row in result.rows]
+        return {"funcoes": funcoes}
+    except Exception as e: return {"error": str(e)}
+    finally: await client.close()
+
+@app.post("/funcoes")
+async def add_funcao(funcao: FuncaoRequest, current_user: dict = Depends(get_current_user)):
+    client = get_db_client()
+    try:
+        user_id = current_user["id"]
+        nome_limpo = funcao.nome.strip()
+        
+        try:
+            res = await client.execute("INSERT INTO funcoes (nome, usuario_id) VALUES (?, ?)", [nome_limpo, user_id])
+            funcao_id = res.last_insert_rowid
+        except Exception:
+            # Trava UNIQUE atingida. A API toma uma decisão inteligente para contornar:
+            check = await client.execute("SELECT id, usuario_id FROM funcoes WHERE nome = ?", [nome_limpo])
+            if check.rows:
+                existente_id = check.rows[0][0]
+                existente_uid = check.rows[0][1]
+                
+                if existente_uid is None:
+                    # Função global antiga. O usuário atual "adota" a posse.
+                    await client.execute("UPDATE funcoes SET usuario_id = ? WHERE id = ?", [user_id, existente_id])
+                    funcao_id = existente_id
+                elif existente_uid == user_id:
+                    # Já pertence a este usuário. Apenas reutiliza.
+                    funcao_id = existente_id
+                else:
+                    # Pertence a outro usuário. Burlar a trava UNIQUE com um espaço invisível.
+                    res_bypass = await client.execute("INSERT INTO funcoes (nome, usuario_id) VALUES (?, ?)", [nome_limpo + " ", user_id])
+                    funcao_id = res_bypass.last_insert_rowid
+            else:
+                return {"error": "Falha de restrição de banco."}
+        
+        if funcao.membros_ids:
+            for m_id in funcao.membros_ids:
+                check_mf = await client.execute("SELECT * FROM membro_funcoes WHERE membro_id = ? AND funcao_id = ?", [m_id, funcao_id])
+                if not check_mf.rows:
+                    await client.execute("INSERT INTO membro_funcoes (membro_id, funcao_id) VALUES (?, ?)", [m_id, funcao_id])
+        return {"message": "Função processada com sucesso!", "id": funcao_id}
+    except Exception as e: return {"error": str(e)}
+    finally: await client.close()
+
+@app.put("/funcoes/{funcao_id}")
+async def update_funcao(funcao_id: int, funcao: FuncaoRequest, current_user: dict = Depends(get_current_user)):
+    client = get_db_client()
+    try:
+        nome_limpo = funcao.nome.strip()
+        try:
+            # Atualiza a função e "adota" ela caso fosse uma função antiga sem dono
+            await client.execute("UPDATE funcoes SET nome = ?, usuario_id = ? WHERE id = ? AND (usuario_id = ? OR usuario_id IS NULL)", [nome_limpo, current_user["id"], funcao_id, current_user["id"]])
+        except Exception:
+            # Se bater no UNIQUE ao renomear, burla com o espaço
+            await client.execute("UPDATE funcoes SET nome = ?, usuario_id = ? WHERE id = ? AND (usuario_id = ? OR usuario_id IS NULL)", [nome_limpo + " ", current_user["id"], funcao_id, current_user["id"]])
+        return {"message": "Função atualizada!"}
+    except Exception as e: return {"error": str(e)}
+    finally: await client.close()
+
+@app.delete("/funcoes/{funcao_id}")
+async def delete_funcao(funcao_id: int, current_user: dict = Depends(get_current_user)):
+    client = get_db_client()
+    try:
+        # Permite deletar funções antigas que ficaram sem dono
+        await client.execute("DELETE FROM funcoes WHERE id = ? AND (usuario_id = ? OR usuario_id IS NULL)", [funcao_id, current_user["id"]])
+        return {"message": "Função excluída!"}
+    except Exception as e: return {"error": str(e)}
+    finally: await client.close()
+
+# ==========================================================
+# CÓDIGO DO TRANSPOSITOR (Mantido Intacto)
+# ==========================================================
+
+MAPA_NOTAS = {
+    "C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3, "E": 4, "F": 5,
+    "F#": 6, "Gb": 6, "G": 7, "G#": 8, "Ab": 8, "A": 9, "A#": 10, "Bb": 10, "B": 11,
+    "E#": 5, "B#": 0, "Fb": 4, "Cb": 11
+}
+MAPA_VALORES_NOTAS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+EXPLICACAO_TEORICA = {
+    "E#": "Mi sustenido (E#) é enarmônica de Fá (F).",
+    "B#": "Si sustenido (B#) é enarmônica de Dó (C).",
+    "Fb": "Fá bemol (Fb) é enarmônica de Mi (E).",
+    "Cb": "Dó bemol (Cb) é enarmônica de Si (B)."
+}
+
+def transpor_nota_individual(nota_str, semitons):
+    nota_key = next((key for key in MAPA_NOTAS if key.lower() == nota_str.lower()), None)
+    if not nota_key: return nota_str
+    
+    valor_original = MAPA_NOTAS[nota_key]
+    novo_valor = (valor_original + semitons + 12) % 12
+    return MAPA_VALORES_NOTAS[novo_valor]
+
+def normalizar_nota(nota_str, explicacoes_set=None):
+    if nota_str.endswith("##"):
+        base = nota_str.replace("##", "")
+        base_key = next((k for k in MAPA_NOTAS if k.lower() == base.lower()), None)
+        if base_key is not None:
+            valor_base = MAPA_NOTAS[base_key]
+            novo_valor = (valor_base + 2) % 12
+            nova_nota = MAPA_VALORES_NOTAS[novo_valor]
+            if explicacoes_set is not None:
+                explicacoes_set.add(f"A nota {nota_str} é enarmônica de {nova_nota} (Duplo Sustenido).")
+            return nova_nota
+
+    if nota_str.endswith("bb"):
+        base = nota_str.replace("bb", "")
+        base_key = next((k for k in MAPA_NOTAS if k.lower() == base.lower()), None)
+        if base_key is not None:
+            valor_base = MAPA_NOTAS[base_key]
+            novo_valor = (valor_base - 2 + 12) % 12
+            nova_nota = MAPA_VALORES_NOTAS[novo_valor]
+            if explicacoes_set is not None:
+                explicacoes_set.add(f"A nota {nota_str} é enarmônica de {nova_nota} (Duplo Bemol).")
+            return nova_nota
+            
+    return nota_str
+
+def transpor_acordes_sequencia(acordes_originais, acao, intervalo):
+    intervalo_semitons = int(intervalo * 2)
+    semitons_ajuste = intervalo_semitons if acao == 'Aumentar' else -intervalo_semitons
+    acordes_transpostos = []
+    explicacoes_entrada = set()
+    
+    for acorde_original in acordes_originais:
+        match = re.match(r"^([A-G](?:##|bb|#|b)?)(.*)", acorde_original, re.IGNORECASE)
+        
+        if not match:
+            acordes_transpostos.append(f"{acorde_original}?")
+            continue
+        
+        nota_bruta, resto = match.groups()
+        nota_fundamental = normalizar_nota(nota_bruta, explicacoes_entrada)
+        
+        if nota_fundamental == nota_bruta:
+            nota_key = next((k for k in EXPLICACAO_TEORICA if k.lower() == nota_fundamental.lower()), None)
+            if nota_key:
+                explicacoes_entrada.add(EXPLICACAO_TEORICA[nota_key])
+
+        nova_fundamental = transpor_nota_individual(nota_fundamental, semitons_ajuste)
+        
+        if '/' in resto:
+            partes = resto.split('/')
+            qualidade = partes[0]
+            baixo_bruto = partes[1]
+            baixo_normalizado = normalizar_nota(baixo_bruto, explicacoes_entrada)
+            novo_baixo = transpor_nota_individual(baixo_normalizado, semitons_ajuste)
+            acorde_final = f"{nova_fundamental}{qualidade}/{novo_baixo}"
+        else:
+            acorde_final = f"{nova_fundamental}{resto}"
+            
+        acordes_transpostos.append(acorde_final)
+
+    return acordes_transpostos, list(explicacoes_entrada)
+
+def is_chord_line(line):
+    line = line.strip()
+    if not line: return False
+    chord_pattern = re.compile(r'^[A-G](?:##|bb|#|b)?(m|M|dim|aug|sus|add|maj|º|°|/|[-+])?(\d+)?(\(?[^)\s]*\)?)?(/[A-G](?:##|bb|#|b)?)?$')
+    words = line.replace('/:', '').replace('|', '').strip().split()
+    if not words: return False
+    chord_count = sum(1 for word in words if chord_pattern.match(word))
+    return (chord_count / len(words)) >= 0.5
+
+def processar_cifra(texto_cifra, acao, intervalo):
+    semitons = int(intervalo * 2) * (1 if acao == 'Aumentar' else -1)
+    
+    padrao_acorde = r'(^|[^A-Ga-g#b])([A-G](?:##|bb|#|b)?)([^A-G\s,.\n\/]*)?(\/[A-G](?:##|bb|#|b)?)?'
+    
+    def replacer(match):
+        prefixo, nota, qualidade, baixo = match.groups()
+        prefixo = prefixo or ""
+        qualidade = qualidade or ""
+        
+        nota_norm = normalizar_nota(nota)
+        nova_nota = transpor_nota_individual(nota_norm, semitons)
+
+        novo_baixo = ""
+        if baixo:
+            nota_baixo = baixo.replace('/', '')
+            nota_baixo_norm = normalizar_nota(nota_baixo)
+            novo_baixo = "/" + transpor_nota_individual(nota_baixo_norm, semitons)
+        
+        return f"{prefixo}{nova_nota}{qualidade}{novo_baixo}"
+
+    linhas = texto_cifra.split('\n')
+    linhas_finais = []
+    
+    for linha in linhas:
+        if is_chord_line(linha):
+            linhas_finais.append(re.sub(padrao_acorde, replacer, linha))
+        else:
+            linhas_finais.append(linha)
+            
+    return "\n".join(linhas_finais)
+
+async def ler_conteudo_arquivo(file: UploadFile) -> str:
+    content = await file.read()
+    if file.filename.endswith('.docx'):
+        try:
+            doc = docx.Document(io.BytesIO(content))
+            return "\n".join([p.text for p in doc.paragraphs])
+        except Exception as e:
+            return f"Erro ao ler arquivo .docx: {str(e)}"
+    return content.decode("utf-8")
+
+@app.post("/transpose-sequence", response_model=TransposeSequenceResponse)
+async def transpose_sequence_endpoint(request: TransposeSequenceRequest):
+    transposed, expl = transpor_acordes_sequencia(request.chords, request.action, request.interval)
+    return {
+        "original_chords": request.chords,
+        "transposed_chords": transposed,
+        "explanations": expl
+    }
+
+@app.post("/transpose-text", response_model=TransposeCifraResponse)
+async def transpose_text_endpoint(request: TransposeCifraRequest):
+    res = processar_cifra(request.cifra_text, request.action, request.interval)
+    return {"transposed_cifra": res}
+
+@app.post("/transpose-file", response_model=TransposeCifraResponse)
+async def transpose_file_endpoint(file: UploadFile = File(...), action: str = Form(...), interval: float = Form(...)):
+    texto = await ler_conteudo_arquivo(file)
+    res = processar_cifra(texto, action, interval)
+    return {"transposed_cifra": res}
+
+# ==========================================================
+# ROTAS DO LEVIROBOTO (REPERTÓRIO E BUSCA MULTI-TENANT)
+# ==========================================================
+
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+
+async def get_optional_user(token: Optional[str] = Depends(oauth2_scheme_optional)):
+    """Permite que visitantes usem o bot sem token, mas identifica quem está logado."""
+    if not token: return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None: return None
+        
+        client = get_db_client()
+        result = await client.execute("SELECT id, email, usar_banco_padrao FROM usuarios WHERE id = ?", [user_id])
+        await client.close()
+        
+        if not result.rows: return None
+        user = result.rows[0]
+        return {"id": user[0], "email": user[1], "usar_banco_padrao": user[2]}
+    except:
+        return None
+
+@app.get("/musicas/buscar")
+async def buscar_musicas(q: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    try:
+        client = get_db_client()
+        if not current_user or current_user["usar_banco_padrao"] == 1:
+            result = await client.execute("SELECT nome_musica, tags, link FROM biblioteca_busca WHERE usuario_id IS NULL")
+        else:
+            result = await client.execute("SELECT nome_musica, tags, link FROM biblioteca_busca WHERE usuario_id = ?", [current_user["id"]])
+        await client.close()
+        
+        q_lower = q.lower().strip()
+        todas_tags = set()
+        for row in result.rows:
+            tags = [t.strip().lower() for t in row[1].split(',') if t.strip()]
+            todas_tags.update(tags)
+            
+        closest_word = q_lower
+        matches = difflib.get_close_matches(q_lower, list(todas_tags), n=1, cutoff=0.6)
+        if matches: closest_word = matches[0]
+            
+        musicas_encontradas = []
+        for row in result.rows:
+            nome, tags_str, link = row[0], row[1], row[2]
+            tags = [t.strip().lower() for t in tags_str.split(',')]
+            if closest_word in tags or closest_word in nome.lower():
+                resultado_str = f"{nome}: {link}" if link else nome
+                musicas_encontradas.append(resultado_str)
+                
+        random.shuffle(musicas_encontradas)
+        return {"closest_word": closest_word, "resultados": musicas_encontradas[:10]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/musicas/buscar_artista")
+async def buscar_artista(q: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    try:
+        client = get_db_client()
+        if not current_user or current_user["usar_banco_padrao"] == 1:
+            result = await client.execute("SELECT nome_musica, artista, link FROM biblioteca_busca WHERE usuario_id IS NULL AND artista IS NOT NULL AND artista != ''")
+        else:
+            result = await client.execute("SELECT nome_musica, artista, link FROM biblioteca_busca WHERE usuario_id = ? AND artista IS NOT NULL AND artista != ''", [current_user["id"]])
+        await client.close()
+        
+        q_lower = q.lower().strip()
+        todos_artistas = set()
+        for row in result.rows:
+            todos_artistas.add(row[1].strip().lower())
+            
+        closest_word = q_lower
+        # Tolerância para erros de digitação (ex: "adianimar" acha "Adhemar")
+        matches = difflib.get_close_matches(q_lower, list(todos_artistas), n=1, cutoff=0.5)
+        if matches: closest_word = matches[0]
+            
+        musicas_encontradas = []
+        for row in result.rows:
+            nome, artista, link = row[0], row[1], row[2]
+            if closest_word in artista.lower() or q_lower in artista.lower():
+                resultado_str = f"{nome} ({artista})"
+                if link: resultado_str += f": {link}"
+                musicas_encontradas.append(resultado_str)
+                
+        random.shuffle(musicas_encontradas)
+        return {"closest_word": closest_word, "resultados": musicas_encontradas[:10]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/musicas/buscar_categoria")
+async def buscar_categoria(q: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    try:
+        client = get_db_client()
+        q_lower = q.lower().strip()
+        
+        # Define a busca dependendo se o usuário está no banco padrão ou pessoal
+        if not current_user or current_user["usar_banco_padrao"] == 1:
+            result = await client.execute(
+                "SELECT nome_musica, link FROM biblioteca_busca WHERE usuario_id IS NULL AND LOWER(categoria) LIKE ?", 
+                [f"%{q_lower}%"]
+            )
+        else:
+            result = await client.execute(
+                "SELECT nome_musica, link FROM biblioteca_busca WHERE usuario_id = ? AND LOWER(categoria) LIKE ?", 
+                [current_user["id"], f"%{q_lower}%"]
+            )
+        await client.close()
+            
+        musicas_encontradas = []
+        for row in result.rows:
+            nome, link = row[0], row[1]
+            # Monta a string bonitinha pro bot: "Nome da Música: https://..."
+            resultado_str = f"{nome}: {link}" if link else nome
+            musicas_encontradas.append(resultado_str)
+                
+        # Embaralha os resultados para o bot não dar sempre as mesmas respostas na mesma ordem
+        random.shuffle(musicas_encontradas)
+        
+        # Diferente das outras rotas, aqui não precisamos de 'closest_word'
+        return {"resultados": musicas_encontradas[:10]}
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/musicas/sortear")
+async def sortear_musica(current_user: Optional[dict] = Depends(get_optional_user)):
+    try:
+        client = get_db_client()
+        
+        # Se for visitante ou usar o banco padrão (Agora buscando da tabela unificada)
+        if not current_user or current_user["usar_banco_padrao"] == 1:
+            async def pegar_aleatoria(categoria_nome):
+                try:
+                    res = await client.execute(
+                        "SELECT nome_musica, link FROM biblioteca_busca WHERE usuario_id IS NULL AND categoria LIKE ? ORDER BY RANDOM() LIMIT 1", 
+                        [f"%{categoria_nome}%"]
+                    )
+                    if res.rows:
+                        nome, link = res.rows[0][0], res.rows[0][1]
+                        return f"{nome}: {link}" if link else nome
+                    return "Nenhuma música cadastrada."
+                except: return "Erro ao buscar."
+
+            resultado = {
+                "is_custom": False,
+                "agitadas1": await pegar_aleatoria("agitadas1"),
+                "agitadas2": await pegar_aleatoria("agitadas2"), 
+                "lentas1": await pegar_aleatoria("lentas1"),
+                "lentas2": await pegar_aleatoria("lentas2"),
+                "ceia": await pegar_aleatoria("ceia"),
+                "infantis": await pegar_aleatoria("infantis"),
+                "natal": await pegar_aleatoria("natal"),
+                "junina": await pegar_aleatoria("junina"),
+                "casais": await pegar_aleatoria("casais"),
+                "pascoa": await pegar_aleatoria("pascoa"),
+                "missoes": await pegar_aleatoria("missoes")
+            }
+            await client.close()
+            return resultado
+            
+        # Se usar o Repertório Pessoal (Lógica Dinâmica)
+        else:
+            user_id = current_user["id"]
+            
+            # Pega as categorias oficias através do GESTOR DE CATEGORIAS
+            res_cats = await client.execute("SELECT nome FROM categorias_repertorio WHERE usuario_id = ?", [user_id])
+            categorias = [row[0].lower() for row in res_cats.rows if row[0].strip() != ""]
+            
+            sorteio = {}
+            # Sorteia 1 música de cada categoria do usuário usando LIKE para ler as vírgulas
+            for cat in categorias:
+                res_musica = await client.execute(
+                    "SELECT nome_musica, link FROM biblioteca_busca WHERE usuario_id = ? AND categoria LIKE ? ORDER BY RANDOM() LIMIT 1", 
+                    [user_id, f"%{cat}%"]
+                )
+                if res_musica.rows:
+                    nome, link = res_musica.rows[0][0], res_musica.rows[0][1]
+                    sorteio[cat] = f"{nome}: {link}" if link else nome
+                    
+            await client.close()
+            return {"is_custom": True, "sorteio": sorteio}
+            
+    except Exception as e:
+        return {"error": str(e)}
+
+# --- ROTAS PARA GERENCIAR O PRÓPRIO REPERTÓRIO E PERFIL ---
+class ConfigRequest(BaseModel):
+    usar_banco_padrao: Optional[bool] = None
+    funcoes_padrao: Optional[str] = None
+
+@app.put("/usuario/config")
+async def update_config(config: ConfigRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        client = get_db_client()
+        
+        if config.usar_banco_padrao is not None:
+            val = 1 if config.usar_banco_padrao else 0
+            await client.execute("UPDATE usuarios SET usar_banco_padrao = ? WHERE id = ?", [val, current_user["id"]])
+            
+        if config.funcoes_padrao is not None:
+            await client.execute("UPDATE usuarios SET funcoes_padrao = ? WHERE id = ?", [config.funcoes_padrao, current_user["id"]])
+            
+        await client.close()
+        return {"message": "Configuração atualizada!"}
+    except Exception as e: return {"error": str(e)}
+
+@app.get("/usuario/me")
+async def get_my_profile(current_user: dict = Depends(get_current_user)):
+    try:
+        client = get_db_client()
+        res = await client.execute("SELECT funcoes_padrao FROM usuarios WHERE id = ?", [current_user["id"]])
+        padrao = res.rows[0][0] if res.rows and res.rows[0][0] else "Mídia,Voz e violão,Voz 1,Voz 2,Voz 3"
+        await client.close()
+        
+        return {
+            "email": current_user["email"], 
+            "usar_banco_padrao": bool(current_user["usar_banco_padrao"]),
+            "funcoes_padrao": padrao,
+            "role": current_user.get("role", "user") # RETORNA SE É ADMIN OU NÃO
+        }
+    except Exception as e: return {"error": str(e)}
+
+# ==========================================================
+# ROTAS DE ADMINISTRAÇÃO E ATUALIZAÇÃO DE PERFIL
+# ==========================================================
+class UpdateCredentialsRequest(BaseModel):
+    novo_email: Optional[str] = None
+    nova_senha: Optional[str] = None
+
+@app.put("/usuario/credenciais")
+async def update_my_credentials(req: UpdateCredentialsRequest, current_user: dict = Depends(get_current_user)):
+    client = get_db_client()
+    try:
+        if req.novo_email:
+            check = await client.execute("SELECT id FROM usuarios WHERE email = ? AND id != ?", [req.novo_email, current_user["id"]])
+            if check.rows: raise HTTPException(status_code=400, detail="Este e-mail já está em uso por outra conta.")
+            await client.execute("UPDATE usuarios SET email = ? WHERE id = ?", [req.novo_email, current_user["id"]])
+        if req.nova_senha:
+            hashed = get_password_hash(req.nova_senha)
+            await client.execute("UPDATE usuarios SET senha = ? WHERE id = ?", [hashed, current_user["id"]])
+        return {"message": "Credenciais atualizadas com sucesso!"}
+    finally: await client.close()
+
+def require_admin(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado. Área restrita a Administradores.")
+    return current_user
+
+@app.get("/admin/usuarios")
+async def admin_get_users(admin: dict = Depends(require_admin)):
+    client = get_db_client()
+    try:
+        res = await client.execute("SELECT id, email, role, is_verified FROM usuarios ORDER BY id")
+        users = [{"id": r[0], "email": r[1], "role": r[2] or 'user', "is_verified": bool(r[3])} for r in res.rows]
+        return {"usuarios": users}
+    finally: await client.close()
+
+class AdminUpdateUser(BaseModel):
+    email: Optional[str] = None
+    senha: Optional[str] = None
+    role: Optional[str] = None
+
+@app.put("/admin/usuarios/{user_id}")
+async def admin_update_user(user_id: int, req: AdminUpdateUser, admin: dict = Depends(require_admin)):
+    client = get_db_client()
+    try:
+        if req.email: await client.execute("UPDATE usuarios SET email = ? WHERE id = ?", [req.email, user_id])
+        if req.senha:
+            hashed = get_password_hash(req.senha)
+            await client.execute("UPDATE usuarios SET senha = ? WHERE id = ?", [hashed, user_id])
+        if req.role: await client.execute("UPDATE usuarios SET role = ? WHERE id = ?", [req.role, user_id])
+        return {"message": "Usuário atualizado pelo Administrador."}
+    finally: await client.close()
+
+@app.delete("/admin/usuarios/{user_id}")
+async def admin_delete_user(user_id: int, admin: dict = Depends(require_admin)):
+    client = get_db_client()
+    try:
+        await client.execute("DELETE FROM usuarios WHERE id = ?", [user_id])
+        return {"message": "Usuário excluído do sistema."}
+    finally: await client.close()
+
+
+# --- ADICIONAR MÚSICAS AO REPERTÓRIO GLOBAL (ADMIN) ---
+class NovaMusicaGlobalRequest(BaseModel):
+    nome_musica: str
+    artista: Optional[str] = ""
+    tags: str
+    categoria: str # Agora vai receber uma string separada por vírgula (ex: "agitadas1, ceia")
+    link: Optional[str] = ""
+
+@app.post("/admin/musicas")
+async def admin_add_global_musica(musica: NovaMusicaGlobalRequest, admin: dict = Depends(require_admin)):
+    client = get_db_client()
+    try:
+        await client.execute(
+            "INSERT INTO biblioteca_busca (nome_musica, artista, tags, categoria, link, usuario_id) VALUES (?, ?, ?, ?, ?, NULL)",
+            [musica.nome_musica, musica.artista, musica.tags, musica.categoria, musica.link]
+        )
+        return {"message": "Música adicionada ao repertório global com sucesso!"}
+    except Exception as e:
+        return {"error": str(e)}
+    finally: 
+        await client.close()
+
+# ==========================================================
+# CRUD DE CATEGORIAS DO REPERTÓRIO
+# ==========================================================
+class CategoriaRequest(BaseModel):
+    nome: str
+
+@app.get("/categorias")
+async def get_categorias(current_user: dict = Depends(get_current_user)):
+    try:
+        client = get_db_client()
+        result = await client.execute("SELECT id, nome FROM categorias_repertorio WHERE usuario_id = ? ORDER BY nome", [current_user["id"]])
+        categorias = [{"id": row[0], "nome": row[1]} for row in result.rows]
+        await client.close()
+        return {"categorias": categorias}
+    except Exception as e: return {"error": str(e)}
+
+@app.post("/categorias")
+async def add_categoria(req: CategoriaRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        client = get_db_client()
+        await client.execute("INSERT INTO categorias_repertorio (nome, usuario_id) VALUES (?, ?)", [req.nome, current_user["id"]])
+        await client.close()
+        return {"message": "Categoria criada!"}
+    except Exception as e: return {"error": str(e)}
+
+@app.put("/categorias/{cat_id}")
+async def update_categoria(cat_id: int, req: CategoriaRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        client = get_db_client()
+        user_id = current_user["id"]
+        
+        # Pega o nome antigo para atualizar nas músicas que já usam essa categoria
+        old_res = await client.execute("SELECT nome FROM categorias_repertorio WHERE id = ? AND usuario_id = ?", [cat_id, user_id])
+        if old_res.rows:
+            old_nome = old_res.rows[0][0]
+            await client.execute("UPDATE biblioteca_busca SET categoria = ? WHERE categoria = ? AND usuario_id = ?", [req.nome, old_nome, user_id])
+        
+        # Atualiza a categoria em si
+        await client.execute("UPDATE categorias_repertorio SET nome = ? WHERE id = ? AND usuario_id = ?", [req.nome, cat_id, user_id])
+        await client.close()
+        return {"message": "Categoria atualizada!"}
+    except Exception as e: return {"error": str(e)}
+
+@app.delete("/categorias/{cat_id}")
+async def delete_categoria(cat_id: int, current_user: dict = Depends(get_current_user)):
+    try:
+        client = get_db_client()
+        user_id = current_user["id"]
+        
+        # Pega o nome antigo para tirar das músicas que usavam ela
+        old_res = await client.execute("SELECT nome FROM categorias_repertorio WHERE id = ? AND usuario_id = ?", [cat_id, user_id])
+        if old_res.rows:
+            old_nome = old_res.rows[0][0]
+            await client.execute("UPDATE biblioteca_busca SET categoria = 'Sem Categoria' WHERE categoria = ? AND usuario_id = ?", [old_nome, user_id])
+
+        # Exclui a categoria
+        await client.execute("DELETE FROM categorias_repertorio WHERE id = ? AND usuario_id = ?", [cat_id, user_id])
+        await client.close()
+        return {"message": "Categoria excluída!"}
+    except Exception as e: return {"error": str(e)}
+
+
+class NovaMusicaRequest(BaseModel):
+    nome_musica: str
+    artista: Optional[str] = ""
+    tags: str
+    categoria: str 
+    link: Optional[str] = ""
+
+class EditaMusicaRequest(BaseModel):
+    nome_musica: str
+    artista: Optional[str] = ""
+    tags: str
+    categoria: str
+    link: Optional[str] = ""
+
+@app.get("/musicas/custom")
+async def get_custom_musicas(current_user: dict = Depends(get_current_user)):
+    try:
+        client = get_db_client()
+        result = await client.execute("SELECT id, nome_musica, artista, tags, categoria, link FROM biblioteca_busca WHERE usuario_id = ? ORDER BY nome_musica", [current_user["id"]])
+        musicas = [{"id": r[0], "nome_musica": r[1], "artista": r[2] or "", "tags": r[3], "categoria": r[4] or "Sem Categoria", "link": r[5] or ""} for r in result.rows]
+        await client.close()
+        return {"musicas": musicas}
+    except Exception as e: return {"error": str(e)}
+
+@app.post("/musicas/custom")
+async def add_custom_musica(musica: NovaMusicaRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        client = get_db_client()
+        await client.execute(
+            "INSERT INTO biblioteca_busca (nome_musica, artista, tags, usuario_id, link, categoria) VALUES (?, ?, ?, ?, ?, ?)",
+            [musica.nome_musica, musica.artista, musica.tags, current_user["id"], musica.link, musica.categoria]
+        )
+        await client.close()
+        return {"message": "Música adicionada ao seu repertório!"}
+    except Exception as e: return {"error": str(e)}
+
+@app.put("/musicas/custom/{musica_id}")
+async def update_custom_musica(musica_id: int, req: EditaMusicaRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        client = get_db_client()
+        await client.execute(
+            "UPDATE biblioteca_busca SET nome_musica = ?, artista = ?, tags = ?, categoria = ?, link = ? WHERE id = ? AND usuario_id = ?",
+            [req.nome_musica, req.artista, req.tags, req.categoria, req.link, musica_id, current_user["id"]]
+        )
+        await client.close()
+        return {"message": "Música atualizada!"}
+    except Exception as e: return {"error": str(e)}
+
+@app.delete("/musicas/custom/{musica_id}")
+async def delete_custom_musica(musica_id: int, current_user: dict = Depends(get_current_user)):
+    try:
+        client = get_db_client()
+        await client.execute("DELETE FROM biblioteca_busca WHERE id = ? AND usuario_id = ?", [musica_id, current_user["id"]])
+        await client.close()
+        return {"message": "Música removida!"}
+    except Exception as e: return {"error": str(e)}
+
+class SugestaoRequest(BaseModel):
+    usuario: str
+    sugestao: str
+
+@app.post("/musicas/sugerir")
+async def sugerir_musica(req: SugestaoRequest):
+    try:
+        google_creds_env = os.getenv("GOOGLE_CREDENTIALS")
+        if google_creds_env:
+            creds_dict = json.loads(google_creds_env)
+            gc = gspread.service_account_from_dict(creds_dict)
+        else:
+            gc = gspread.service_account(filename="credentials.json")
+        sh = gc.open("Sugestões de músicas LeviRoboto")
+        sh.sheet1.append_row([req.usuario, req.sugestao])
+        return {"message": "Sucesso"}
+    except Exception as e: return {"error": str(e)}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
