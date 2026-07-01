@@ -16,7 +16,7 @@ aiohttp>=3.14.1
 # Segurança e Auth
 slowapi
 passlib[bcrypt]
-python-jose[cryptography]
+PyJWT
 cryptography>=48.0.1
 
 # Outros / Cloud

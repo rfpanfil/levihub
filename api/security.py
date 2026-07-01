@@ -4,7 +4,7 @@
 # Centraliza tudo que antes estava espalhado no topo de api.py.
 
 import bcrypt
-from jose import JWTError, jwt
+import jwt
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -88,7 +88,7 @@ async def get_current_user(
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-    except JWTError:
+    except jwt.PyJWTError:
         raise credentials_exception
 
     result = await client.execute(
