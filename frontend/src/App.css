@@ -462,7 +462,8 @@ pre {
 
 .escala-matrix th { background: rgba(255, 255, 255, 0.05); padding: 16px; color: var(--color-on-primary); font-weight: 600; border-bottom: 1px solid var(--glass-border); }
 .escala-matrix td { border-bottom: 1px solid var(--glass-border); padding: 12px; background: rgba(0,0,0,0.2); }
-.membro-celula { background: rgba(255, 255, 255, 0.02) !important; font-weight: 500; }
+.membro-celula { background: rgba(255, 255, 255, 0.02) !important; font-weight: 500; white-space: normal; min-width: 150px; max-width: 250px; }
+.funcoes-mini { font-size: 0.85em; opacity: 0.8; white-space: normal; word-wrap: break-word; line-height: 1.3; margin-top: 4px; }
 .celula-ok { background: rgba(16, 185, 129, 0.1) !important; color: #10b981; text-align: center; cursor: pointer; }
 .celula-falta { background: rgba(225, 29, 72, 0.1) !important; color: var(--color-primary); font-weight: bold; text-align: center; cursor: pointer; }
 
