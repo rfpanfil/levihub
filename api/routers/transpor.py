@@ -212,6 +212,16 @@ async def transpose_text_endpoint(request: TransposeCifraRequest):
 
 from fastapi.responses import StreamingResponse
 
+def get_run_style(run):
+    return (
+        run.bold,
+        run.italic,
+        run.underline,
+        run.font.name,
+        run.font.size,
+        run.font.color.rgb if run.font.color else None
+    )
+
 @router.post("/transpose-file")
 async def transpose_file_endpoint(
     file: UploadFile = File(...),
@@ -225,12 +235,32 @@ async def transpose_file_endpoint(
             doc = docx.Document(io.BytesIO(content))
             
             for paragraph in doc.paragraphs:
-                # Se o parágrafo inteiro não mudou de acordo com a nossa regra, pulamos ele inteiro para economizar tempo.
                 if not paragraph.text.strip():
                     continue
                     
-                # Aplicamos a transposição run por run. Isso preserva formatações diferentes na mesma linha!
-                for run in paragraph.runs:
+                # Fusão (Merge) de runs idênticos para evitar que palavras sejam fatiadas no meio 
+                # por corretores ortográficos invisíveis do Word (ex: "Em" -> "E" + "m").
+                runs = paragraph.runs
+                if not runs:
+                    continue
+                    
+                merged_runs = []
+                current_run = runs[0]
+                current_style = get_run_style(current_run)
+                
+                for run in runs[1:]:
+                    style = get_run_style(run)
+                    if style == current_style:
+                        current_run.text += run.text
+                        run.text = ""
+                    else:
+                        merged_runs.append(current_run)
+                        current_run = run
+                        current_style = style
+                merged_runs.append(current_run)
+                    
+                # Aplicamos a transposição run por run (já unificados)
+                for run in merged_runs:
                     if not run.text.strip():
                         continue
                     
