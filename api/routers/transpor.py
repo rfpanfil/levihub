@@ -235,6 +235,11 @@ def set_run_text_safe(run, new_text):
             t.text = new_text
             run._r.append(t)
 
+def has_special_content(run):
+    xml = run._element.xml
+    tags = ["<w:drawing", "<w:pict", "<mc:AlternateContent", "v:shape", "<w:sym", "<w:object"]
+    return any(tag in xml for tag in tags)
+
 @router.post("/transpose-file")
 async def transpose_file_endpoint(
     file: UploadFile = File(...),
@@ -264,7 +269,8 @@ async def transpose_file_endpoint(
                 
                 for run in runs[1:]:
                     style = get_run_style(run)
-                    if style == current_style:
+                    # Não mesclamos runs se algum deles possuir conteúdo especial (símbolo, seta, desenho)
+                    if style == current_style and not has_special_content(run) and not has_special_content(current_run):
                         current_text += run.text
                         set_run_text_safe(run, "")
                     else:
