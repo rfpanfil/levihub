@@ -221,6 +221,20 @@ def get_run_style(run):
         run.font.color.rgb if run.font.color else None
     )
 
+def set_run_text_safe(run, new_text):
+    # Acessa os nós de texto diretamente sem apagar os nós de desenho (shapes, brackets, imagens)
+    t_elements = run._r.xpath('.//w:t')
+    if t_elements:
+        t_elements[0].text = new_text
+        for t in t_elements[1:]:
+            t.text = ""
+    else:
+        if new_text:
+            from docx.oxml import OxmlElement
+            t = OxmlElement('w:t')
+            t.text = new_text
+            run._r.append(t)
+
 @router.post("/transpose-file")
 async def transpose_file_endpoint(
     file: UploadFile = File(...),
@@ -246,26 +260,31 @@ async def transpose_file_endpoint(
                 merged_runs = []
                 current_run = runs[0]
                 current_style = get_run_style(current_run)
+                current_text = current_run.text
                 
                 for run in runs[1:]:
                     style = get_run_style(run)
                     if style == current_style:
-                        current_run.text += run.text
-                        run.text = ""
+                        current_text += run.text
+                        set_run_text_safe(run, "")
                     else:
+                        set_run_text_safe(current_run, current_text)
                         merged_runs.append(current_run)
                         current_run = run
                         current_style = style
+                        current_text = current_run.text
+                set_run_text_safe(current_run, current_text)
                 merged_runs.append(current_run)
                     
                 # Aplicamos a transposição run por run (já unificados)
                 for run in merged_runs:
-                    if not run.text.strip():
+                    original_text = run.text
+                    if not original_text.strip():
                         continue
                     
-                    new_run_text = processar_cifra(run.text, action, interval)
-                    if new_run_text != run.text:
-                        run.text = new_run_text
+                    new_run_text = processar_cifra(original_text, action, interval)
+                    if new_run_text != original_text:
+                        set_run_text_safe(run, new_run_text)
                         
             # Salva o arquivo em buffer de memória
             buffer = io.BytesIO()
