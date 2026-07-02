@@ -110,11 +110,10 @@ def is_chord_line(line: str) -> bool:
     if not line:
         return False
     chord_pattern = re.compile(
-        r"^[A-G](?:##|bb|#|b)?(?:m|M|dim|aug|sus|add|maj|º|°)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]+\))?(?:/[A-G](?:##|bb|#|b)?)?$"
+        r"^\(?[A-G](?:##|bb|#|b)?(?:m|M|dim|aug|sus|add|maj|º|°)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]+\))?(?:/[A-G](?:##|bb|#|b)?)?\)?$"
     )
-    # Removemos pontuações grudadas
-    clean_line = line.replace("(", "").replace(")", "").strip()
-    clean_line = re.sub(r'[,.]', '', clean_line)
+    # Removemos pontuações grudadas, mas não apagamos parênteses para não estragar (11)
+    clean_line = re.sub(r'[,.]', '', line.strip())
     words = clean_line.split()
     
     if not words:
@@ -138,19 +137,19 @@ def processar_cifra(texto_cifra: str, acao: str, intervalo: float) -> str:
         prefixo, acorde = match.groups()
         prefixo = prefixo or ""
         
-        # O acorde pode ter baixo, vamos transpor separadamente
+        def transpose_part(part):
+            m = re.match(r"^([A-G](?:##|bb|#|b)?)(.*)", part)
+            if m:
+                root, quality = m.groups()
+                root_trans = transpor_nota_individual(normalizar_nota(root), semitons)
+                return f"{root_trans}{quality}"
+            return part
+
         if "/" in acorde:
             base, baixo = acorde.split("/", 1)
-            base_nota = normalizar_nota(base)
-            base_transposta = transpor_nota_individual(base_nota, semitons)
-            
-            baixo_nota = normalizar_nota(baixo)
-            baixo_transposto = transpor_nota_individual(baixo_nota, semitons)
-            
-            novo_acorde = f"{base_transposta}/{baixo_transposto}"
+            novo_acorde = f"{transpose_part(base)}/{transpose_part(baixo)}"
         else:
-            nota_norm = normalizar_nota(acorde)
-            novo_acorde = transpor_nota_individual(nota_norm, semitons)
+            novo_acorde = transpose_part(acorde)
             
         return f"{prefixo}{novo_acorde}"
 
