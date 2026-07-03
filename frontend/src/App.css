@@ -456,7 +456,7 @@ pre {
 }
 
 .escala-matrix {
-  display: block; width: 100%; overflow-x: auto; white-space: nowrap; border-collapse: separate; border-spacing: 0; margin-top: 20px;
+  display: table; width: 100%; white-space: nowrap; border-collapse: separate; border-spacing: 0; margin-top: 20px;
   border-radius: 12px; border: 1px solid var(--glass-border);
 }
 
@@ -469,7 +469,7 @@ pre {
 
 /* Adicionado para arrumar a tabela de disponibilidade */
 .disponibilidades-table, table {
-  display: block; width: 100%; overflow-x: auto; white-space: nowrap;
+  width: 100%; white-space: nowrap;
 }
 
 /* Chat Container */
