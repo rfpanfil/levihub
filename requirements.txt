@@ -29,7 +29,7 @@ oauth2client
 # Subdependências (Transitivas) forçadas por segurança
 h11>=0.16.0
 lxml>=6.1.1
-pyasn1>=0.6.3
+pyasn1>=0.6.4
 zipp>=4.1.0
 requests>=2.32.2
 pygments>=2.20.0
