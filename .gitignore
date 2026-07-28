@@ -48,3 +48,11 @@ __pycache__/
 
 # Logs de Segurança Local
 snyk-log.txt
+
+# Arquivos de teste temporários (transposição DOCX)
+test_*.py
+test_*.docx
+inspect_*.py
+read_*.py
+/*.docx
+/*.pdf
