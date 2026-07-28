@@ -16,7 +16,7 @@
     "html2canvas": "^1.4.1",
     "lucide-react": "^1.25.0",
     "mammoth": "^1.12.0",
-    "react": "^19.2.7",
+    "react": "^19.2.8",
     "react-countup": "^6.5.3",
     "react-dom": "^19.2.7"
   },
