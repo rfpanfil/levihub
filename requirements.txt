@@ -17,7 +17,7 @@ aiohttp>=3.14.3
 slowapi
 passlib[bcrypt]
 PyJWT>=2.13.0
-cryptography>=49.0.0
+cryptography>=50.0.0
 
 # Outros / Cloud
 python-dotenv>=1.2.2
