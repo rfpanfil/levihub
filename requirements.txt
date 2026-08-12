@@ -1,6 +1,6 @@
 # API e Core
 fastapi>=0.139.2
-starlette>=1.3.1
+starlette>=1.6.0
 uvicorn[standard]
 pydantic
 
