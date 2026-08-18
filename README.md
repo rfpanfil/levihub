@@ -9,7 +9,8 @@
 
 <br/>
 
-> **🔗 Acesse a aplicação ao vivo:** [https://levihub.vercel.app](https://levihub.vercel.app)
+> **🔗 Acesse a aplicação ao vivo:** [https://levihub.vercel.app](https://levihub.vercel.app)  
+> *(Para avaliar a aplicação rapidamente, clique em **"Entrar como Visitante"** na tela de login)*
 
 O **LeviHub** é uma aplicação Full-Stack desenvolvida para resolver as complexidades da organização de equipes de música em igrejas. O projeto automatiza a geração de escalas de voluntários e oferece ferramentas avançadas para músicos, incluindo um transposto nativo de cifras em arquivos Microsoft Word (`.docx`).
 
