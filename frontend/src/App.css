@@ -368,10 +368,12 @@ pre {
     padding: 16px 32px;
   }
 
-  /* Banner de visitante como barra inteira abaixo do top bar */
+  /* Banner de visitante agora fica dentro do AppMain */
   .visitor-banner {
-    flex: 1 1 100%;
-    margin: 0 0 16px 0;
+    margin-top: 0;
+    margin-bottom: 24px;
+    margin-left: 0;
+    margin-right: 0;
   }
 
   /* A Bottom Nav vira uma SIDEBAR na Esquerda */

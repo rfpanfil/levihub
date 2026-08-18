@@ -361,12 +361,6 @@ function App() {
         </div>
       </header>
       
-      {/* Banner de aviso para visitantes */}
-      {isVisitor && (
-        <div className="visitor-banner">
-          ⚠️ Você está no modo <b>Visitante</b>. Faça login para acessar as escalas da sua igreja.
-        </div>
-      )}
 
       {/* --- NAVEGAÇÃO PRINCIPAL (Bottom Nav no Mobile / Sidebar no Desktop) --- */}
       <nav className="app-navigation glass-panel">
@@ -435,6 +429,13 @@ function App() {
 
       {/* --- ÁREA PRINCIPAL DE CONTEÚDO --- */}
       <main className="AppMain">
+
+      {/* Banner de aviso para visitantes */}
+      {isVisitor && (
+        <div className="visitor-banner">
+          ⚠️ Você está no modo <b>Visitante</b>. Faça login para acessar as escalas da sua igreja.
+        </div>
+      )}
 
 
       {/* --- LÓGICA DE ALTERNÂNCIA DE TELAS --- */}
