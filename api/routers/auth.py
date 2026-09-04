@@ -153,7 +153,7 @@ async def verify_email(
     return {"message": "Email verificado com sucesso! Já pode fazer o login."}
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, dependencies=[])
 @limiter.limit("5/minute")
 async def login_for_access_token(
     request: Request,
@@ -197,7 +197,7 @@ async def login_for_access_token(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.post("/logout")
+@router.post("/logout", dependencies=[])
 async def logout(response: Response):
     response.delete_cookie(
         key="access_token",
@@ -208,7 +208,7 @@ async def logout(response: Response):
     return {"message": "Logout realizado com sucesso"}
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=[])
 async def forgot_password(
     req: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
@@ -232,7 +232,7 @@ async def forgot_password(
     return {"message": "Código de recuperação enviado!"}
 
 
-@router.post("/reset-password")
+@router.post("/reset-password", dependencies=[])
 async def reset_password(
     req: ResetPasswordRequest,
     client: libsql_client.Client = Depends(get_db),

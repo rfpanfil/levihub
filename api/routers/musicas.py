@@ -48,7 +48,7 @@ async def _set_categorias_musica(
 # BUSCA PÚBLICA (visitantes + usuários)
 # =============================================================================
 
-@router.get("/buscar")
+@router.get("/buscar", dependencies=[])
 async def buscar_musicas(
     q: str,
     current_user: Optional[dict] = Depends(get_optional_user),
@@ -90,7 +90,7 @@ async def buscar_musicas(
         return {"error": str(e)}
 
 
-@router.get("/buscar_artista")
+@router.get("/buscar_artista", dependencies=[])
 async def buscar_artista(
     q: str,
     current_user: Optional[dict] = Depends(get_optional_user),
@@ -131,7 +131,7 @@ async def buscar_artista(
         return {"error": str(e)}
 
 
-@router.get("/buscar_categoria")
+@router.get("/buscar_categoria", dependencies=[])
 async def buscar_categoria(
     q: str,
     current_user: Optional[dict] = Depends(get_optional_user),
@@ -202,7 +202,7 @@ async def buscar_categoria(
         return {"error": str(e)}
 
 
-@router.get("/sortear")
+@router.get("/sortear", dependencies=[])
 async def sortear_musica(
     current_user: Optional[dict] = Depends(get_optional_user),
     client: libsql_client.Client = Depends(get_db),

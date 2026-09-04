@@ -191,7 +191,7 @@ async def ler_conteudo_arquivo(file: UploadFile) -> str:
 # ENDPOINTS
 # =============================================================================
 
-@router.post("/transpose-sequence", response_model=TransposeSequenceResponse)
+@router.post("/transpose-sequence", response_model=TransposeSequenceResponse, dependencies=[])
 async def transpose_sequence_endpoint(request: TransposeSequenceRequest):
     transposed, expl = transpor_acordes_sequencia(
         request.chords, request.action, request.interval
@@ -203,7 +203,7 @@ async def transpose_sequence_endpoint(request: TransposeSequenceRequest):
     }
 
 
-@router.post("/transpose-text", response_model=TransposeCifraResponse)
+@router.post("/transpose-text", response_model=TransposeCifraResponse, dependencies=[])
 async def transpose_text_endpoint(request: TransposeCifraRequest):
     res = processar_cifra(request.cifra_text, request.action, request.interval)
     return {"transposed_cifra": res}
@@ -240,7 +240,7 @@ def has_special_content(run):
     tags = ["<w:drawing", "<w:pict", "<mc:AlternateContent", "v:shape", "<w:sym", "<w:object"]
     return any(tag in xml for tag in tags)
 
-@router.post("/transpose-file")
+@router.post("/transpose-file", dependencies=[])
 async def transpose_file_endpoint(
     file: UploadFile = File(...),
     action: str = Form(...),
