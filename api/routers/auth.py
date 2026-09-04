@@ -61,25 +61,40 @@ def enviar_email_verificacao(destinatario: str, codigo: str) -> None:
 
 
 def enviar_email_recuperacao(destinatario: str, codigo: str) -> None:
-    if not SMTP_EMAIL or not SMTP_PASSWORD:
-        return
-
-    msg = MIMEMultipart()
-    msg["From"] = SMTP_EMAIL
-    msg["To"] = destinatario
-    msg["Subject"] = "Recuperação de Senha - LeviHub 🎸"
-    body = (
-        f"Você solicitou a recuperação de senha. Seu código é:\n\n"
-        f"{codigo}\n\n"
-        f"Se não foi você, ignore este e-mail."
-    )
-    msg.attach(MIMEText(body, "plain"))
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context()) as server:
-            server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, destinatario, msg.as_string())
-    except Exception as e:
-        print(f"Erro ao enviar e-mail de recuperação: {e}")
+    # 1. Tenta via RESEND (Recomendado para Produção/Render)
+    if RESEND_API_KEY:
+        resend.api_key = RESEND_API_KEY
+        try:
+            r = resend.Emails.send({
+                "from": "LeviHub <onboarding@resend.dev>",
+                "to": destinatario,
+                "subject": "Recuperação de Senha - LeviHub 🎸",
+                "html": f"<p>Você solicitou a recuperação de senha. Seu código é:</p><h2>{codigo}</h2><p>Se não foi você, ignore este e-mail.</p>"
+            })
+            print(f"E-mail enviado via Resend: {r}")
+            return
+        except Exception as e:
+            print(f"Erro ao enviar e-mail (Resend): {e}")
+            
+    # 2. Fallback para SMTP Gmail (Desenvolvimento Local)
+    if SMTP_EMAIL and SMTP_PASSWORD:
+        msg = MIMEMultipart()
+        msg["From"] = SMTP_EMAIL
+        msg["To"] = destinatario
+        msg["Subject"] = "Recuperação de Senha - LeviHub 🎸"
+        body = (
+            f"Você solicitou a recuperação de senha. Seu código é:\n\n"
+            f"{codigo}\n\n"
+            f"Se não foi você, ignore este e-mail."
+        )
+        msg.attach(MIMEText(body, "plain"))
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context()) as server:
+                server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                server.sendmail(SMTP_EMAIL, destinatario, msg.as_string())
+            print("E-mail enviado via SMTP Fallback com sucesso!")
+        except Exception as e:
+            print(f"Erro ao enviar e-mail de recuperação via SMTP: {e}")
 
 
 # =============================================================================

@@ -27,6 +27,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # Token dura 7 dias
 # --- E-mail (SMTP Gmail) ---
 SMTP_EMAIL: str | None = os.getenv("SMTP_EMAIL")
 SMTP_PASSWORD: str | None = os.getenv("SMTP_PASSWORD")
+RESEND_API_KEY: str | None = os.getenv("RESEND_API_KEY")
 
 # --- Google Sheets (Sugestões) ---
 GOOGLE_CREDENTIALS: str | None = os.getenv("GOOGLE_CREDENTIALS")
