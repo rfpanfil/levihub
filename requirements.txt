@@ -20,7 +20,7 @@ PyJWT>=2.13.0
 cryptography>=49.0.0
 
 # Outros / Cloud
-python-dotenv>=1.2.2
+python-dotenv>=1.2.3
 cloudinary
 urllib3>=2.7.0
 idna>=3.18
