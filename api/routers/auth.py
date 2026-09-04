@@ -12,8 +12,9 @@ from datetime import timedelta
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Request
 import libsql_client
 
+import resend
 from api.limiter import limiter
-from api.config import ACCESS_TOKEN_EXPIRE_MINUTES, SMTP_EMAIL, SMTP_PASSWORD, IS_PRODUCTION
+from api.config import ACCESS_TOKEN_EXPIRE_MINUTES, SMTP_EMAIL, SMTP_PASSWORD, IS_PRODUCTION, RESEND_API_KEY
 from api.database import get_db
 from api.models import (
     UserCreate, Token, VerifyRequest,
