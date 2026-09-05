@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 };
 
-test.describe('Levi Roboto', () => {
+test.describe('Perfil do Usuário', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/*', async route => {
       if (route.request().method() === 'OPTIONS') {
@@ -30,50 +30,34 @@ test.describe('Levi Roboto', () => {
       }
     });
 
-    await page.route('**/roboto/contexto', async route => {
-      if (route.request().method() === 'GET') {
-        await route.fulfill({
-          status: 200,
-          headers: corsHeaders,
-          contentType: 'application/json',
-          body: JSON.stringify({ ultima_busca: '', tipo_busca: 'palavra' })
-        });
-      } else {
-        await route.fallback();
-      }
-    });
-
     await page.goto('/');
     await expect(page.getByText('Sair')).toBeVisible({ timeout: 10000 });
   });
 
-  test('deve enviar mensagem no chat buscando musica', async ({ page }) => {
-    await page.locator('button.nav-item').filter({ hasText: 'Levi Roboto' }).click();
-    await page.route('**/musicas/buscar*', async route => {
-      if (route.request().method() === 'GET') {
+  test('deve editar o proprio perfil', async ({ page }) => {
+    await page.route('**/usuario/credenciais', async route => {
+      if (route.request().method() === 'PUT') {
         await route.fulfill({
           status: 200,
           headers: corsHeaders,
           contentType: 'application/json',
-          body: JSON.stringify({ resultados: ['Te Adorarei - Banda Teste'], closest_word: 'adorar' })
+          body: JSON.stringify({ message: 'Profile updated' })
         });
       } else {
         await route.fallback();
       }
     });
-    
-    await page.route('**/roboto/contexto', async route => {
-      if (route.request().method() === 'PUT') {
-        await route.fulfill({ status: 200, headers: corsHeaders });
-      } else {
-        await route.fallback();
-      }
-    });
 
-    const chatInput = page.locator('input[placeholder*="Digite"]');
-    await chatInput.fill('Qual é a música?');
-    await chatInput.press('Enter');
+    await page.locator('button.nav-item').filter({ hasText: 'Perfil' }).click();
 
-    await expect(page.locator('.bubble-bot').filter({ hasText: 'Te Adorarei' }).first()).toBeVisible({ timeout: 10000 });
+    // Click on Alterar E-mail ou Senha first
+    await page.locator('button').filter({ hasText: 'Alterar E-mail ou Senha' }).click();
+
+    await page.screenshot({ path: 'debug-perfil.png' });
+    await page.locator('input[type="email"]').fill('novo_email@levihub.com');
+    await page.locator('input[type="password"]').fill('novasenha123');
+
+    await page.locator('button').filter({ hasText: 'Salvar Alterações' }).click();
+    await expect(page.getByText('Credenciais atualizadas com sucesso!')).toBeVisible({ timeout: 10000 });
   });
 });
