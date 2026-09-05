@@ -90,6 +90,7 @@ test.describe('Repertório de Músicas (CRUD)', () => {
     await page.locator('input[placeholder*="A Ele a Gl"]').fill('Canção de Teste E2E');
     await page.locator('input[placeholder*="Diante do Trono"]').fill('Banda E2E');
     await page.locator('input[placeholder*="exaltação, animada, deus"]').fill('louvor');
+    await page.locator('input[placeholder*="Cole a URL do"]').fill('https://youtube.com/watch?v=123');
 
     // Seleciona criar nova categoria no dropdown e preenche o nome
     await page.locator('select').last().selectOption('nova');

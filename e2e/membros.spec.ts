@@ -83,6 +83,7 @@ test.describe('Gestão de Membros (CRUD)', () => {
     
     await page.locator('input[placeholder="Ex: Lucas Silva"]').fill('Lucas Silva E2E');
     await page.locator('input[placeholder="email@exemplo.com"]').fill('lucas@e2e.com');
+    await page.locator('input[placeholder="(DD) 99999-9999"]').fill('(11) 99999-9999');
 
     await page.locator('button', { hasText: 'Salvar Membro' }).click();
 
