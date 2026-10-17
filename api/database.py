@@ -1,6 +1,6 @@
 # arquivo: api/database.py
 #
-# Gerencia a conexão com o banco de dados Turso (LibSQL).
+# Gerencia a conexo com o banco de dados Turso (LibSQL).
 #
 # SINGLETON: cliente criado uma vez no startup via lifespan, fechado no shutdown.
 # Os endpoints recebem o cliente via Depends(get_db).
@@ -8,7 +8,7 @@
 import libsql_client
 from typing import Optional
 
-# --- Instância Singleton ---
+# --- Instncia Singleton ---
 _client: Optional[libsql_client.Client] = None
 
 
@@ -16,7 +16,7 @@ def get_db() -> libsql_client.Client:
     """Dependency do FastAPI. Retorna o cliente Turso singleton."""
     if _client is None:
         raise RuntimeError(
-            "Banco de dados não inicializado. "
+            "Banco de dados no inicializado. "
             "Certifique-se de que o lifespan do FastAPI foi executado."
         )
     return _client
@@ -48,7 +48,7 @@ async def find_or_create_categoria(
 ) -> int:
     """
     Encontra ou cria uma categoria em categorias_repertorio.
-    usuario_id=None indica categoria global (banco padrão).
+    usuario_id=None indica categoria global (banco padro).
     Retorna o ID da categoria.
     """
     if usuario_id is None:
@@ -73,13 +73,13 @@ async def find_or_create_categoria(
 
 
 # =============================================================================
-# MIGRAÇÃO DE DADOS: CSV categoria → musica_categorias (one-time, idempotente)
+# MIGRAO DE DADOS: CSV categoria  musica_categorias (one-time, idempotente)
 # =============================================================================
 
 async def _migrate_categorias_para_relacional() -> None:
     """
-    Lê a coluna categoria (CSV) de cada música e popula musica_categorias.
-    Chamada apenas quando musica_categorias está vazia e há músicas com categorias.
+    L a coluna categoria (CSV) de cada msica e popula musica_categorias.
+    Chamada apenas quando musica_categorias est vazia e h msicas com categorias.
     """
     client = _client
     musicas = await client.execute(
@@ -100,7 +100,7 @@ async def _migrate_categorias_para_relacional() -> None:
             )
         migradas += 1
 
-    print(f"✅ Migração de categorias concluída: {migradas} músicas processadas.")
+    print(f" Migrao de categorias concluda: {migradas} msicas processadas.")
 
 
 # =============================================================================
@@ -109,13 +109,13 @@ async def _migrate_categorias_para_relacional() -> None:
 
 async def run_migrations() -> None:
     """
-    Executa todas as migrações de schema do banco de dados.
-    Idempotente: seguro de rodar múltiplas vezes.
+    Executa todas as migraes de schema do banco de dados.
+    Idempotente: seguro de rodar mltiplas vezes.
     """
     client = _client
 
     # -------------------------------------------------------------------------
-    # CRIAÇÃO DAS TABELAS PRINCIPAIS (CREATE TABLE IF NOT EXISTS)
+    # CRIAO DAS TABELAS PRINCIPAIS (CREATE TABLE IF NOT EXISTS)
     # -------------------------------------------------------------------------
 
     await client.execute("""
@@ -139,7 +139,7 @@ async def run_migrations() -> None:
     """)
 
     # funcoes: criada sem UNIQUE em nome pois a constraint correta
-    # será imposta pelos índices parciais na migração abaixo.
+    # ser imposta pelos ndices parciais na migrao abaixo.
     await client.execute("""
         CREATE TABLE IF NOT EXISTS funcoes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -179,7 +179,7 @@ async def run_migrations() -> None:
     """)
 
     # -------------------------------------------------------------------------
-    # NOVA TABELA: musica_categorias (Débito Técnico #3)
+    # NOVA TABELA: musica_categorias (Dbito Tcnico #3)
     # -------------------------------------------------------------------------
     await client.execute("""
         CREATE TABLE IF NOT EXISTS musica_categorias (
@@ -190,7 +190,7 @@ async def run_migrations() -> None:
     """)
 
     # -------------------------------------------------------------------------
-    # NOVAS TABELAS: persistência de configuração de escalas
+    # NOVAS TABELAS: persistncia de configurao de escalas
     # Uma linha por (usuario_id, mes_ano) com o payload JSON completo.
     # O UNIQUE viabiliza o ON CONFLICT DO UPDATE (upsert) no router.
     # -------------------------------------------------------------------------
@@ -236,9 +236,9 @@ async def run_migrations() -> None:
 
     # -------------------------------------------------------------------------
     # NOVA TABELA: roboto_contexto
-    # Persiste apenas o contexto de busca do LeviRoboto (última busca + tipo).
-    # O histórico de chat permanece estritamente no localStorage do cliente.
-    # UNIQUE(usuario_id) → uma linha por usuário, viabiliza upsert.
+    # Persiste apenas o contexto de busca do LeviRoboto (ltima busca + tipo).
+    # O histrico de chat permanece estritamente no localStorage do cliente.
+    # UNIQUE(usuario_id)  uma linha por usurio, viabiliza upsert.
     # -------------------------------------------------------------------------
     await client.execute("""
         CREATE TABLE IF NOT EXISTS roboto_contexto (
@@ -250,15 +250,35 @@ async def run_migrations() -> None:
     """)
 
     # -------------------------------------------------------------------------
-    # MIGRAÇÕES CUMULATIVAS (ALTER TABLE — tolerantes a falhas)
+    # NOVA TABELA: planejamento_periodos e planejamento_musicas
+    # -------------------------------------------------------------------------
+    await client.execute("""
+        CREATE TABLE IF NOT EXISTS planejamento_periodos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            nome TEXT NOT NULL
+        )
+    """)
+
+    await client.execute("""
+        CREATE TABLE IF NOT EXISTS planejamento_musicas (
+            periodo_id INTEGER NOT NULL,
+            musica_id INTEGER NOT NULL,
+            ordem INTEGER DEFAULT 0,
+            PRIMARY KEY (periodo_id, musica_id)
+        )
+    """)
+
+    # -------------------------------------------------------------------------
+    # MIGRAES CUMULATIVAS (ALTER TABLE  tolerantes a falhas)
     # -------------------------------------------------------------------------
     _alter_migrations = [
-        "ALTER TABLE usuarios ADD COLUMN funcoes_padrao TEXT DEFAULT 'Mídia,Voz e violão,Voz 1,Voz 2,Voz 3'",
+        "ALTER TABLE usuarios ADD COLUMN funcoes_padrao TEXT DEFAULT 'Mdia,Voz e violo,Voz 1,Voz 2,Voz 3'",
         "ALTER TABLE usuarios ADD COLUMN is_verified BOOLEAN DEFAULT 1",
         "ALTER TABLE usuarios ADD COLUMN verification_code TEXT",
         "ALTER TABLE usuarios ADD COLUMN role TEXT DEFAULT 'user'",
         "ALTER TABLE usuarios ADD COLUMN slugs TEXT DEFAULT '[]'",
-        # Separa o token de recuperação de senha do código de verificação de conta
+        # Separa o token de recuperao de senha do cdigo de verificao de conta
         "ALTER TABLE usuarios ADD COLUMN token_recuperacao TEXT",
         "ALTER TABLE membros ADD COLUMN usuario_id INTEGER",
         "ALTER TABLE funcoes ADD COLUMN usuario_id INTEGER",
@@ -268,33 +288,43 @@ async def run_migrations() -> None:
         "ALTER TABLE biblioteca_busca ADD COLUMN link TEXT DEFAULT ''",
         "ALTER TABLE biblioteca_busca ADD COLUMN categoria TEXT DEFAULT ''",
         "ALTER TABLE biblioteca_busca ADD COLUMN artista TEXT DEFAULT ''",
+        "ALTER TABLE biblioteca_busca ADD COLUMN codigo TEXT DEFAULT ''",
+        "ALTER TABLE biblioteca_busca ADD COLUMN primeira_linha TEXT DEFAULT ''",
+        "ALTER TABLE biblioteca_busca ADD COLUMN tom TEXT DEFAULT ''",
+        "ALTER TABLE biblioteca_busca ADD COLUMN primeira_nota TEXT DEFAULT ''",
+        "ALTER TABLE biblioteca_busca ADD COLUMN versao_vocal TEXT DEFAULT ''",
+        "ALTER TABLE biblioteca_busca ADD COLUMN compasso TEXT DEFAULT ''",
+        "ALTER TABLE biblioteca_busca ADD COLUMN bpm TEXT DEFAULT ''",
+        "ALTER TABLE biblioteca_busca ADD COLUMN cifra TEXT DEFAULT ''",
+        "ALTER TABLE biblioteca_busca ADD COLUMN versao_parecida TEXT DEFAULT ''",
+        "ALTER TABLE biblioteca_busca ADD COLUMN tema_central TEXT DEFAULT ''",
     ]
     for sql in _alter_migrations:
         try:
             await client.execute(sql)
         except Exception:
-            pass  # Coluna já existe — comportamento esperado
+            pass  # Coluna j existe  comportamento esperado
 
     # -------------------------------------------------------------------------
-    # MIGRAÇÃO ESTRUTURAL: funcoes — adiciona índices parciais UNIQUE(nome, usuario_id)
-    # (Débito Técnico #2 — resolve o hack do espaço invisível)
+    # MIGRAO ESTRUTURAL: funcoes  adiciona ndices parciais UNIQUE(nome, usuario_id)
+    # (Dbito Tcnico #2  resolve o hack do espao invisvel)
     #
-    # SEGURO: NÃO dropa nem recria a tabela. O SQLite permite criar índices
+    # SEGURO: NO dropa nem recria a tabela. O SQLite permite criar ndices
     # diretamente na tabela existente, preservando todos os dados e as
-    # referências em membro_funcoes.
+    # referncias em membro_funcoes.
     # -------------------------------------------------------------------------
 
-    # Índices parciais (idempotentes via IF NOT EXISTS):
-    # — Funções de usuário: UNIQUE(nome, usuario_id) para usuario_id IS NOT NULL
+    # ndices parciais (idempotentes via IF NOT EXISTS):
+    #  Funes de usurio: UNIQUE(nome, usuario_id) para usuario_id IS NOT NULL
     try:
         await client.execute("""
             CREATE UNIQUE INDEX IF NOT EXISTS funcoes_nome_usuario
             ON funcoes(nome, usuario_id) WHERE usuario_id IS NOT NULL
         """)
     except Exception as e:
-        # Pode falhar se houver nomes duplicados herdados do hack do espaço.
+        # Pode falhar se houver nomes duplicados herdados do hack do espao.
         # Nesse caso, limpa os duplicados mantendo apenas o primeiro registro.
-        print(f"⚠️ Índice funcoes_nome_usuario: limpando duplicados antes de criar. ({e})")
+        print(f" ndice funcoes_nome_usuario: limpando duplicados antes de criar. ({e})")
         await client.execute("""
             DELETE FROM funcoes
             WHERE rowid NOT IN (
@@ -308,14 +338,14 @@ async def run_migrations() -> None:
             ON funcoes(nome, usuario_id) WHERE usuario_id IS NOT NULL
         """)
 
-    # — Funções globais: UNIQUE(nome) para usuario_id IS NULL
+    #  Funes globais: UNIQUE(nome) para usuario_id IS NULL
     try:
         await client.execute("""
             CREATE UNIQUE INDEX IF NOT EXISTS funcoes_nome_global
             ON funcoes(nome) WHERE usuario_id IS NULL
         """)
     except Exception as e:
-        print(f"⚠️ Índice funcoes_nome_global: limpando duplicados globais. ({e})")
+        print(f" ndice funcoes_nome_global: limpando duplicados globais. ({e})")
         await client.execute("""
             DELETE FROM funcoes
             WHERE rowid NOT IN (
@@ -329,12 +359,12 @@ async def run_migrations() -> None:
             ON funcoes(nome) WHERE usuario_id IS NULL
         """)
 
-    print("✅ Índices de funcoes verificados/criados com sucesso.")
+    print(" ndices de funcoes verificados/criados com sucesso.")
 
     # -------------------------------------------------------------------------
-    # REPARO DE INTEGRIDADE: remove entradas órfãs de membro_funcoes
-    # (membro_funcoes.funcao_id que não existem mais em funcoes)
-    # Pode ocorrer se migração anterior tiver sido destrutiva.
+    # REPARO DE INTEGRIDADE: remove entradas rfs de membro_funcoes
+    # (membro_funcoes.funcao_id que no existem mais em funcoes)
+    # Pode ocorrer se migrao anterior tiver sido destrutiva.
     # -------------------------------------------------------------------------
     orphans = await client.execute("""
         SELECT COUNT(*) FROM membro_funcoes mf
@@ -342,15 +372,15 @@ async def run_migrations() -> None:
     """)
     orphan_count = orphans.rows[0][0] if orphans.rows else 0
     if orphan_count > 0:
-        print(f"⚠️ Encontradas {orphan_count} referências órfãs em membro_funcoes. Removendo...")
+        print(f" Encontradas {orphan_count} referncias rfs em membro_funcoes. Removendo...")
         await client.execute("""
             DELETE FROM membro_funcoes
             WHERE NOT EXISTS (SELECT 1 FROM funcoes f WHERE f.id = funcao_id)
         """)
 
     # -------------------------------------------------------------------------
-    # MIGRAÇÃO DE DADOS: CSV categoria → musica_categorias (one-time)
-    # (Débito Técnico #3 — popula a nova tabela associativa)
+    # MIGRAO DE DADOS: CSV categoria  musica_categorias (one-time)
+    # (Dbito Tcnico #3  popula a nova tabela associativa)
     # -------------------------------------------------------------------------
     mc_count = await client.execute("SELECT COUNT(*) FROM musica_categorias")
     bb_count = await client.execute(

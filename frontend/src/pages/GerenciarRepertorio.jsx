@@ -1,8 +1,8 @@
 // arquivo: frontend/src/pages/GerenciarRepertorio.jsx
 
 import React, { useState, useEffect } from 'react';
-
 import { apiFetch } from '../services/api';
+import ExcelImportModal from '../components/ExcelImportModal';
 
 
 function GerenciarRepertorio() {
@@ -15,17 +15,32 @@ function GerenciarRepertorio() {
   const [searchNome, setSearchNome] = useState('');
   const [searchTag, setSearchTag] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
-
-  // Estados do Modal de Música
+  const [filterText, setFilterText] = useState('');
+  
+  // Controle de Modais
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
   
   const [nomeMusica, setNomeMusica] = useState('');
-  const [artista, setArtista] = useState(''); // NOVO ESTADO
+  const [artista, setArtista] = useState('');
   const [tags, setTags] = useState('');
   const [link, setLink] = useState('');
   const [categoria, setCategoria] = useState('');
+
+  // Novos campos avançados
+  const [codigo, setCodigo] = useState('');
+  const [primeiraLinha, setPrimeiraLinha] = useState('');
+  const [tom, setTom] = useState('');
+  const [primeiraNota, setPrimeiraNota] = useState('');
+  const [versaoVocal, setVersaoVocal] = useState('');
+  const [compasso, setCompasso] = useState('');
+  const [bpm, setBpm] = useState('');
+  const [cifra, setCifra] = useState('');
+  const [versaoParecida, setVersaoParecida] = useState('');
+  const [temaCentral, setTemaCentral] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Estados para Criação Rápida de Categoria no Dropdown
   const [isNovaCategoriaInline, setIsNovaCategoriaInline] = useState(false);
@@ -82,6 +97,10 @@ function GerenciarRepertorio() {
     setIsEditing(false); setEditId(null); 
     setNomeMusica(''); setArtista(''); setTags(''); setLink(''); 
     setCategoria(categoriasObjetos.length > 0 ? categoriasObjetos[0].nome : '');
+    setCodigo(''); setPrimeiraLinha(''); setTom(''); setPrimeiraNota('');
+    setVersaoVocal(''); setCompasso(''); setBpm(''); setCifra('');
+    setVersaoParecida(''); setTemaCentral('');
+    setShowAdvanced(false);
     setIsNovaCategoriaInline(false); setNovaCategoriaNomeInline('');
     setIsModalOpen(true);
   };
@@ -93,6 +112,16 @@ function GerenciarRepertorio() {
     setTags(musica.tags); setLink(musica.link || '');
     // API retorna categorias como array; usa a primeira para o campo de seleção
     setCategoria(musica.categorias && musica.categorias.length > 0 ? musica.categorias[0] : '');
+    setCodigo(musica.codigo || ''); setPrimeiraLinha(musica.primeira_linha || '');
+    setTom(musica.tom || ''); setPrimeiraNota(musica.primeira_nota || '');
+    setVersaoVocal(musica.versao_vocal || ''); setCompasso(musica.compasso || '');
+    setBpm(musica.bpm || ''); setCifra(musica.cifra || '');
+    setVersaoParecida(musica.versao_parecida || ''); setTemaCentral(musica.tema_central || '');
+    setShowAdvanced(
+      !!musica.codigo || !!musica.primeira_linha || !!musica.tom || !!musica.primeira_nota || 
+      !!musica.versao_vocal || !!musica.compasso || !!musica.bpm || !!musica.cifra ||
+      !!musica.versao_parecida || !!musica.tema_central
+    );
     setIsNovaCategoriaInline(false); setNovaCategoriaNomeInline('');
     setIsModalOpen(true);
   };
@@ -129,9 +158,14 @@ function GerenciarRepertorio() {
         }
       }
 
-      // 2. Salva a Música — envia categorias como array (novo contrato da API)
+      // 2. Salva a Música - envia categorias como array (novo contrato da API)
       const linkLimpo = formatarLinkYouTube(link);
-      const bodyData = { nome_musica: nomeMusica, artista, tags, categorias: [catFinal], link: linkLimpo };
+      const bodyData = { 
+        nome_musica: nomeMusica, artista, tags, categorias: [catFinal], link: linkLimpo,
+        codigo, primeira_linha: primeiraLinha, tom, primeira_nota: primeiraNota,
+        versao_vocal: versaoVocal, compasso, bpm, cifra,
+        versao_parecida: versaoParecida, tema_central: temaCentral
+      };
 
       const url = isEditing ? `/musicas/custom/${editId}` : '/musicas/custom';
       const method = isEditing ? 'PUT' : 'POST';
@@ -214,12 +248,19 @@ function GerenciarRepertorio() {
 
   return (
     <div className="gerador-escala-container">
-      
+      <ExcelImportModal 
+        isOpen={isExcelModalOpen} 
+        onClose={() => setIsExcelModalOpen(false)} 
+        onImportSuccess={carregarDados} 
+      />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
-        <h2>🎸 O Meu Repertório Pessoal</h2>
+        <h2>🎵 O Meu Repertório Pessoal</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={() => setIsCategoriasModalOpen(true)} style={{ padding: '12px 20px', backgroundColor: 'transparent', border: '2px solid #f39c12', color: '#f39c12', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
             ⚙️ Gerenciar Categorias
+          </button>
+          <button onClick={() => setIsExcelModalOpen(true)} style={{ padding: '12px 20px', backgroundColor: 'transparent', border: '2px solid #2ecc71', color: '#2ecc71', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+            📥 Importar do Excel
           </button>
           <button onClick={abrirModalNovo} className="main-button" style={{ margin: 0, width: 'auto' }}>
             ➕ Adicionar Música
@@ -356,6 +397,60 @@ function GerenciarRepertorio() {
               <div>
                 <label>Link YouTube (Opcional - Encurtamos p/ você!)</label>
                 <input type="text" value={link} onChange={e => setLink(e.target.value)} placeholder="Cole a URL do vídeo ou cifra aqui" style={inputStyle} />
+              </div>
+
+              <div style={{ marginTop: '15px', padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                <div 
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#61dafb' }}
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                >
+                  <span>{showAdvanced ? '▼ Ocultar Campos Avançados' : '▶ Mostrar Campos Avançados'}</span>
+                </div>
+                
+                {showAdvanced && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px' }}>
+                    <div>
+                      <label>Código Interno</label>
+                      <input type="text" value={codigo} onChange={e => setCodigo(e.target.value)} placeholder="Ex: A-01" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label>Primeira Linha</label>
+                      <input type="text" value={primeiraLinha} onChange={e => setPrimeiraLinha(e.target.value)} placeholder="Como começa a música" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label>Tom</label>
+                      <input type="text" value={tom} onChange={e => setTom(e.target.value)} placeholder="Ex: C, Am, D" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label>1ª Nota</label>
+                      <input type="text" value={primeiraNota} onChange={e => setPrimeiraNota(e.target.value)} placeholder="Para a voz principal" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label>Versão p/ Vocal</label>
+                      <input type="text" value={versaoVocal} onChange={e => setVersaoVocal(e.target.value)} placeholder="Referência pro vocal" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label>Compasso</label>
+                      <input type="text" value={compasso} onChange={e => setCompasso(e.target.value)} placeholder="Ex: 4/4, 6/8" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label>BPM ≈</label>
+                      <input type="text" value={bpm} onChange={e => setBpm(e.target.value)} placeholder="Ex: 120" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label>Cifra (Texto)</label>
+                      <textarea value={cifra} onChange={e => setCifra(e.target.value)} placeholder="Cole aqui ou use o link acima" style={{...inputStyle, height: '60px', resize: 'vertical'}} />
+                    </div>
+                    <div>
+                      <label>Versão Parecida</label>
+                      <input type="text" value={versaoParecida} onChange={e => setVersaoParecida(e.target.value)} placeholder="Ex: Diante do Trono" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label>Tema Central</label>
+                      <input type="text" value={temaCentral} onChange={e => setTemaCentral(e.target.value)} placeholder="Ex: Comunhão" style={inputStyle} />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

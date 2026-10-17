@@ -24,10 +24,11 @@ SECRET_KEY: str = os.getenv("SECRET_KEY", "uma_chave_secreta_super_segura_aqui_p
 ALGORITHM: str = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # Token dura 7 dias
 
-# --- E-mail (SMTP Gmail) ---
+# --- E-mail (SMTP Gmail / Resend / Google Apps Script Webhook) ---
 SMTP_EMAIL: str | None = os.getenv("SMTP_EMAIL")
 SMTP_PASSWORD: str | None = os.getenv("SMTP_PASSWORD")
 RESEND_API_KEY: str | None = os.getenv("RESEND_API_KEY")
+GOOGLE_SCRIPT_EMAIL_URL: str | None = os.getenv("GOOGLE_SCRIPT_EMAIL_URL")
 
 # --- Google Sheets (Sugestões) ---
 GOOGLE_CREDENTIALS: str | None = os.getenv("GOOGLE_CREDENTIALS")

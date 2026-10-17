@@ -287,7 +287,9 @@ async def get_custom_musicas(
         result = await client.execute(
             """
             SELECT bb.id, bb.nome_musica, bb.artista, bb.tags, bb.link,
-                   GROUP_CONCAT(cr.nome) as categorias_str
+                   GROUP_CONCAT(cr.nome) as categorias_str,
+                   bb.codigo, bb.primeira_linha, bb.tom, bb.primeira_nota, bb.versao_vocal,
+                   bb.compasso, bb.bpm, bb.cifra, bb.versao_parecida, bb.tema_central
             FROM biblioteca_busca bb
             LEFT JOIN musica_categorias mc ON bb.id = mc.musica_id
             LEFT JOIN categorias_repertorio cr ON mc.categoria_id = cr.id
@@ -305,6 +307,16 @@ async def get_custom_musicas(
                 "tags": r[3],
                 "link": r[4] or "",
                 "categorias": r[5].split(",") if r[5] else [],
+                "codigo": r[6] or "",
+                "primeira_linha": r[7] or "",
+                "tom": r[8] or "",
+                "primeira_nota": r[9] or "",
+                "versao_vocal": r[10] or "",
+                "compasso": r[11] or "",
+                "bpm": r[12] or "",
+                "cifra": r[13] or "",
+                "versao_parecida": r[14] or "",
+                "tema_central": r[15] or ""
             }
             for r in result.rows
         ]
@@ -321,9 +333,10 @@ async def add_custom_musica(
 ):
     try:
         res = await client.execute(
-            "INSERT INTO biblioteca_busca (nome_musica, artista, tags, usuario_id, link) "
-            "VALUES (?, ?, ?, ?, ?)",
-            [musica.nome_musica, musica.artista, musica.tags, current_user["id"], musica.link],
+            "INSERT INTO biblioteca_busca (nome_musica, artista, tags, usuario_id, link, codigo, primeira_linha, tom, primeira_nota, versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [musica.nome_musica, musica.artista, musica.tags, current_user["id"], musica.link,
+             musica.codigo, musica.primeira_linha, musica.tom, musica.primeira_nota, musica.versao_vocal, musica.compasso, musica.bpm, musica.cifra, musica.versao_parecida, musica.tema_central],
         )
         musica_id = res.last_insert_rowid
         await _set_categorias_musica(client, musica_id, musica.categorias, current_user["id"])
@@ -341,9 +354,12 @@ async def update_custom_musica(
 ):
     try:
         await client.execute(
-            "UPDATE biblioteca_busca SET nome_musica = ?, artista = ?, tags = ?, link = ? "
+            "UPDATE biblioteca_busca SET nome_musica = ?, artista = ?, tags = ?, link = ?, "
+            "codigo = ?, primeira_linha = ?, tom = ?, primeira_nota = ?, versao_vocal = ?, compasso = ?, bpm = ?, cifra = ?, versao_parecida = ?, tema_central = ? "
             "WHERE id = ? AND usuario_id = ?",
-            [req.nome_musica, req.artista, req.tags, req.link, musica_id, current_user["id"]],
+            [req.nome_musica, req.artista, req.tags, req.link,
+             req.codigo, req.primeira_linha, req.tom, req.primeira_nota, req.versao_vocal, req.compasso, req.bpm, req.cifra, req.versao_parecida, req.tema_central,
+             musica_id, current_user["id"]],
         )
         await _set_categorias_musica(client, musica_id, req.categorias, current_user["id"])
         return {"message": "Música atualizada!"}

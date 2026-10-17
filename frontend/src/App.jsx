@@ -12,6 +12,7 @@ import Login from './pages/Login';
 import GestaoMembros from './pages/GestaoMembros';
 import GerenciarPerfil from './pages/GerenciarPerfil';
 import GerenciarRepertorio from './pages/GerenciarRepertorio';
+import Planejamento from './pages/Planejamento';
 import AdminPanel from './pages/AdminPanel';
 // Importamos a lógica local para usar APENAS se a API falhar
 import { calcularSequenciaLocal, processarCifraCompleta } from './utils/musicLogic';
@@ -401,6 +402,16 @@ function App() {
         )}
 
         {!isVisitor && (
+          <button
+            className={`nav-item ${appMode === 'planejamento' ? 'active' : ''}`}
+            onClick={() => { setAppMode('planejamento'); }}
+          >
+            <Calendar size={22} />
+            <span>Planejamento</span>
+          </button>
+        )}
+
+        {!isVisitor && (
           <button className={`nav-item ${appMode === 'repertorio' ? 'active' : ''}`} onClick={() => { setAppMode('repertorio'); }}>
             <Bot size={22} />
             <span>Levi Roboto</span>
@@ -600,6 +611,10 @@ function App() {
       {/* AS NOVAS TELAS ENTRAM AQUI */}
       {appMode === 'meu_repertorio' && (
         <GerenciarRepertorio />
+      )}
+
+      {appMode === 'planejamento' && (
+        <Planejamento />
       )}
 
       {appMode === 'perfil' && (

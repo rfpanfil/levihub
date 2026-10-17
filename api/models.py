@@ -79,6 +79,16 @@ class NovaMusicaRequest(BaseModel):
     tags: str
     categorias: List[str]  # Lista de nomes de categorias
     link: Optional[str] = ""
+    codigo: Optional[str] = ""
+    primeira_linha: Optional[str] = ""
+    tom: Optional[str] = ""
+    primeira_nota: Optional[str] = ""
+    versao_vocal: Optional[str] = ""
+    compasso: Optional[str] = ""
+    bpm: Optional[str] = ""
+    cifra: Optional[str] = ""
+    versao_parecida: Optional[str] = ""
+    tema_central: Optional[str] = ""
 
 class EditaMusicaRequest(BaseModel):
     nome_musica: str
@@ -86,6 +96,16 @@ class EditaMusicaRequest(BaseModel):
     tags: str
     categorias: List[str]  # Lista de nomes de categorias
     link: Optional[str] = ""
+    codigo: Optional[str] = ""
+    primeira_linha: Optional[str] = ""
+    tom: Optional[str] = ""
+    primeira_nota: Optional[str] = ""
+    versao_vocal: Optional[str] = ""
+    compasso: Optional[str] = ""
+    bpm: Optional[str] = ""
+    cifra: Optional[str] = ""
+    versao_parecida: Optional[str] = ""
+    tema_central: Optional[str] = ""
 
 class SugestaoRequest(BaseModel):
     usuario: str
@@ -102,12 +122,36 @@ class NovaMusicaGlobalRequest(BaseModel):
     tags: str
     categorias: List[str]  # Lista de nomes de categorias (ex: ["agitadas1", "ceia"])
     link: Optional[str] = ""
+    codigo: Optional[str] = ""
+    primeira_linha: Optional[str] = ""
+    tom: Optional[str] = ""
+    primeira_nota: Optional[str] = ""
+    versao_vocal: Optional[str] = ""
+    compasso: Optional[str] = ""
+    bpm: Optional[str] = ""
+    cifra: Optional[str] = ""
+    versao_parecida: Optional[str] = ""
+    tema_central: Optional[str] = ""
 
 class AdminUpdateUser(BaseModel):
     email: Optional[str] = None
     senha: Optional[str] = None
     role: Optional[str] = None
 
+
+# =============================================================================
+# PLANEJAMENTO (REPERTÓRIO POR PERÍODO)
+# =============================================================================
+
+class PeriodoCreateRequest(BaseModel):
+    nome: str
+
+class PeriodoUpdateRequest(BaseModel):
+    nome: str
+
+class PeriodoAdicionarMusicaRequest(BaseModel):
+    musica_id: int
+    ordem: Optional[int] = 0
 
 # =============================================================================
 # TRANSPOSITOR

@@ -67,9 +67,10 @@ async def admin_add_global_musica(
 ):
     try:
         res = await client.execute(
-            "INSERT INTO biblioteca_busca (nome_musica, artista, tags, link, usuario_id) "
-            "VALUES (?, ?, ?, ?, NULL)",
-            [musica.nome_musica, musica.artista, musica.tags, musica.link],
+            "INSERT INTO biblioteca_busca (nome_musica, artista, tags, link, codigo, primeira_linha, tom, primeira_nota, versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, usuario_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+            [musica.nome_musica, musica.artista, musica.tags, musica.link,
+             musica.codigo, musica.primeira_linha, musica.tom, musica.primeira_nota, musica.versao_vocal, musica.compasso, musica.bpm, musica.cifra, musica.versao_parecida, musica.tema_central],
         )
         musica_id = res.last_insert_rowid
         # Insere cada categoria na tabela associativa (usuario_id=None = global)

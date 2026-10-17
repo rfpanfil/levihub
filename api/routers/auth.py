@@ -12,9 +12,13 @@ from datetime import timedelta
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Request
 import libsql_client
 
+import requests
 import resend
 from api.limiter import limiter
-from api.config import ACCESS_TOKEN_EXPIRE_MINUTES, SMTP_EMAIL, SMTP_PASSWORD, IS_PRODUCTION, RESEND_API_KEY
+from api.config import (
+    ACCESS_TOKEN_EXPIRE_MINUTES, SMTP_EMAIL, SMTP_PASSWORD,
+    IS_PRODUCTION, RESEND_API_KEY, GOOGLE_SCRIPT_EMAIL_URL,
+)
 from api.database import get_db
 from api.models import (
     UserCreate, Token, VerifyRequest,
@@ -32,70 +36,99 @@ router = APIRouter(prefix="/auth", tags=["Autenticação"])
 # FUNÇÕES AUXILIARES DE E-MAIL
 # =============================================================================
 
-# SSL: usa o contexto padrão seguro do sistema (verificação de certificado habilitada)
+def _disparar_email(destinatario: str, assunto: str, corpo_texto: str, corpo_html: str) -> None:
+    """
+    Ordem de tentativa de envio:
+    1. Google Apps Script Webhook (HTTPS) -> Contorna bloqueio SMTP do Render e envia para qualquer destinatário via Gmail.
+    2. Resend API (HTTPS) -> Envia via Resend (requer domínio próprio para destinatários externos).
+    3. SMTP Gmail (Porta 465) -> Funciona em desenvolvimento local / Docker.
+    """
+    # 1. Tenta via Google Apps Script Webhook (Recomendado para Render sem domínio próprio)
+    if GOOGLE_SCRIPT_EMAIL_URL:
+        try:
+            resp = requests.post(
+                GOOGLE_SCRIPT_EMAIL_URL,
+                json={
+                    "to": destinatario,
+                    "subject": assunto,
+                    "body": corpo_texto,
+                    "htmlBody": corpo_html,
+                },
+                timeout=15,
+            )
+            if resp.status_code == 200:
+                print(f"E-mail enviado via Google Apps Script para {destinatario}")
+                return
+            print(f"Aviso Google Apps Script (status {resp.status_code}): {resp.text}")
+        except Exception as e:
+            print(f"Erro ao enviar e-mail via Google Apps Script: {e}")
 
-
-def enviar_email_verificacao(destinatario: str, codigo: str) -> None:
-    if not SMTP_EMAIL or not SMTP_PASSWORD:
-        print(f"AVISO: SMTP não configurado. Código para {destinatario}: {codigo}")
-        return
-
-    msg = MIMEMultipart()
-    msg["From"] = SMTP_EMAIL
-    msg["To"] = destinatario
-    msg["Subject"] = "Verifique a sua conta no LeviHub 🎸"
-    body = (
-        f"Olá Abençoado(a)!\n\n"
-        f"Bem-vindo ao LeviHub! O seu código de verificação é:\n\n"
-        f"{codigo}\n\n"
-        f"Insira este código na tela de cadastro para ativar a sua conta.\n\n"
-        f"Deus abençoe!"
-    )
-    msg.attach(MIMEText(body, "plain"))
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context()) as server:
-            server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, destinatario, msg.as_string())
-            print(f"E-mail de verificação enviado para {destinatario}")
-    except Exception as e:
-        print(f"Erro ao enviar e-mail: {e}")
-
-
-def enviar_email_recuperacao(destinatario: str, codigo: str) -> None:
-    # 1. Tenta via RESEND (Recomendado para Produção/Render)
+    # 2. Tenta via RESEND
     if RESEND_API_KEY:
         resend.api_key = RESEND_API_KEY
         try:
             r = resend.Emails.send({
                 "from": "LeviHub <onboarding@resend.dev>",
                 "to": destinatario,
-                "subject": "Recuperação de Senha - LeviHub 🎸",
-                "html": f"<p>Você solicitou a recuperação de senha. Seu código é:</p><h2>{codigo}</h2><p>Se não foi você, ignore este e-mail.</p>"
+                "subject": assunto,
+                "html": corpo_html,
             })
-            print(f"E-mail enviado via Resend: {r}")
+            print(f"E-mail enviado via Resend para {destinatario}: {r}")
             return
         except Exception as e:
             print(f"Erro ao enviar e-mail (Resend): {e}")
-            
-    # 2. Fallback para SMTP Gmail (Desenvolvimento Local)
+
+    # 3. Fallback para SMTP Gmail (Desenvolvimento Local)
     if SMTP_EMAIL and SMTP_PASSWORD:
         msg = MIMEMultipart()
         msg["From"] = SMTP_EMAIL
         msg["To"] = destinatario
-        msg["Subject"] = "Recuperação de Senha - LeviHub 🎸"
-        body = (
-            f"Você solicitou a recuperação de senha. Seu código é:\n\n"
-            f"{codigo}\n\n"
-            f"Se não foi você, ignore este e-mail."
-        )
-        msg.attach(MIMEText(body, "plain"))
+        msg["Subject"] = assunto
+        msg.attach(MIMEText(corpo_texto, "plain"))
         try:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context()) as server:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context(), timeout=15) as server:
                 server.login(SMTP_EMAIL, SMTP_PASSWORD)
                 server.sendmail(SMTP_EMAIL, destinatario, msg.as_string())
-            print("E-mail enviado via SMTP Fallback com sucesso!")
+            print(f"E-mail enviado via SMTP para {destinatario}")
+            return
         except Exception as e:
-            print(f"Erro ao enviar e-mail de recuperação via SMTP: {e}")
+            print(f"Erro ao enviar e-mail via SMTP: {e}")
+
+    print(f"AVISO: Nenhum provedor de e-mail conseguiu entregar a mensagem para {destinatario}.")
+
+
+def enviar_email_verificacao(destinatario: str, codigo: str) -> None:
+    assunto = "Verifique a sua conta no LeviHub 🎸"
+    corpo_texto = (
+        f"Olá Abençoado(a)!\n\n"
+        f"Bem-vindo ao LeviHub! O seu código de verificação é:\n\n"
+        f"{codigo}\n\n"
+        f"Insira este código na tela de cadastro para ativar a sua conta.\n\n"
+        f"Deus abençoe!"
+    )
+    corpo_html = (
+        f"<p>Olá Abençoado(a)!</p>"
+        f"<p>Bem-vindo ao <b>LeviHub</b>! O seu código de verificação é:</p>"
+        f"<h2>{codigo}</h2>"
+        f"<p>Insira este código na tela de cadastro para ativar a sua conta.</p>"
+        f"<p>Deus abençoe!</p>"
+    )
+    _disparar_email(destinatario, assunto, corpo_texto, corpo_html)
+
+
+def enviar_email_recuperacao(destinatario: str, codigo: str) -> None:
+    assunto = "Recuperação de Senha - LeviHub 🎸"
+    corpo_texto = (
+        f"Você solicitou a recuperação de senha. Seu código é:\n\n"
+        f"{codigo}\n\n"
+        f"Se não foi você, ignore este e-mail."
+    )
+    corpo_html = (
+        f"<p>Você solicitou a recuperação de senha. Seu código é:</p>"
+        f"<h2>{codigo}</h2>"
+        f"<p>Se não foi você, ignore este e-mail.</p>"
+    )
+    _disparar_email(destinatario, assunto, corpo_texto, corpo_html)
 
 
 # =============================================================================
