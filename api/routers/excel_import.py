@@ -61,6 +61,7 @@ async def preview_excel(
     # Mapeamento dinâmico de colunas
     col_map = {
         "nome_musica": next((c for c in df.columns if "NOME DA MÚSICA" in c or "TÍTULO" in c), None),
+        "artista": next((c for c in df.columns if "ARTISTA" in c), None),
         "codigo": next((c for c in df.columns if "CÓD." in c or "CÓDIGO" in c), None),
         "primeira_linha": next((c for c in df.columns if "PRIMEIRA LINHA" in c), None),
         "versao_parecida": next((c for c in df.columns if "VERSÃO PARECIDA" in c), None),
@@ -72,6 +73,7 @@ async def preview_excel(
         "versao_vocal": next((c for c in df.columns if "VERSÃO P VOCAL" in c or "VERSÃO PARA VOCAL" in c), None),
         "compasso": next((c for c in df.columns if "COMPASSO" in c), None),
         "bpm": next((c for c in df.columns if "BPM" in c), None),
+        "link": next((c for c in df.columns if "LINK" in c), None),
     }
 
     if not col_map["nome_musica"]:
@@ -82,7 +84,7 @@ async def preview_excel(
     existing_musics = await client.execute(
         """
         SELECT id, nome_musica, artista, codigo, primeira_linha, tom, primeira_nota, 
-               versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central 
+               versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, link
         FROM biblioteca_busca WHERE usuario_id = ?
         """,
         [user_id]
@@ -117,6 +119,7 @@ async def preview_excel(
             "cifra": r[10] or "",
             "versao_parecida": r[11] or "",
             "tema_central": r[12] or "",
+            "link": r[13] or "",
             "categorias": db_cats
         }
 
@@ -136,12 +139,13 @@ async def preview_excel(
         if not nome:
             continue
             
-        # Extrai artista do Nome da Música se houver parênteses "Meu Mestre (Irmão Lázaro)"
-        artista = ""
+        # Lê coluna ARTISTA se existir, senão extrai de parênteses no Nome da Música "Meu Mestre (Irmão Lázaro)"
+        artista = sanitize_str(row[col_map["artista"]]) if col_map["artista"] else ""
         import re
         match_artist = re.search(r'\((.*?)\)', nome)
         if match_artist:
-            artista = match_artist.group(1).strip()
+            if not artista:
+                artista = match_artist.group(1).strip()
             # Limpa o nome da música removendo os parênteses
             nome = re.sub(r'\(.*?\)', '', nome).strip()
             
@@ -167,6 +171,7 @@ async def preview_excel(
             "versao_vocal": sanitize_str(row[col_map["versao_vocal"]]) if col_map["versao_vocal"] else "",
             "compasso": sanitize_str(row[col_map["compasso"]]) if col_map["compasso"] else "",
             "bpm": sanitize_str(row[col_map["bpm"]]) if col_map["bpm"] else "",
+            "link": sanitize_str(row[col_map["link"]]) if col_map["link"] else "",
         }
         
         # Procura no banco de dados
@@ -227,7 +232,7 @@ async def commit_excel(
         final_data = {}
         
         keys = ["nome_musica", "artista", "codigo", "primeira_linha", "tom", "primeira_nota", 
-                "versao_vocal", "compasso", "bpm", "cifra", "versao_parecida", "tema_central"]
+                "versao_vocal", "compasso", "bpm", "cifra", "versao_parecida", "tema_central", "link"]
                 
         if db:
             for k in keys:
@@ -252,6 +257,7 @@ async def commit_excel(
 
         # Salva as tags como string pro BD
         tags = ", ".join(final_cats).lower()
+        cat_principal = final_cats[0]
 
         try:
             if status == "update" and db:
@@ -259,12 +265,12 @@ async def commit_excel(
                 await client.execute(
                     """
                     UPDATE biblioteca_busca SET
-                        nome_musica = ?, artista = ?, tags = ?, codigo = ?, primeira_linha = ?,
+                        nome_musica = ?, artista = ?, tags = ?, link = ?, categoria = ?, codigo = ?, primeira_linha = ?,
                         tom = ?, primeira_nota = ?, versao_vocal = ?, compasso = ?, bpm = ?,
                         cifra = ?, versao_parecida = ?, tema_central = ?
                     WHERE id = ? AND usuario_id = ?
                     """,
-                    [final_data["nome_musica"], final_data["artista"], tags, final_data["codigo"], final_data["primeira_linha"],
+                    [final_data["nome_musica"], final_data["artista"], tags, final_data["link"], cat_principal, final_data["codigo"], final_data["primeira_linha"],
                      final_data["tom"], final_data["primeira_nota"], final_data["versao_vocal"], final_data["compasso"], final_data["bpm"],
                      final_data["cifra"], final_data["versao_parecida"], final_data["tema_central"], db["id"], user_id]
                 )
@@ -278,11 +284,11 @@ async def commit_excel(
                 res = await client.execute(
                     """
                     INSERT INTO biblioteca_busca (
-                        nome_musica, artista, tags, link, codigo, primeira_linha, tom, primeira_nota,
+                        nome_musica, artista, tags, link, categoria, codigo, primeira_linha, tom, primeira_nota,
                         versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, usuario_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    [final_data["nome_musica"], final_data["artista"], tags, "", final_data["codigo"], final_data["primeira_linha"],
+                    [final_data["nome_musica"], final_data["artista"], tags, final_data["link"], cat_principal, final_data["codigo"], final_data["primeira_linha"],
                      final_data["tom"], final_data["primeira_nota"], final_data["versao_vocal"], final_data["compasso"], final_data["bpm"],
                      final_data["cifra"], final_data["versao_parecida"], final_data["tema_central"], user_id]
                 )

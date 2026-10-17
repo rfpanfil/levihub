@@ -4,7 +4,7 @@ import { apiFetch } from '../services/api';
 const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
   const [step, setStep] = useState(1);
   const [file, setFile] = useState(null);
-  const [fonteVerdade, setFonteVerdade] = useState('excel');
+  const [fonteVerdade, setFonteVerdade] = useState('banco');
   const [isLoading, setIsLoading] = useState(false);
   const [previewData, setPreviewData] = useState([]);
   
@@ -129,7 +129,26 @@ const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
 
         {step === 1 && (
           <div className="step-1">
-            <p>Selecione a sua planilha <b>.xlsx</b>. As colunas devem ter cabeçalhos compatíveis como "Nome da Música", "Categorias", "Tom", "BPM", etc.</p>
+            {/* Caixa do Arquivo Modelo */}
+            <div style={{ marginBottom: '18px', padding: '14px 16px', backgroundColor: 'rgba(46, 204, 113, 0.08)', border: '1px solid #2ecc71', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ flex: 1, minWidth: '240px' }}>
+                <strong style={{ color: '#2ecc71', display: 'block', marginBottom: '4px' }}>📄 Precisa do arquivo modelo padrão?</strong>
+                <span style={{ fontSize: '0.85rem', color: '#ccc' }}>
+                  Baixe a planilha modelo já configurada com todas as colunas do sistema. <br/>
+                  • <b>CATEGORIAS:</b> aceita <u>múltiplas categorias separadas por vírgula</u> (ex: <i>Alegria, Agitada 1, Ceia</i>).<br/>
+                  • <b>TEMA CENTRAL:</b> destinado a uma única palavra descritiva (ex: <i>Comunhão</i>).
+                </span>
+              </div>
+              <a 
+                href="/modelo_importacao_levihub.xlsx" 
+                download="Modelo_Importacao_LeviHub.xlsx"
+                style={{ padding: '10px 16px', backgroundColor: '#2ecc71', color: '#151821', fontWeight: 'bold', borderRadius: '6px', textDecoration: 'none', whiteSpace: 'nowrap', fontSize: '0.9rem' }}
+              >
+                📥 Baixar Planilha Modelo (.xlsx)
+              </a>
+            </div>
+
+            <p style={{ marginTop: 0 }}>Selecione a sua planilha preenchida (<b>.xlsx</b> ou <b>.xls</b>):</p>
             
             <div style={{ padding: '20px', border: '2px dashed #4a505c', borderRadius: '10px', textAlign: 'center', marginBottom: '20px' }}>
               <input type="file" accept=".xlsx, .xls" onChange={handleFileChange} />
@@ -137,21 +156,9 @@ const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
 
             <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#2a2f3a', borderRadius: '8px' }}>
               <h4 style={{ margin: '0 0 10px 0' }}>Conflito de Dados (Fonte da Verdade)</h4>
-              <p style={{ fontSize: '0.9rem', color: '#9ab', margin: '0 0 10px 0' }}>Caso a música já exista no banco de dados e a planilha possua dados diferentes (ex: Tons diferentes), qual deve ser mantido?</p>
+              <p style={{ fontSize: '0.9rem', color: '#9ab', margin: '0 0 12px 0' }}>Caso a música já exista no seu banco de dados e a planilha possua dados diferentes, o que o sistema deve fazer?</p>
               
-              <label style={{ display: 'block', marginBottom: '10px', cursor: 'pointer' }}>
-                <input 
-                  type="radio" 
-                  name="fonteVerdade" 
-                  value="excel" 
-                  checked={fonteVerdade === 'excel'}
-                  onChange={() => setFonteVerdade('excel')}
-                  style={{ marginRight: '10px' }}
-                />
-                <b>Usar dados da Planilha (Recomendado)</b> - Atualiza o banco com as informações do Excel.
-              </label>
-
-              <label style={{ display: 'block', cursor: 'pointer' }}>
+              <label style={{ display: 'block', marginBottom: '12px', cursor: 'pointer', padding: '10px', borderRadius: '6px', backgroundColor: fonteVerdade === 'banco' ? 'rgba(46, 204, 113, 0.12)' : 'transparent', border: fonteVerdade === 'banco' ? '1px solid #2ecc71' : '1px solid transparent' }}>
                 <input 
                   type="radio" 
                   name="fonteVerdade" 
@@ -160,8 +167,29 @@ const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
                   onChange={() => setFonteVerdade('banco')}
                   style={{ marginRight: '10px' }}
                 />
-                <b>Manter dados do Banco</b> - Só preenche os campos do banco que estiverem totalmente vazios.
+                <b style={{ color: '#2ecc71' }}>Manter dados atuais do Banco (Recomendado / Seguro)</b> — Não apaga nada do que já existe no seu banco; apenas preenche os campos novos que estiverem totalmente vazios (ex: Tom, Primeira Linha, BPM).
               </label>
+
+              <label style={{ display: 'block', cursor: 'pointer', padding: '10px', borderRadius: '6px', backgroundColor: fonteVerdade === 'excel' ? 'rgba(255, 75, 75, 0.12)' : 'transparent', border: fonteVerdade === 'excel' ? '1px solid #ff4b4b' : '1px solid transparent' }}>
+                <input 
+                  type="radio" 
+                  name="fonteVerdade" 
+                  value="excel" 
+                  checked={fonteVerdade === 'excel'}
+                  onChange={() => setFonteVerdade('excel')}
+                  style={{ marginRight: '10px' }}
+                />
+                <b style={{ color: '#ff6b6b' }}>Substituir pelos dados da Planilha (Sobrescrever)</b> — A planilha passa a ser a fonte da verdade e substitui os dados existentes.
+              </label>
+
+              {fonteVerdade === 'excel' && (
+                <div style={{ marginTop: '12px', padding: '12px 14px', backgroundColor: 'rgba(255, 75, 75, 0.18)', border: '2px solid #ff4b4b', borderRadius: '6px', color: '#ffb3b3', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                  <strong style={{ color: '#ff4b4b', display: 'block', fontSize: '0.95rem', marginBottom: '4px' }}>
+                    ⚠️ ATENÇÃO: OS DADOS ATUAIS DO BANCO SERÃO SOBRESCRITOS E APAGADOS!
+                  </strong>
+                  Ao continuar com esta opção selecionada, para todas as músicas já cadastradas que derem match, <b>qualquer informação ou categoria que já exista hoje no seu banco de dados será apagada e substituída</b> pelo conteúdo que estiver preenchido na planilha. Se não quiser perder seus dados atuais, selecione a opção <b>"Manter dados atuais do Banco"</b> acima.
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
