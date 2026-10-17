@@ -132,11 +132,12 @@ const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
             {/* Caixa do Arquivo Modelo */}
             <div style={{ marginBottom: '18px', padding: '14px 16px', backgroundColor: 'rgba(46, 204, 113, 0.08)', border: '1px solid #2ecc71', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div style={{ flex: 1, minWidth: '240px' }}>
-                <strong style={{ color: '#2ecc71', display: 'block', marginBottom: '4px' }}>📄 Precisa do arquivo modelo padrão?</strong>
-                <span style={{ fontSize: '0.85rem', color: '#ccc' }}>
-                  Baixe a planilha modelo já configurada com todas as colunas do sistema. <br/>
-                  • <b>CATEGORIAS:</b> aceita <u>múltiplas categorias separadas por vírgula</u> (ex: <i>Alegria, Agitada 1, Ceia</i>).<br/>
-                  • <b>TEMA CENTRAL:</b> destinado a uma única palavra descritiva (ex: <i>Comunhão</i>).
+                <strong style={{ color: '#2ecc71', display: 'block', marginBottom: '6px' }}>📄 Precisa do arquivo modelo padrão?</strong>
+                <span style={{ fontSize: '0.85rem', color: '#ccc', lineHeight: '1.5', display: 'block' }}>
+                  Baixe a planilha modelo já configurada com todas as colunas do sistema: <br/>
+                  • <b>CATEGORIAS:</b> grupos/situações do repertório, separados por vírgula (ex: <i>agitadas1, lentas2, ceia, natal, pascoa, missoes</i>).<br/>
+                  • <b>TAGS / PALAVRAS-CHAVE:</b> temas da música para busca no Levi Roboto, separados por vírgula (ex: <i>jesus, maria, pés, tesouro</i>).<br/>
+                  • <b>TEMA CENTRAL:</b> uma única palavra de destaque da música (ex: <i>Alegria, Família, Comunhão</i>).
                 </span>
               </div>
               <a 

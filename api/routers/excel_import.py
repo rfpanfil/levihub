@@ -65,8 +65,9 @@ async def preview_excel(
         "codigo": next((c for c in df.columns if "CÓD." in c or "CÓDIGO" in c), None),
         "primeira_linha": next((c for c in df.columns if "PRIMEIRA LINHA" in c), None),
         "versao_parecida": next((c for c in df.columns if "VERSÃO PARECIDA" in c), None),
-        "tema_central": next((c for c in df.columns if "TEMA CENTRAL" in c and "CATEGORIA" not in c), None),
+        "tema_central": next((c for c in df.columns if "TEMA CENTRAL" in c), None),
         "categorias": next((c for c in df.columns if "CATEGORIA" in c), None),
+        "tags": next((c for c in df.columns if "TAG" in c or "PALAVRAS-CHAVE" in c or "PALAVRAS CHAVE" in c), None),
         "cifra": next((c for c in df.columns if "CIFRA" in c), None),
         "tom": next((c for c in df.columns if "TOM" in c), None),
         "primeira_nota": next((c for c in df.columns if "1ª NOTA" in c or "PRIMEIRA NOTA" in c), None),
@@ -84,7 +85,7 @@ async def preview_excel(
     existing_musics = await client.execute(
         """
         SELECT id, nome_musica, artista, codigo, primeira_linha, tom, primeira_nota, 
-               versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, link
+               versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, link, tags, categoria
         FROM biblioteca_busca WHERE usuario_id = ?
         """,
         [user_id]
@@ -94,7 +95,6 @@ async def preview_excel(
     db_musics_dict = {}
     for r in existing_musics.rows:
         m_id = r[0]
-        # Pega as tags do banco
         cats_res = await client.execute(
             """
             SELECT cr.nome FROM musica_categorias mc
@@ -104,6 +104,8 @@ async def preview_excel(
             [m_id]
         )
         db_cats = [cr[0] for cr in cats_res.rows]
+        if not db_cats and r[15]:
+            db_cats = parse_categorias(r[15])
         
         db_musics_dict[m_id] = {
             "id": m_id,
@@ -120,6 +122,7 @@ async def preview_excel(
             "versao_parecida": r[11] or "",
             "tema_central": r[12] or "",
             "link": r[13] or "",
+            "tags": r[14] or "",
             "categorias": db_cats
         }
 
@@ -149,13 +152,8 @@ async def preview_excel(
             # Limpa o nome da música removendo os parênteses
             nome = re.sub(r'\(.*?\)', '', nome).strip()
             
-        # Monta os dados lidos do Excel
+        # Monta os dados lidos do Excel (SEM misturar Categorias com Tema Central ou Tags!)
         excel_cats = parse_categorias(sanitize_str(row[col_map["categorias"]])) if col_map["categorias"] else []
-        # Fallback: se não tiver coluna CATEGORIAS, tenta pegar do Tema Central
-        if not excel_cats and col_map["tema_central"]:
-            fallback_cats = parse_categorias(sanitize_str(row[col_map["tema_central"]]))
-            if fallback_cats:
-                excel_cats = fallback_cats
                 
         excel_data = {
             "nome_musica": nome,
@@ -165,6 +163,7 @@ async def preview_excel(
             "versao_parecida": sanitize_str(row[col_map["versao_parecida"]]) if col_map["versao_parecida"] else "",
             "tema_central": sanitize_str(row[col_map["tema_central"]]) if col_map["tema_central"] else "",
             "categorias": excel_cats,
+            "tags": sanitize_str(row[col_map["tags"]]) if col_map["tags"] else "",
             "cifra": sanitize_str(row[col_map["cifra"]]) if col_map["cifra"] else "",
             "tom": sanitize_str(row[col_map["tom"]]) if col_map["tom"] else "",
             "primeira_nota": sanitize_str(row[col_map["primeira_nota"]]) if col_map["primeira_nota"] else "",
@@ -182,15 +181,9 @@ async def preview_excel(
             # Tenta encontrar só pelo nome
             db_match = next((v for v in db_musics_dict.values() if normalize(v["nome_musica"]) == normalize(nome)), None)
             
-        status = "new"
         errors = []
-        if not excel_data["categorias"]:
-            errors.append("Falta a coluna/campo de Categorias")
-            status = "error"
-            
         if db_match:
-            if status != "error":
-                status = "update"
+            status = "update"
             preview_items.append({
                 "status": status,
                 "errors": errors,
@@ -198,6 +191,10 @@ async def preview_excel(
                 "db_data": db_match
             })
         else:
+            status = "new"
+            if not excel_data["categorias"]:
+                errors.append("Música nova sem Categoria (ex: agitadas1, lentas2, ceia)")
+                status = "error"
             preview_items.append({
                 "status": status,
                 "errors": errors,
@@ -232,7 +229,7 @@ async def commit_excel(
         final_data = {}
         
         keys = ["nome_musica", "artista", "codigo", "primeira_linha", "tom", "primeira_nota", 
-                "versao_vocal", "compasso", "bpm", "cifra", "versao_parecida", "tema_central", "link"]
+                "versao_vocal", "compasso", "bpm", "cifra", "versao_parecida", "tema_central", "link", "tags"]
                 
         if db:
             for k in keys:
@@ -244,24 +241,28 @@ async def commit_excel(
                 else:
                     final_data[k] = val_db if val_db != "" else val_excel
                     
-            final_cats = excel.get("categorias", []) if payload.fonte_verdade == "excel" and excel.get("categorias") else db.get("categorias", [])
-            if not final_cats and excel.get("categorias"):
-                 final_cats = excel.get("categorias")
+            if payload.fonte_verdade == "excel":
+                final_cats = excel.get("categorias", []) if excel.get("categorias") else db.get("categorias", [])
+            else:
+                final_cats = db.get("categorias", []) if db.get("categorias") else excel.get("categorias", [])
         else:
             for k in keys:
                 final_data[k] = excel.get(k, "")
             final_cats = excel.get("categorias", [])
 
         if not final_cats:
-            final_cats = ["Geral"] # Fallback
+            final_cats = ["Geral"]
 
-        # Salva as tags como string pro BD
-        tags = ", ".join(final_cats).lower()
-        cat_principal = final_cats[0]
+        # Se for música nova e tags estiver vazio, usa o tema_central como tag inicial (sem misturar com categorias!)
+        tags_str = final_data["tags"]
+        if not tags_str and final_data["tema_central"]:
+            tags_str = final_data["tema_central"].lower()
+
+        categoria_str = ", ".join([c.strip() for c in final_cats if c.strip()])
 
         try:
             if status == "update" and db:
-                # Faz update
+                # Faz update preservando tags, categoria e demais campos conforme fonte da verdade
                 await client.execute(
                     """
                     UPDATE biblioteca_busca SET
@@ -270,15 +271,16 @@ async def commit_excel(
                         cifra = ?, versao_parecida = ?, tema_central = ?
                     WHERE id = ? AND usuario_id = ?
                     """,
-                    [final_data["nome_musica"], final_data["artista"], tags, final_data["link"], cat_principal, final_data["codigo"], final_data["primeira_linha"],
+                    [final_data["nome_musica"], final_data["artista"], tags_str, final_data["link"], categoria_str, final_data["codigo"], final_data["primeira_linha"],
                      final_data["tom"], final_data["primeira_nota"], final_data["versao_vocal"], final_data["compasso"], final_data["bpm"],
                      final_data["cifra"], final_data["versao_parecida"], final_data["tema_central"], db["id"], user_id]
                 )
                 musica_id = db["id"]
                 updated += 1
                 
-                # Reseta categorias
-                await client.execute("DELETE FROM musica_categorias WHERE musica_id = ?", [musica_id])
+                # Só recria musica_categorias se houver categorias definidas
+                if final_cats:
+                    await client.execute("DELETE FROM musica_categorias WHERE musica_id = ?", [musica_id])
                 
             elif status == "new":
                 res = await client.execute(
@@ -288,16 +290,18 @@ async def commit_excel(
                         versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, usuario_id
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    [final_data["nome_musica"], final_data["artista"], tags, final_data["link"], cat_principal, final_data["codigo"], final_data["primeira_linha"],
+                    [final_data["nome_musica"], final_data["artista"], tags_str, final_data["link"], categoria_str, final_data["codigo"], final_data["primeira_linha"],
                      final_data["tom"], final_data["primeira_nota"], final_data["versao_vocal"], final_data["compasso"], final_data["bpm"],
                      final_data["cifra"], final_data["versao_parecida"], final_data["tema_central"], user_id]
                 )
                 musica_id = res.last_insert_rowid
                 inserted += 1
 
-            # Sincroniza as Categorias
+            # Sincroniza as Categorias na tabela associativa
             for cat_nome in final_cats:
                 cat_nome_clean = cat_nome.strip()
+                if not cat_nome_clean:
+                    continue
                 cat_res = await client.execute(
                     "SELECT id FROM categorias_repertorio WHERE LOWER(nome) = ? AND (usuario_id = ? OR usuario_id IS NULL)",
                     [cat_nome_clean.lower(), user_id]
@@ -312,7 +316,7 @@ async def commit_excel(
                     cat_id = cat_res.rows[0][0]
                     
                 await client.execute(
-                    "INSERT INTO musica_categorias (musica_id, categoria_id) VALUES (?, ?)",
+                    "INSERT OR IGNORE INTO musica_categorias (musica_id, categoria_id) VALUES (?, ?)",
                     [musica_id, cat_id]
                 )
 
