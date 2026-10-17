@@ -1,21 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { apiFetch } from '../services/api';
 
 const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
   const [step, setStep] = useState(1);
   const [file, setFile] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [fonteVerdade, setFonteVerdade] = useState('banco');
   const [isLoading, setIsLoading] = useState(false);
   const [previewData, setPreviewData] = useState([]);
+  const fileInputRef = useRef(null);
   
   // Seleção de linhas (todas marcadas por padrão)
   const [selectedItems, setSelectedItems] = useState([]);
 
   if (!isOpen) return null;
 
+  const validateAndSetFile = (selected) => {
+    if (!selected) return;
+    if (!selected.name.toLowerCase().endsWith('.xlsx') && !selected.name.toLowerCase().endsWith('.xls')) {
+      alert("Formato inválido! Por favor, envie apenas arquivos Excel (.xlsx ou .xls).");
+      return;
+    }
+    setFile(selected);
+  };
+
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      validateAndSetFile(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      validateAndSetFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -149,10 +181,51 @@ const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
               </a>
             </div>
 
-            <p style={{ marginTop: 0 }}>Selecione a sua planilha preenchida (<b>.xlsx</b> ou <b>.xls</b>):</p>
+            <p style={{ marginTop: 0 }}>Selecione ou arraste a sua planilha preenchida (<b>.xlsx</b> ou <b>.xls</b>):</p>
             
-            <div style={{ padding: '20px', border: '2px dashed #4a505c', borderRadius: '10px', textAlign: 'center', marginBottom: '20px' }}>
-              <input type="file" accept=".xlsx, .xls" onChange={handleFileChange} />
+            <div 
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              style={{ 
+                padding: '28px 20px', 
+                border: isDragging ? '2px dashed #2ecc71' : file ? '2px solid #61dafb' : '2px dashed #4a505c', 
+                backgroundColor: isDragging ? 'rgba(46, 204, 113, 0.12)' : file ? 'rgba(97, 218, 251, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                borderRadius: '10px', 
+                textAlign: 'center', 
+                marginBottom: '20px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <input 
+                ref={fileInputRef}
+                type="file" 
+                accept=".xlsx, .xls" 
+                onChange={handleFileChange} 
+                style={{ display: 'none' }} 
+              />
+              {file ? (
+                <div>
+                  <div style={{ fontSize: '1.8rem', marginBottom: '6px' }}>📊</div>
+                  <strong style={{ color: '#61dafb', fontSize: '1rem' }}>{file.name}</strong>
+                  <div style={{ fontSize: '0.82rem', color: '#9ab', marginTop: '6px' }}>
+                    Clique aqui ou arraste outro arquivo caso queira trocar
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📂</div>
+                  <strong style={{ color: isDragging ? '#2ecc71' : '#fff', fontSize: '1rem' }}>
+                    {isDragging ? 'Solte a planilha aqui!' : 'Arraste e solte sua planilha Excel aqui'}
+                  </strong>
+                  <div style={{ fontSize: '0.85rem', color: '#9ab', marginTop: '6px' }}>
+                    ou <span style={{ color: '#61dafb', textDecoration: 'underline' }}>clique para procurar no computador</span> (.xlsx, .xls)
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#2a2f3a', borderRadius: '8px' }}>
