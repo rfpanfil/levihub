@@ -446,8 +446,8 @@ function GerenciarRepertorio() {
                       <input type="text" value={versaoParecida} onChange={e => setVersaoParecida(e.target.value)} placeholder="Ex: Diante do Trono" style={inputStyle} />
                     </div>
                     <div>
-                      <label>Tema Central</label>
-                      <input type="text" value={temaCentral} onChange={e => setTemaCentral(e.target.value)} placeholder="Ex: Comunhão" style={inputStyle} />
+                      <label>Tema Central (Exclusivo p/ Planejamento)</label>
+                      <input type="text" value={temaCentral} onChange={e => setTemaCentral(e.target.value)} placeholder="Ex: Comunhão (usado apenas no Planejamento)" style={inputStyle} />
                     </div>
                   </div>
                 )}

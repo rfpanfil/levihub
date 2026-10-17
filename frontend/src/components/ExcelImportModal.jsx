@@ -137,7 +137,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
                   Baixe a planilha modelo já configurada com todas as colunas do sistema: <br/>
                   • <b>CATEGORIAS:</b> grupos/situações do repertório, separados por vírgula (ex: <i>agitadas1, lentas2, ceia, natal, pascoa, missoes</i>).<br/>
                   • <b>TAGS / PALAVRAS-CHAVE:</b> temas da música para busca no Levi Roboto, separados por vírgula (ex: <i>jesus, maria, pés, tesouro</i>).<br/>
-                  • <b>TEMA CENTRAL:</b> uma única palavra de destaque da música (ex: <i>Alegria, Família, Comunhão</i>).
+                  • <b>TEMA CENTRAL (Exclusivo p/ Planejamento):</b> uma única palavra de destaque da música, usada <u>exclusivamente na funcionalidade de Planejamento</u> (ex: <i>Alegria, Família, Comunhão</i>).
                 </span>
               </div>
               <a 
