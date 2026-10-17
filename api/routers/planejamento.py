@@ -104,10 +104,15 @@ async def listar_musicas_do_periodo(
         SELECT pm.musica_id, pm.ordem, 
                b.nome_musica, b.artista, b.tags, b.link, b.codigo, 
                b.primeira_linha, b.tom, b.primeira_nota, b.versao_vocal, 
-               b.compasso, b.bpm, b.cifra, b.categoria, b.versao_parecida, b.tema_central
+               b.compasso, b.bpm, b.cifra,
+               COALESCE(NULLIF(GROUP_CONCAT(cr.nome, ', '), ''), b.categoria) as categorias_str,
+               b.versao_parecida, b.tema_central
         FROM planejamento_musicas pm
         JOIN biblioteca_busca b ON pm.musica_id = b.id
+        LEFT JOIN musica_categorias mc ON b.id = mc.musica_id
+        LEFT JOIN categorias_repertorio cr ON mc.categoria_id = cr.id
         WHERE pm.periodo_id = ?
+        GROUP BY pm.musica_id, pm.ordem
         ORDER BY pm.ordem ASC, pm.musica_id ASC
         """
         musicas = await client.execute(sql, [periodo_id])

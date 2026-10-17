@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../services/api';
-import { Plus, Trash2, ArrowLeft, Search, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Edit2, ArrowLeft, Search, Eye, EyeOff } from 'lucide-react';
 import './Planejamento.css';
 
 export default function Planejamento() {
@@ -11,6 +11,7 @@ export default function Planejamento() {
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   
   const [showModal, setShowModal] = useState(false);
+  const [editingPeriodId, setEditingPeriodId] = useState(null);
   const [novoNome, setNovoNome] = useState('');
 
   // Estados da tela de detalhes
@@ -71,22 +72,52 @@ export default function Planejamento() {
     setLoading(false);
   };
 
-  const handleCriarPeriodo = async (e) => {
+  const abrirModalCriar = () => {
+    setEditingPeriodId(null);
+    setNovoNome('');
+    setShowModal(true);
+  };
+
+  const abrirModalEditar = (periodo, e) => {
+    e.stopPropagation();
+    setEditingPeriodId(periodo.id);
+    setNovoNome(periodo.nome);
+    setShowModal(true);
+  };
+
+  const handleSalvarPeriodo = async (e) => {
     e.preventDefault();
     if (!novoNome.trim()) return;
     try {
-      const res = await apiFetch('/planejamento/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: novoNome })
-      });
-      if (res.ok) {
-        setNovoNome('');
-        setShowModal(false);
-        carregarPeriodos();
+      if (editingPeriodId) {
+        const res = await apiFetch(`/planejamento/${editingPeriodId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome: novoNome })
+        });
+        if (res.ok) {
+          if (selectedPeriod?.id === editingPeriodId) {
+            setSelectedPeriod({ ...selectedPeriod, nome: novoNome });
+          }
+          setNovoNome('');
+          setEditingPeriodId(null);
+          setShowModal(false);
+          carregarPeriodos();
+        }
+      } else {
+        const res = await apiFetch('/planejamento/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome: novoNome })
+        });
+        if (res.ok) {
+          setNovoNome('');
+          setShowModal(false);
+          carregarPeriodos();
+        }
       }
     } catch (err) {
-      alert('Erro ao criar período.');
+      alert('Erro ao salvar período.');
     }
   };
 
@@ -189,26 +220,28 @@ export default function Planejamento() {
 
   if (selectedPeriod) {
     return (
-      <div className="planejamento-container glass-panel">
+      <div className="planejamento-container">
         <div className="planejamento-header">
-          <button className="back-btn" onClick={() => setSelectedPeriod(null)}>
-            <ArrowLeft size={20} /> Voltar
-          </button>
-          <h2>{selectedPeriod.nome}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <button className="back-btn" onClick={() => setSelectedPeriod(null)}>
+              <ArrowLeft size={18} /> Voltar
+            </button>
+            <h2 style={{ margin: 0 }}>🗓️ {selectedPeriod.nome}</h2>
+          </div>
           
           <div className="header-actions">
             <button className="secondary-btn" onClick={() => setShowColSettings(!showColSettings)}>
-              {showColSettings ? <EyeOff size={16}/> : <Eye size={16}/>} Colunas
+              {showColSettings ? <EyeOff size={16}/> : <Eye size={16}/>} Opções de Colunas
             </button>
             <button className="primary-btn" onClick={() => {setSearchMusica(''); setShowAddModal(true);}}>
-              <Plus size={16} /> Adicionar Música
+              <Plus size={18} /> Adicionar Música
             </button>
           </div>
         </div>
 
         {showColSettings && (
           <div className="col-settings-panel glass-panel">
-            <h4>Visibilidade de Colunas</h4>
+            <h4>⚙️ Escolha quais colunas deseja visualizar neste período:</h4>
             <div className="col-grid">
               {colunasPossiveis.map(col => (
                 <label key={col.key} className="col-label">
@@ -224,85 +257,100 @@ export default function Planejamento() {
           </div>
         )}
 
-        <div className="table-responsive">
-          {loadingMusicas ? <p>Carregando repertório...</p> : (
-            <table className="repertorio-table">
-              <thead>
-                <tr>
-                  <th>Música</th>
-                  {colunasPossiveis.map(col => (
-                    visibleCols.includes(col.key) && <th key={col.key}>{col.label}</th>
-                  ))}
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {musicasPeriodo.length === 0 ? (
+        <div className="input-area" style={{ padding: '20px' }}>
+          <div className="table-responsive">
+            {loadingMusicas ? <p style={{ padding: '20px' }}>Carregando repertório...</p> : (
+              <table className="repertorio-table">
+                <thead>
                   <tr>
-                    <td colSpan={visibleCols.length + 2} style={{textAlign:'center', padding: '20px'}}>
-                      Nenhuma música neste planejamento.
-                    </td>
+                    <th>Música</th>
+                    {colunasPossiveis.map(col => (
+                      visibleCols.includes(col.key) && <th key={col.key}>{col.label}</th>
+                    ))}
+                    <th style={{ width: '80px', textAlign: 'center' }}>Ações</th>
                   </tr>
-                ) : (
-                  musicasPeriodo.map((m, idx) => (
-                    <tr key={`${m.id}-${idx}`}>
-                      <td style={{fontWeight: 'bold'}}>{m.nome_musica}</td>
-                      {colunasPossiveis.map(col => {
-                        if (!visibleCols.includes(col.key)) return null;
-                        return (
-                          <td key={col.key}>
-                            {col.key === 'link' && m[col.key] ? (
-                              <a href={m[col.key]} target="_blank" rel="noreferrer">Ver Link</a>
-                            ) : m[col.key]}
-                          </td>
-                        );
-                      })}
-                      <td>
-                        <button className="icon-btn delete-btn" onClick={() => handleRemoverMusica(m.id)}>
-                          <Trash2 size={16} />
-                        </button>
+                </thead>
+                <tbody>
+                  {musicasPeriodo.length === 0 ? (
+                    <tr>
+                      <td colSpan={visibleCols.length + 2} style={{ textAlign: 'center', padding: '32px 20px', color: '#9ab', fontStyle: 'italic' }}>
+                        Nenhuma música adicionada a este planejamento ainda. Clique em "+ Adicionar Música" acima para escolher da sua biblioteca!
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
+                  ) : (
+                    musicasPeriodo.map((m, idx) => (
+                      <tr key={`${m.id}-${idx}`}>
+                        <td style={{ fontWeight: 'bold', color: '#fff' }}>{m.nome_musica}</td>
+                        {colunasPossiveis.map(col => {
+                          if (!visibleCols.includes(col.key)) return null;
+                          return (
+                            <td key={col.key}>
+                              {col.key === 'link' && m[col.key] ? (
+                                <a href={m[col.key]} target="_blank" rel="noreferrer" style={{ color: '#2ecc71', fontWeight: 'bold' }}>🔗 Abrir</a>
+                              ) : (m[col.key] || '-')}
+                            </td>
+                          );
+                        })}
+                        <td style={{ textAlign: 'center' }}>
+                          <button className="icon-btn delete-btn" onClick={() => handleRemoverMusica(m.id)} title="Remover do período">
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
 
         {showAddModal && (
           <div className="modal-overlay">
-            <div className="modal-content glass-panel">
-              <h3>Adicionar Música da Biblioteca</h3>
+            <div className="modal-content">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #4a505c', paddingBottom: '10px' }}>
+                <h3 style={{ margin: 0, color: '#61dafb' }}>➕ Adicionar Música da Biblioteca</h3>
+                <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: '#9ab', fontSize: '1.5em', cursor: 'pointer' }}>&times;</button>
+              </div>
               
               <div className="search-box">
-                <Search size={18} />
+                <Search size={18} color="#9ab" />
                 <input 
                   type="text" 
-                  placeholder="Buscar por nome ou artista..." 
+                  placeholder="Buscar por nome da música ou artista..." 
                   value={searchMusica}
                   onChange={(e) => setSearchMusica(e.target.value)}
                 />
               </div>
 
               <div className="search-results">
-                {searching && <p>Buscando...</p>}
-                {!searching && searchResults.length === 0 && <p>Nenhuma música encontrada.</p>}
-                {!searching && searchResults.map(res => (
-                  <div key={res.id} className="search-item">
-                    <div>
-                      <strong>{res.nome_musica}</strong>
-                      {res.artista && <span className="search-artista"> - {res.artista}</span>}
+                {searching && <p style={{ color: '#9ab', textAlign: 'center' }}>Buscando...</p>}
+                {!searching && searchResults.length === 0 && (
+                  <p style={{ color: '#9ab', textAlign: 'center', padding: '20px 0' }}>Nenhuma música encontrada na sua biblioteca.</p>
+                )}
+                {!searching && searchResults.map(res => {
+                  const jaAdicionada = musicasPeriodo.some(mp => mp.id === res.id);
+                  return (
+                    <div key={res.id} className="search-item">
+                      <div>
+                        <strong style={{ color: '#fff' }}>{res.nome_musica}</strong>
+                        {res.artista && <span className="search-artista"> - {res.artista}</span>}
+                      </div>
+                      <button 
+                        className="primary-btn add-btn-sm" 
+                        onClick={() => handleAdicionarMusica(res.id)}
+                        disabled={jaAdicionada}
+                        style={jaAdicionada ? { background: '#3c414d', boxShadow: 'none', color: '#9ab', cursor: 'default' } : {}}
+                      >
+                        {jaAdicionada ? 'Já adicionada' : '+ Adicionar'}
+                      </button>
                     </div>
-                    <button className="primary-btn add-btn-sm" onClick={() => handleAdicionarMusica(res.id)}>
-                      Adicionar
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="modal-actions">
-                <button className="secondary-btn" onClick={() => setShowAddModal(false)}>Fechar</button>
+                <button className="cancel-btn" onClick={() => setShowAddModal(false)}>Fechar</button>
               </div>
             </div>
           </div>
@@ -315,37 +363,45 @@ export default function Planejamento() {
     <div className="planejamento-container">
       <div className="planejamento-header">
         <h2>🗓️ Planejador de Repertório</h2>
-        <button className="primary-btn" onClick={() => setShowModal(true)}>
+        <button className="primary-btn" onClick={abrirModalCriar}>
           <Plus size={18} /> Novo Planejamento
         </button>
       </div>
 
       {loading ? <p>Carregando...</p> : error ? <p className="error">{error}</p> : (
-        <div className="periodos-grid">
-          {periodos.length === 0 ? (
-            <div className="glass-panel empty-state">
-              <p>Nenhum período criado ainda. Comece criando um Planejamento Semestral, Mensal ou Personalizado!</p>
-            </div>
-          ) : (
-            periodos.map(p => (
-              <div key={p.id} className="periodo-card glass-panel" onClick={() => abrirPeriodo(p)}>
-                <h3>{p.nome}</h3>
+        periodos.length === 0 ? (
+          <div className="empty-state">
+            <p>Nenhum período criado ainda. Comece criando um Planejamento Semestral, Mensal ou Personalizado!</p>
+          </div>
+        ) : (
+          <div className="periodos-grid">
+            {periodos.map(p => (
+              <div key={p.id} className="periodo-card" onClick={() => abrirPeriodo(p)}>
+                <h3>📅 {p.nome}</h3>
                 <div className="card-actions">
-                  <button className="icon-btn delete-btn" onClick={(e) => handleExcluirPeriodo(p.id, e)}>
+                  <button className="icon-btn edit-btn" onClick={(e) => abrirModalEditar(p, e)} title="Renomear período">
+                    <Edit2 size={16} />
+                  </button>
+                  <button className="icon-btn delete-btn" onClick={(e) => handleExcluirPeriodo(p.id, e)} title="Excluir período">
                     <Trash2 size={16} />
                   </button>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )
       )}
 
       {showModal && (
         <div className="modal-overlay">
-          <div className="modal-content glass-panel">
-            <h3>Criar Planejamento</h3>
-            <form onSubmit={handleCriarPeriodo}>
+          <div className="modal-content">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #4a505c', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, color: editingPeriodId ? '#f39c12' : '#61dafb' }}>
+                {editingPeriodId ? '✏️ Renomear Planejamento' : '➕ Criar Planejamento'}
+              </h3>
+              <button onClick={() => setShowModal(false)} style={{ background: 'transparent', border: 'none', color: '#9ab', fontSize: '1.5em', cursor: 'pointer' }}>&times;</button>
+            </div>
+            <form onSubmit={handleSalvarPeriodo}>
               <div className="form-group">
                 <label>Nome do Período</label>
                 <input 
@@ -354,10 +410,11 @@ export default function Planejamento() {
                   value={novoNome} 
                   onChange={(e) => setNovoNome(e.target.value)}
                   autoFocus
+                  required
                 />
               </div>
               <div className="modal-actions">
-                <button type="button" className="secondary-btn" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button type="button" className="cancel-btn" onClick={() => setShowModal(false)}>Cancelar</button>
                 <button type="submit" className="primary-btn">Salvar</button>
               </div>
             </form>
