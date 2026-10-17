@@ -11,7 +11,7 @@ gspread
 
 # Banco de Dados
 libsql-client
-aiohttp>=3.14.3
+aiohttp>=3.14.5
 
 # Segurança e Auth
 slowapi
