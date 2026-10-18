@@ -27,7 +27,7 @@ function GerenciarRepertorio() {
   const [artista, setArtista] = useState('');
   const [tags, setTags] = useState('');
   const [link, setLink] = useState('');
-  const [categoria, setCategoria] = useState('');
+  const [categoriasSelecionadas, setCategoriasSelecionadas] = useState([]);
 
   // Novos campos avançados
   const [codigo, setCodigo] = useState('');
@@ -42,7 +42,7 @@ function GerenciarRepertorio() {
   const [temaCentral, setTemaCentral] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   
-  // Estados para Criação Rápida de Categoria no Dropdown
+  // Estados para Criação Rápida de Categoria no Modal
   const [isNovaCategoriaInline, setIsNovaCategoriaInline] = useState(false);
   const [novaCategoriaNomeInline, setNovaCategoriaNomeInline] = useState('');
 
@@ -92,11 +92,20 @@ function GerenciarRepertorio() {
     return limpo;
   };
 
+  const toggleCategoriaSelecionada = (nomeCat) => {
+    const limpo = nomeCat.trim();
+    if (categoriasSelecionadas.some(c => c.toLowerCase() === limpo.toLowerCase())) {
+      setCategoriasSelecionadas(categoriasSelecionadas.filter(c => c.toLowerCase() !== limpo.toLowerCase()));
+    } else {
+      setCategoriasSelecionadas([...categoriasSelecionadas, limpo]);
+    }
+  };
+
   // --- LÓGICA DE MÚSICAS ---
   const abrirModalNovo = () => {
     setIsEditing(false); setEditId(null); 
     setNomeMusica(''); setArtista(''); setTags(''); setLink(''); 
-    setCategoria(categoriasObjetos.length > 0 ? categoriasObjetos[0].nome : '');
+    setCategoriasSelecionadas([]);
     setCodigo(''); setPrimeiraLinha(''); setTom(''); setPrimeiraNota('');
     setVersaoVocal(''); setCompasso(''); setBpm(''); setCifra('');
     setVersaoParecida(''); setTemaCentral('');
@@ -110,8 +119,12 @@ function GerenciarRepertorio() {
     setNomeMusica(musica.nome_musica);
     setArtista(musica.artista || '');
     setTags(musica.tags); setLink(musica.link || '');
-    // API retorna categorias como array; usa a primeira para o campo de seleção
-    setCategoria(musica.categorias && musica.categorias.length > 0 ? musica.categorias[0] : '');
+    // Carrega todas as categorias da música para permitir múltipla seleção
+    setCategoriasSelecionadas(
+      musica.categorias && musica.categorias.length > 0
+        ? musica.categorias.map(c => c.trim()).filter(Boolean)
+        : []
+    );
     setCodigo(musica.codigo || ''); setPrimeiraLinha(musica.primeira_linha || '');
     setTom(musica.tom || ''); setPrimeiraNota(musica.primeira_nota || '');
     setVersaoVocal(musica.versao_vocal || ''); setCompasso(musica.compasso || '');
@@ -129,16 +142,18 @@ function GerenciarRepertorio() {
   const handleSalvarMusica = async (e) => {
     e.preventDefault();
     
-    let catFinal = categoria;
+    let listaCatsFinal = [...categoriasSelecionadas];
 
-    // Se o usuário escolheu criar uma categoria na hora
-    if (isNovaCategoriaInline) {
-      catFinal = novaCategoriaNomeInline.trim();
-      if (!catFinal) {
-        mostrarMensagem("Digite o nome da nova categoria.", "erro"); return;
+    // Se o usuário digitou uma nova categoria inline, inclui também na lista
+    if (isNovaCategoriaInline && novaCategoriaNomeInline.trim()) {
+      const novaCat = novaCategoriaNomeInline.trim();
+      if (!listaCatsFinal.some(c => c.toLowerCase() === novaCat.toLowerCase())) {
+        listaCatsFinal.push(novaCat);
       }
-    } else if (!categoria.trim()) {
-      mostrarMensagem("Selecione uma categoria.", "erro"); return;
+    }
+
+    if (listaCatsFinal.length === 0) {
+      mostrarMensagem("Selecione pelo menos uma categoria.", "erro"); return;
     }
 
     if (!nomeMusica.trim() || !tags.trim()) {
@@ -147,21 +162,22 @@ function GerenciarRepertorio() {
 
     try {
       // 1. Salva a categoria no banco de dados PRIMEIRO (se for nova inline)
-      if (isNovaCategoriaInline) {
-        const catExiste = categoriasObjetos.some(c => c.nome.toLowerCase() === catFinal.toLowerCase());
+      if (isNovaCategoriaInline && novaCategoriaNomeInline.trim()) {
+        const novaCat = novaCategoriaNomeInline.trim();
+        const catExiste = categoriasObjetos.some(c => c.nome.toLowerCase() === novaCat.toLowerCase());
         if (!catExiste) {
           await apiFetch('/categorias', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nome: catFinal })
+            body: JSON.stringify({ nome: novaCat })
           });
         }
       }
 
-      // 2. Salva a Música - envia categorias como array (novo contrato da API)
+      // 2. Salva a Música - envia todas as categorias selecionadas como array
       const linkLimpo = formatarLinkYouTube(link);
       const bodyData = { 
-        nome_musica: nomeMusica, artista, tags, categorias: [catFinal], link: linkLimpo,
+        nome_musica: nomeMusica, artista, tags, categorias: listaCatsFinal, link: linkLimpo,
         codigo, primeira_linha: primeiraLinha, tom, primeira_nota: primeiraNota,
         versao_vocal: versaoVocal, compasso, bpm, cifra,
         versao_parecida: versaoParecida, tema_central: temaCentral
@@ -355,35 +371,79 @@ function GerenciarRepertorio() {
                   <label>Artista / Banda (Opcional)</label>
                   <input type="text" value={artista} onChange={e => setArtista(e.target.value)} placeholder="Ex: Diante do Trono" style={inputStyle} />
                 </div>
-                <div style={{ flex: 1, minWidth: '150px' }}>
-                  <label>Categoria *</label>
-                  <select 
-                    value={isNovaCategoriaInline ? 'nova' : categoria} 
-                    onChange={e => {
-                      if(e.target.value === 'nova') { setIsNovaCategoriaInline(true); setCategoria(''); }
-                      else { setIsNovaCategoriaInline(false); setCategoria(e.target.value); }
-                    }} 
-                    style={inputStyle} 
-                    required={!isNovaCategoriaInline}
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                  <label style={{ margin: 0 }}>
+                    Categorias * <span style={{ fontSize: '0.82em', color: '#9ab', fontWeight: 'normal' }}>(clique para marcar uma ou várias)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsNovaCategoriaInline(!isNovaCategoriaInline)}
+                    style={{
+                      background: 'transparent',
+                      border: '1px dashed #f39c12',
+                      color: '#f39c12',
+                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
+                    }}
                   >
-                    <option value="" disabled>Selecione...</option>
-                    {categoriasObjetos.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
-                    <option value="nova">✨ + Criar Nova Categoria...</option>
-                  </select>
+                    {isNovaCategoriaInline ? '✕ Cancelar Nova Categoria' : '✨ + Criar Nova Categoria'}
+                  </button>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  padding: '12px',
+                  backgroundColor: '#282c34',
+                  borderRadius: '8px',
+                  border: '1px solid #4a505c'
+                }}>
+                  {Array.from(new Set([
+                    ...categoriasObjetos.map(c => c.nome.trim()),
+                    ...categoriasSelecionadas
+                  ])).filter(Boolean).sort((a, b) => a.localeCompare(b)).map(nomeCat => {
+                    const ativa = categoriasSelecionadas.some(c => c.toLowerCase() === nomeCat.toLowerCase());
+                    return (
+                      <button
+                        key={nomeCat}
+                        type="button"
+                        onClick={() => toggleCategoriaSelecionada(nomeCat)}
+                        style={{
+                          padding: '6px 13px',
+                          borderRadius: '999px',
+                          fontSize: '0.85rem',
+                          fontWeight: ativa ? '700' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          backgroundColor: ativa ? 'rgba(243, 156, 18, 0.22)' : 'rgba(255, 255, 255, 0.05)',
+                          border: ativa ? '1px solid #f39c12' : '1px solid rgba(255, 255, 255, 0.18)',
+                          color: ativa ? '#fcd34d' : '#cbd5e1',
+                        }}
+                      >
+                        {ativa ? `✓ ${nomeCat}` : nomeCat}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* CAMPO EXTRA: Aparece se o usuário escolher "Criar Nova Categoria..." */}
               {isNovaCategoriaInline && (
                 <div style={{ animation: 'fadeIn 0.3s ease' }}>
-                  <label style={{ color: '#f39c12' }}>Nome da Nova Categoria *</label>
+                  <label style={{ color: '#f39c12' }}>Nome da Nova Categoria (será adicionada junto com as selecionadas acima)</label>
                   <input 
                     type="text" 
                     value={novaCategoriaNomeInline} 
                     onChange={e => setNovaCategoriaNomeInline(e.target.value)} 
-                    placeholder="Ex: Adoração, Entrada..." 
+                    placeholder="Ex: pascoa, casais..." 
                     style={{...inputStyle, borderColor: '#f39c12'}} 
-                    required 
                     autoFocus 
                   />
                 </div>

@@ -348,10 +348,11 @@ async def add_custom_musica(
     client: libsql_client.Client = Depends(get_db),
 ):
     try:
+        cat_str = ", ".join([c.strip() for c in musica.categorias if c.strip()])
         res = await client.execute(
-            "INSERT INTO biblioteca_busca (nome_musica, artista, tags, usuario_id, link, codigo, primeira_linha, tom, primeira_nota, versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [musica.nome_musica, musica.artista, musica.tags, current_user["id"], musica.link,
+            "INSERT INTO biblioteca_busca (nome_musica, artista, tags, usuario_id, link, categoria, codigo, primeira_linha, tom, primeira_nota, versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [musica.nome_musica, musica.artista, musica.tags, current_user["id"], musica.link, cat_str,
              musica.codigo, musica.primeira_linha, musica.tom, musica.primeira_nota, musica.versao_vocal, musica.compasso, musica.bpm, musica.cifra, musica.versao_parecida, musica.tema_central],
         )
         musica_id = res.last_insert_rowid
@@ -369,11 +370,12 @@ async def update_custom_musica(
     client: libsql_client.Client = Depends(get_db),
 ):
     try:
+        cat_str = ", ".join([c.strip() for c in req.categorias if c.strip()])
         await client.execute(
-            "UPDATE biblioteca_busca SET nome_musica = ?, artista = ?, tags = ?, link = ?, "
+            "UPDATE biblioteca_busca SET nome_musica = ?, artista = ?, tags = ?, link = ?, categoria = ?, "
             "codigo = ?, primeira_linha = ?, tom = ?, primeira_nota = ?, versao_vocal = ?, compasso = ?, bpm = ?, cifra = ?, versao_parecida = ?, tema_central = ? "
             "WHERE id = ? AND usuario_id = ?",
-            [req.nome_musica, req.artista, req.tags, req.link,
+            [req.nome_musica, req.artista, req.tags, req.link, cat_str,
              req.codigo, req.primeira_linha, req.tom, req.primeira_nota, req.versao_vocal, req.compasso, req.bpm, req.cifra, req.versao_parecida, req.tema_central,
              musica_id, current_user["id"]],
         )
