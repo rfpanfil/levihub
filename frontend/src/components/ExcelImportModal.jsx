@@ -167,9 +167,9 @@ const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
                 <strong style={{ color: '#2ecc71', display: 'block', marginBottom: '6px' }}>📄 Precisa do arquivo modelo padrão?</strong>
                 <span style={{ fontSize: '0.85rem', color: '#ccc', lineHeight: '1.5', display: 'block' }}>
                   Baixe a planilha modelo já configurada com todas as colunas do sistema: <br/>
-                  • <b>CATEGORIAS:</b> grupos/situações do repertório, separados por vírgula (ex: <i>agitadas1, lentas2, ceia, natal, pascoa, missoes</i>).<br/>
-                  • <b>TAGS / PALAVRAS-CHAVE:</b> temas da música para busca no Levi Roboto, separados por vírgula (ex: <i>jesus, maria, pés, tesouro</i>).<br/>
-                  • <b>TEMA CENTRAL (Exclusivo p/ Planejamento):</b> uma única palavra de destaque da música, usada <u>exclusivamente na funcionalidade de Planejamento</u> (ex: <i>Alegria, Família, Comunhão</i>).
+                  • <b>CATEGORIAS *:</b> obrigatório para novas músicas — grupos/situações do repertório, separados por vírgula (ex: <i>agitadas1, lentas2, ceia, natal, pascoa, missoes</i>).<br/>
+                  • <b>TAGS / PALAVRAS-CHAVE *:</b> temas da música para busca no Levi Roboto, separados por vírgula (ex: <i>jesus, maria, pés, tesouro</i>).<br/>
+                  • <b>TEMA CENTRAL (Exclusivo p/ Planejamento) *:</b> obrigatório para novas músicas — uma única opção de destaque da música, usada <u>exclusivamente na funcionalidade de Planejamento</u> (ex: <i>Adoração, Alegria, Comunhão, Cruz</i>).
                 </span>
               </div>
               <a 

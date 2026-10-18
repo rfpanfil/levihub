@@ -42,9 +42,11 @@ function GerenciarRepertorio() {
   const [temaCentral, setTemaCentral] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   
-  // Estados para Criação Rápida de Categoria no Modal
+  // Estados para Criação Rápida de Categoria e Tema Central no Modal
   const [isNovaCategoriaInline, setIsNovaCategoriaInline] = useState(false);
   const [novaCategoriaNomeInline, setNovaCategoriaNomeInline] = useState('');
+  const [isNovoTemaInline, setIsNovoTemaInline] = useState(false);
+  const [novoTemaNomeInline, setNovoTemaNomeInline] = useState('');
 
   // Estados do Modal de Categorias (CRUD)
   const [isCategoriasModalOpen, setIsCategoriasModalOpen] = useState(false);
@@ -111,6 +113,7 @@ function GerenciarRepertorio() {
     setVersaoParecida(''); setTemaCentral('');
     setShowAdvanced(false);
     setIsNovaCategoriaInline(false); setNovaCategoriaNomeInline('');
+    setIsNovoTemaInline(false); setNovoTemaNomeInline('');
     setIsModalOpen(true);
   };
 
@@ -133,9 +136,10 @@ function GerenciarRepertorio() {
     setShowAdvanced(
       !!musica.codigo || !!musica.primeira_linha || !!musica.tom || !!musica.primeira_nota || 
       !!musica.versao_vocal || !!musica.compasso || !!musica.bpm || !!musica.cifra ||
-      !!musica.versao_parecida || !!musica.tema_central
+      !!musica.versao_parecida
     );
     setIsNovaCategoriaInline(false); setNovaCategoriaNomeInline('');
+    setIsNovoTemaInline(false); setNovoTemaNomeInline('');
     setIsModalOpen(true);
   };
 
@@ -156,6 +160,14 @@ function GerenciarRepertorio() {
       mostrarMensagem("Selecione pelo menos uma categoria.", "erro"); return;
     }
 
+    const temaFinal = (isNovoTemaInline && novoTemaNomeInline.trim())
+      ? novoTemaNomeInline.trim()
+      : temaCentral.trim();
+
+    if (!temaFinal) {
+      mostrarMensagem("Selecione ou crie um Tema Central para a música.", "erro"); return;
+    }
+
     if (!nomeMusica.trim() || !tags.trim()) {
       mostrarMensagem("Preencha o nome e as tags.", "erro"); return;
     }
@@ -174,13 +186,13 @@ function GerenciarRepertorio() {
         }
       }
 
-      // 2. Salva a Música - envia todas as categorias selecionadas como array
+      // 2. Salva a Música - envia todas as categorias selecionadas como array e o tema central obrigatório
       const linkLimpo = formatarLinkYouTube(link);
       const bodyData = { 
         nome_musica: nomeMusica, artista, tags, categorias: listaCatsFinal, link: linkLimpo,
         codigo, primeira_linha: primeiraLinha, tom, primeira_nota: primeiraNota,
         versao_vocal: versaoVocal, compasso, bpm, cifra,
-        versao_parecida: versaoParecida, tema_central: temaCentral
+        versao_parecida: versaoParecida, tema_central: temaFinal
       };
 
       const url = isEditing ? `/musicas/custom/${editId}` : '/musicas/custom';
@@ -325,7 +337,12 @@ function GerenciarRepertorio() {
                   <strong style={{ color: 'white', fontSize: '1.1em', display: 'block', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                     {musica.nome_musica} {musica.artista && <span style={{ color: '#f39c12', fontSize: '0.85em', fontWeight: 'normal' }}> - {musica.artista}</span>}
                   </strong>
-                  <div style={{ display: 'flex', gap: '5px', marginTop: '5px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '5px', marginTop: '5px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {musica.tema_central && (
+                      <span style={{ fontSize: '0.7em', backgroundColor: 'rgba(46, 204, 113, 0.2)', border: '1px solid rgba(46, 204, 113, 0.45)', padding: '2px 8px', borderRadius: '10px', color: '#86efac', fontWeight: 'bold' }}>
+                        🎯 {musica.tema_central}
+                      </span>
+                    )}
                     {musica.categorias && musica.categorias.map((cat, i) => (
                       <span key={i} style={{ fontSize: '0.7em', backgroundColor: '#4a505c', padding: '3px 8px', borderRadius: '10px', color: '#eafcff' }}>
                         {cat.trim()}
@@ -449,6 +466,98 @@ function GerenciarRepertorio() {
                 </div>
               )}
 
+              {/* TEMA CENTRAL (OBRIGATÓRIO - SELEÇÃO ÚNICA + CRIAR NOVO) */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                  <label style={{ margin: 0 }}>
+                    🎯 Tema Central * <span style={{ fontSize: '0.82em', color: '#9ab', fontWeight: 'normal' }}>(Exclusivo p/ Planejamento — selecione 1 opção)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const proximoEstado = !isNovoTemaInline;
+                      setIsNovoTemaInline(proximoEstado);
+                      if (!proximoEstado) setNovoTemaNomeInline('');
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: '1px dashed #2ecc71',
+                      color: '#2ecc71',
+                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {isNovoTemaInline ? '✕ Cancelar Novo Tema' : '✨ + Criar Novo Tema Central'}
+                  </button>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '7px',
+                  padding: '12px',
+                  maxHeight: '135px',
+                  overflowY: 'auto',
+                  backgroundColor: '#282c34',
+                  borderRadius: '8px',
+                  border: '1px solid #4a505c'
+                }}>
+                  {Array.from(new Set([
+                    'Adoração', 'Alegria', 'Amor de Deus', 'Bondade', 'Casais', 'Celebração',
+                    'Comunhão', 'Criação', 'Cruz', 'Entrega', 'Esperança', 'Espírito Santo',
+                    'Família', 'Fidelidade', 'Força', 'Graça', 'Gratidão', 'Identidade',
+                    'Igreja', 'Jesus', 'Louvor', 'Missões', 'Natal', 'Oração', 'Palavra',
+                    'Perdão', 'Perseverança', 'Provisão', 'Ressurreição', 'Restauração',
+                    'Salvação', 'Santidade', 'Segurança', 'Vitória',
+                    ...musicasCustom.map(m => (m.tema_central || '').trim()),
+                    temaCentral.trim()
+                  ])).filter(Boolean).sort((a, b) => a.localeCompare(b)).map(nomeTema => {
+                    const ativo = !isNovoTemaInline && temaCentral.trim().toLowerCase() === nomeTema.toLowerCase();
+                    return (
+                      <button
+                        key={nomeTema}
+                        type="button"
+                        onClick={() => {
+                          setTemaCentral(nomeTema);
+                          setIsNovoTemaInline(false);
+                          setNovoTemaNomeInline('');
+                        }}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '999px',
+                          fontSize: '0.82rem',
+                          fontWeight: ativo ? '700' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          backgroundColor: ativo ? 'rgba(46, 204, 113, 0.22)' : 'rgba(255, 255, 255, 0.05)',
+                          border: ativo ? '1px solid #2ecc71' : '1px solid rgba(255, 255, 255, 0.18)',
+                          color: ativo ? '#86efac' : '#cbd5e1',
+                        }}
+                      >
+                        {ativo ? `✓ ${nomeTema}` : nomeTema}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {isNovoTemaInline && (
+                <div style={{ animation: 'fadeIn 0.3s ease' }}>
+                  <label style={{ color: '#2ecc71' }}>Nome do Novo Tema Central *</label>
+                  <input 
+                    type="text" 
+                    value={novoTemaNomeInline} 
+                    onChange={e => setNovoTemaNomeInline(e.target.value)} 
+                    placeholder="Ex: Santificação, Arrependimento..." 
+                    style={{...inputStyle, borderColor: '#2ecc71'}} 
+                    autoFocus 
+                  />
+                </div>
+              )}
+
               <div>
                 <label>Palavras-Chave (Separadas por vírgula) *</label>
                 <input type="text" value={tags} onChange={e => setTags(e.target.value)} placeholder="exaltação, animada, deus" style={inputStyle} required />
@@ -501,13 +610,9 @@ function GerenciarRepertorio() {
                       <label>Cifra (Texto)</label>
                       <textarea value={cifra} onChange={e => setCifra(e.target.value)} placeholder="Cole aqui ou use o link acima" style={{...inputStyle, height: '60px', resize: 'vertical'}} />
                     </div>
-                    <div>
+                    <div style={{ gridColumn: '1 / -1' }}>
                       <label>Versão Parecida</label>
                       <input type="text" value={versaoParecida} onChange={e => setVersaoParecida(e.target.value)} placeholder="Ex: Diante do Trono" style={inputStyle} />
-                    </div>
-                    <div>
-                      <label>Tema Central (Exclusivo p/ Planejamento)</label>
-                      <input type="text" value={temaCentral} onChange={e => setTemaCentral(e.target.value)} placeholder="Ex: Comunhão (usado apenas no Planejamento)" style={inputStyle} />
                     </div>
                   </div>
                 )}

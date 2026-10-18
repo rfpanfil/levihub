@@ -195,6 +195,9 @@ async def preview_excel(
             if not excel_data["categorias"]:
                 errors.append("Música nova sem Categoria (ex: agitadas1, lentas2, ceia)")
                 status = "error"
+            if not excel_data["tema_central"]:
+                errors.append("Música nova sem Tema Central (ex: Adoração, Comunhão, Cruz)")
+                status = "error"
             preview_items.append({
                 "status": status,
                 "errors": errors,
