@@ -265,6 +265,7 @@ async def run_migrations() -> None:
             periodo_id INTEGER NOT NULL,
             musica_id INTEGER NOT NULL,
             ordem INTEGER DEFAULT 0,
+            adicionado_em TEXT,
             PRIMARY KEY (periodo_id, musica_id)
         )
     """)
@@ -298,6 +299,7 @@ async def run_migrations() -> None:
         "ALTER TABLE biblioteca_busca ADD COLUMN cifra TEXT DEFAULT ''",
         "ALTER TABLE biblioteca_busca ADD COLUMN versao_parecida TEXT DEFAULT ''",
         "ALTER TABLE biblioteca_busca ADD COLUMN tema_central TEXT DEFAULT ''",
+        "ALTER TABLE planejamento_musicas ADD COLUMN adicionado_em TEXT",
     ]
     for sql in _alter_migrations:
         try:

@@ -159,7 +159,7 @@ async def adicionar_musica_ao_periodo(
             return {"error": "Período não encontrado."}
             
         await client.execute(
-            "INSERT INTO planejamento_musicas (periodo_id, musica_id, ordem) VALUES (?, ?, ?)",
+            "INSERT INTO planejamento_musicas (periodo_id, musica_id, ordem, adicionado_em) VALUES (?, ?, ?, datetime('now'))",
             [periodo_id, req.musica_id, req.ordem]
         )
         return {"message": "Música adicionada ao período!"}

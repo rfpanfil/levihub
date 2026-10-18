@@ -1,7 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '../services/api';
-import { Plus, Trash2, Edit2, ArrowLeft, Search, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Edit2, ArrowLeft, Search, Eye, EyeOff, Filter, Clock } from 'lucide-react';
 import './Planejamento.css';
+
+// Formata há quanto tempo a música foi adicionada em um planejamento pela última vez
+function formatarTempoSemPlanejar(isoDateStr) {
+  if (!isoDateStr) return null;
+  const data = new Date(isoDateStr.endsWith('Z') ? isoDateStr : `${isoDateStr.replace(' ', 'T')}Z`);
+  if (isNaN(data.getTime())) return null;
+
+  const agora = new Date();
+  const diffMs = Math.max(0, agora.getTime() - data.getTime());
+  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDias === 0) return 'hoje';
+  if (diffDias === 1) return 'há 1 dia';
+  if (diffDias < 30) return `há ${diffDias} dias`;
+  const meses = Math.floor(diffDias / 30);
+  if (meses === 1) return `há 1 mês (${diffDias}d)`;
+  if (meses < 12) return `há ${meses} meses (${diffDias}d)`;
+  const anos = Math.floor(diffDias / 365);
+  return anos === 1 ? `há 1 ano (${diffDias}d)` : `há ${anos} anos (${diffDias}d)`;
+}
 
 export default function Planejamento() {
   const [periodos, setPeriodos] = useState([]);
@@ -18,11 +38,17 @@ export default function Planejamento() {
   const [musicasPeriodo, setMusicasPeriodo] = useState([]);
   const [loadingMusicas, setLoadingMusicas] = useState(false);
   
-  // Modal de Adicionar Música
+  // Modal de Adicionar Música e Filtros Avançados
   const [showAddModal, setShowAddModal] = useState(false);
-  const [searchMusica, setSearchMusica] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
+  const [todasMusicas, setTodasMusicas] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [searchMusica, setSearchMusica] = useState('');
+  const [showFiltersPanel, setShowFiltersPanel] = useState(true);
+  const [sortTempoMode, setSortTempoMode] = useState('mais_tempo'); // 'alfabetica' | 'mais_tempo' | 'nunca_planejadas' | 'recentes'
+  const [selectedCategorias, setSelectedCategorias] = useState([]);
+  const [selectedTemas, setSelectedTemas] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [tagFilterInput, setTagFilterInput] = useState('');
 
   // Controle de colunas
   const colunasPossiveis = [
@@ -154,17 +180,13 @@ export default function Planejamento() {
     setLoadingMusicas(false);
   };
 
-  const handleBuscarMusica = async () => {
+  const carregarBibliotecaUsuario = async () => {
     setSearching(true);
     try {
       const res2 = await apiFetch('/musicas/custom');
       if (res2.ok) {
         const dados = await res2.json();
-        let filtradas = dados.musicas.filter(m => 
-          m.nome_musica.toLowerCase().includes(searchMusica.toLowerCase()) || 
-          (m.artista && m.artista.toLowerCase().includes(searchMusica.toLowerCase()))
-        );
-        setSearchResults(filtradas);
+        setTodasMusicas(dados.musicas || []);
       }
     } catch (e) {
       console.error(e);
@@ -172,12 +194,128 @@ export default function Planejamento() {
     setSearching(false);
   };
 
-  // Carregar toda a biblioteca ao abrir modal pra facilitar
+  // Carrega toda a biblioteca ao abrir o modal
   useEffect(() => {
     if (showAddModal) {
-      handleBuscarMusica();
+      carregarBibliotecaUsuario();
     }
-  }, [showAddModal, searchMusica]);
+  }, [showAddModal]);
+
+  // Extrai todas as opções únicas de Categorias, Temas Centrais e Tags da biblioteca do usuário
+  const opcoesFiltros = useMemo(() => {
+    const catsSet = new Set();
+    const temasSet = new Set();
+    const tagsSet = new Set();
+
+    todasMusicas.forEach(m => {
+      (m.categorias || []).forEach(c => {
+        if (c && c.trim()) catsSet.add(c.trim());
+      });
+      if (m.tema_central && m.tema_central.trim()) {
+        temasSet.add(m.tema_central.trim());
+      }
+      if (m.tags) {
+        m.tags.split(',').forEach(t => {
+          const clean = t.trim().toLowerCase();
+          if (clean) tagsSet.add(clean);
+        });
+      }
+    });
+
+    return {
+      categorias: Array.from(catsSet).sort((a, b) => a.localeCompare(b)),
+      temas: Array.from(temasSet).sort((a, b) => a.localeCompare(b)),
+      tags: Array.from(tagsSet).sort((a, b) => a.localeCompare(b)),
+    };
+  }, [todasMusicas]);
+
+  // Aplica busca por Nome/Artista + Múltiplos Filtros (Categorias, Temas Centrais, Tags) + Ordenação de Tempo
+  const searchResults = useMemo(() => {
+    const termo = searchMusica.trim().toLowerCase();
+
+    let lista = todasMusicas.filter(m => {
+      // 1. Busca exclusivamente por Nome da Música ou Artista
+      if (termo) {
+        const matchNome = (m.nome_musica || '').toLowerCase().includes(termo);
+        const matchArtista = (m.artista || '').toLowerCase().includes(termo);
+        if (!matchNome && !matchArtista) return false;
+      }
+
+      // 2. Filtro de Categorias (múltipla seleção: se alguma selecionada estiver nas categorias da música)
+      if (selectedCategorias.length > 0) {
+        const catsMusica = (m.categorias || []).map(c => c.trim().toLowerCase());
+        const temCat = selectedCategorias.some(sel => catsMusica.includes(sel.toLowerCase()));
+        if (!temCat) return false;
+      }
+
+      // 3. Filtro de Temas Centrais (múltipla seleção)
+      if (selectedTemas.length > 0) {
+        const temaMusica = (m.tema_central || '').trim().toLowerCase();
+        const temTema = selectedTemas.some(sel => sel.toLowerCase() === temaMusica);
+        if (!temTema) return false;
+      }
+
+      // 4. Filtro de Tags (múltipla seleção)
+      if (selectedTags.length > 0) {
+        const tagsMusica = (m.tags || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+        const temTag = selectedTags.some(sel => tagsMusica.includes(sel.toLowerCase()));
+        if (!temTag) return false;
+      }
+
+      // 5. Filtro exclusivo de "Nunca planejadas"
+      if (sortTempoMode === 'nunca_planejadas') {
+        if (m.ultimo_planejamento_em || m.ultimo_periodo_nome) return false;
+      }
+
+      return true;
+    });
+
+    // Ordenação
+    lista = [...lista].sort((a, b) => {
+      if (sortTempoMode === 'mais_tempo') {
+        const aNunca = !a.ultimo_planejamento_em && !a.ultimo_periodo_nome;
+        const bNunca = !b.ultimo_planejamento_em && !b.ultimo_periodo_nome;
+        if (aNunca && !bNunca) return -1;
+        if (!aNunca && bNunca) return 1;
+        if (!aNunca && !bNunca) {
+          const dateA = a.ultimo_planejamento_em ? new Date(a.ultimo_planejamento_em).getTime() : 0;
+          const dateB = b.ultimo_planejamento_em ? new Date(b.ultimo_planejamento_em).getTime() : 0;
+          if (dateA !== dateB) return dateA - dateB; // Mais antigas primeiro
+        }
+      } else if (sortTempoMode === 'recentes') {
+        const aNunca = !a.ultimo_planejamento_em && !a.ultimo_periodo_nome;
+        const bNunca = !b.ultimo_planejamento_em && !b.ultimo_periodo_nome;
+        if (aNunca && !bNunca) return 1;
+        if (!aNunca && bNunca) return -1;
+        if (!aNunca && !bNunca) {
+          const dateA = a.ultimo_planejamento_em ? new Date(a.ultimo_planejamento_em).getTime() : 0;
+          const dateB = b.ultimo_planejamento_em ? new Date(b.ultimo_planejamento_em).getTime() : 0;
+          if (dateA !== dateB) return dateB - dateA; // Mais recentes primeiro
+        }
+      }
+      return (a.nome_musica || '').localeCompare(b.nome_musica || '');
+    });
+
+    return lista;
+  }, [todasMusicas, searchMusica, selectedCategorias, selectedTemas, selectedTags, sortTempoMode]);
+
+  const toggleItemArray = (arr, setArr, val) => {
+    if (arr.includes(val)) {
+      setArr(arr.filter(i => i !== val));
+    } else {
+      setArr([...arr, val]);
+    }
+  };
+
+  const limparFiltros = () => {
+    setSelectedCategorias([]);
+    setSelectedTemas([]);
+    setSelectedTags([]);
+    setTagFilterInput('');
+    setSortTempoMode('mais_tempo');
+  };
+
+  const totalFiltrosAtivos = selectedCategorias.length + selectedTemas.length + selectedTags.length + (sortTempoMode === 'nunca_planejadas' ? 1 : 0);
 
   const handleAdicionarMusica = async (musicaId) => {
     try {
@@ -188,6 +326,7 @@ export default function Planejamento() {
       });
       if (res.ok) {
         carregarMusicasDoPeriodo(selectedPeriod.id);
+        carregarBibliotecaUsuario();
       } else {
         const d = await res.json();
         alert(d.error || 'Erro ao adicionar.');
@@ -307,12 +446,13 @@ export default function Planejamento() {
 
         {showAddModal && (
           <div className="modal-overlay">
-            <div className="modal-content">
+            <div className="modal-content" style={{ maxWidth: '760px', width: '94%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #4a505c', paddingBottom: '10px' }}>
                 <h3 style={{ margin: 0, color: '#61dafb' }}>➕ Adicionar Música da Biblioteca</h3>
                 <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: '#9ab', fontSize: '1.5em', cursor: 'pointer' }}>&times;</button>
               </div>
               
+              {/* Busca exclusiva por Nome da Música ou Artista */}
               <div className="search-box">
                 <Search size={18} color="#9ab" />
                 <input 
@@ -323,19 +463,171 @@ export default function Planejamento() {
                 />
               </div>
 
+              {/* Barra de Ordenação de Tempo + Toggle de Filtros */}
+              <div className="filter-toolbar">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '240px' }}>
+                  <Clock size={16} color="#f39c12" />
+                  <select 
+                    value={sortTempoMode} 
+                    onChange={(e) => setSortTempoMode(e.target.value)}
+                    className="sort-select"
+                  >
+                    <option value="mais_tempo">⏳ Mais tempo sem planejar (Nunca planejadas 1º)</option>
+                    <option value="nunca_planejadas">✨ Mostrar apenas músicas NUNCA planejadas</option>
+                    <option value="alfabetica">🔤 Ordem Alfabética (A - Z)</option>
+                    <option value="recentes">🕒 Planejadas mais recentemente</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {totalFiltrosAtivos > 0 && (
+                    <button type="button" onClick={limparFiltros} className="clear-filters-btn">
+                      Limpar ({totalFiltrosAtivos})
+                    </button>
+                  )}
+                  <button 
+                    type="button" 
+                    onClick={() => setShowFiltersPanel(!showFiltersPanel)} 
+                    className="toggle-filters-btn"
+                  >
+                    <Filter size={15} /> {showFiltersPanel ? 'Ocultar Filtros' : 'Filtros (Categorias / Temas / Tags)'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Painel de Múltipla Seleção: Categorias, Temas Centrais e Tags */}
+              {showFiltersPanel && (
+                <div className="multi-filters-box">
+                  {/* Categorias */}
+                  <div className="filter-section">
+                    <label className="filter-section-title">📁 Categorias (pode selecionar várias):</label>
+                    {opcoesFiltros.categorias.length === 0 ? (
+                      <span className="filter-empty-hint">Nenhuma categoria cadastrada</span>
+                    ) : (
+                      <div className="chips-container">
+                        {opcoesFiltros.categorias.map(cat => {
+                          const active = selectedCategorias.includes(cat);
+                          return (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => toggleItemArray(selectedCategorias, setSelectedCategorias, cat)}
+                              className={`filter-chip ${active ? 'active-cat' : ''}`}
+                            >
+                              {cat}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Temas Centrais */}
+                  <div className="filter-section">
+                    <label className="filter-section-title">🎯 Temas Centrais (pode selecionar vários):</label>
+                    {opcoesFiltros.temas.length === 0 ? (
+                      <span className="filter-empty-hint">Nenhum tema central preenchido nas músicas ainda</span>
+                    ) : (
+                      <div className="chips-container">
+                        {opcoesFiltros.temas.map(tema => {
+                          const active = selectedTemas.includes(tema);
+                          return (
+                            <button
+                              key={tema}
+                              type="button"
+                              onClick={() => toggleItemArray(selectedTemas, setSelectedTemas, tema)}
+                              className={`filter-chip ${active ? 'active-tema' : ''}`}
+                            >
+                              {tema}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tags / Palavras-Chave */}
+                  <div className="filter-section" style={{ marginBottom: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                      <label className="filter-section-title" style={{ marginBottom: 0 }}>🏷️ Tags / Palavras-Chave (pode selecionar várias):</label>
+                      {opcoesFiltros.tags.length > 8 && (
+                        <input
+                          type="text"
+                          placeholder="Filtrar tags (ex: ceia, cruz)..."
+                          value={tagFilterInput}
+                          onChange={(e) => setTagFilterInput(e.target.value)}
+                          className="tag-mini-search"
+                        />
+                      )}
+                    </div>
+                    {opcoesFiltros.tags.length === 0 ? (
+                      <span className="filter-empty-hint">Nenhuma tag cadastrada</span>
+                    ) : (
+                      <div className="chips-container tags-scroll">
+                        {opcoesFiltros.tags
+                          .filter(t => !tagFilterInput.trim() || t.includes(tagFilterInput.trim().toLowerCase()) || selectedTags.includes(t))
+                          .slice(0, 60)
+                          .map(tag => {
+                            const active = selectedTags.includes(tag);
+                            return (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => toggleItemArray(selectedTags, setSelectedTags, tag)}
+                                className={`filter-chip ${active ? 'active-tag' : ''}`}
+                              >
+                                #{tag}
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ fontSize: '0.82rem', color: '#9ab', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Mostrando <b>{searchResults.length}</b> de {todasMusicas.length} músicas</span>
+              </div>
+
               <div className="search-results">
                 {searching && <p style={{ color: '#9ab', textAlign: 'center' }}>Buscando...</p>}
                 {!searching && searchResults.length === 0 && (
-                  <p style={{ color: '#9ab', textAlign: 'center', padding: '20px 0' }}>Nenhuma música encontrada na sua biblioteca.</p>
+                  <p style={{ color: '#9ab', textAlign: 'center', padding: '20px 0' }}>Nenhuma música encontrada com esses filtros.</p>
                 )}
                 {!searching && searchResults.map(res => {
                   const jaAdicionada = musicasPeriodo.some(mp => mp.id === res.id);
+                  const tempoStr = formatarTempoSemPlanejar(res.ultimo_planejamento_em);
+                  const nuncaPlanejada = !res.ultimo_planejamento_em && !res.ultimo_periodo_nome;
+
                   return (
                     <div key={res.id} className="search-item">
-                      <div>
-                        <strong style={{ color: '#fff' }}>{res.nome_musica}</strong>
-                        {res.artista && <span className="search-artista"> - {res.artista}</span>}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <strong style={{ color: '#fff', fontSize: '1rem' }}>{res.nome_musica}</strong>
+                          {res.artista && <span className="search-artista"> - {res.artista}</span>}
+                        </div>
+
+                        {/* Selos informativos: Tempo sem planejar + Categorias + Tema Central */}
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px', alignItems: 'center' }}>
+                          {nuncaPlanejada ? (
+                            <span className="badge-tempo nunca">✨ Nunca planejada</span>
+                          ) : (
+                            <span className="badge-tempo planejada" title={res.ultimo_periodo_nome ? `Último período: ${res.ultimo_periodo_nome}` : ''}>
+                              ⏳ Última vez: {tempoStr || 'anteriormente'} {res.ultimo_periodo_nome ? `(${res.ultimo_periodo_nome})` : ''}
+                            </span>
+                          )}
+
+                          {res.tema_central && (
+                            <span className="badge-meta tema">🎯 {res.tema_central}</span>
+                          )}
+
+                          {(res.categorias || []).map((c, idx) => (
+                            <span key={idx} className="badge-meta cat">📁 {c}</span>
+                          ))}
+                        </div>
                       </div>
+
                       <button 
                         className="primary-btn add-btn-sm" 
                         onClick={() => handleAdicionarMusica(res.id)}

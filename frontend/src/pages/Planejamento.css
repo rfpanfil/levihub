@@ -315,3 +315,170 @@
 .back-btn:hover {
   background: rgba(97, 218, 251, 0.12);
 }
+
+/* --- FILTROS AVANÇADOS E TEMPO SEM PLANEJAR NO MODAL --- */
+.filter-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.sort-select {
+  padding: 8px 12px !important;
+  font-size: 0.88rem !important;
+  border-radius: 8px !important;
+  background: rgba(0, 0, 0, 0.35) !important;
+  border: 1px solid rgba(243, 156, 18, 0.4) !important;
+  color: #f8fafc !important;
+  width: auto !important;
+  flex: 1;
+}
+
+.toggle-filters-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(97, 218, 251, 0.1);
+  color: #61dafb;
+  border: 1px solid rgba(97, 218, 251, 0.35);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.toggle-filters-btn:hover {
+  background: rgba(97, 218, 251, 0.18);
+}
+
+.clear-filters-btn {
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: rgba(255, 75, 75, 0.12);
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 75, 75, 0.4);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.multi-filters-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.filter-section {
+  margin-bottom: 12px;
+}
+
+.filter-section-title {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.filter-empty-hint {
+  font-size: 0.8rem;
+  color: #71717a;
+  font-style: italic;
+}
+
+.chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tags-scroll {
+  max-height: 90px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.filter-chip {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d4d4d8;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.filter-chip:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+
+.filter-chip.active-cat {
+  background: rgba(243, 156, 18, 0.22);
+  border-color: #f39c12;
+  color: #fcd34d;
+  font-weight: 600;
+}
+
+.filter-chip.active-tema {
+  background: rgba(46, 204, 113, 0.22);
+  border-color: #2ecc71;
+  color: #86efac;
+  font-weight: 600;
+}
+
+.filter-chip.active-tag {
+  background: rgba(97, 218, 251, 0.22);
+  border-color: #61dafb;
+  color: #bae6fd;
+  font-weight: 600;
+}
+
+.tag-mini-search {
+  width: 210px !important;
+  padding: 4px 10px !important;
+  font-size: 0.8rem !important;
+  border-radius: 6px !important;
+}
+
+.badge-tempo {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.badge-tempo.nunca {
+  background: rgba(46, 204, 113, 0.16);
+  color: #4ade80;
+  border: 1px solid rgba(46, 204, 113, 0.35);
+}
+
+.badge-tempo.planejada {
+  background: rgba(243, 156, 18, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(243, 156, 18, 0.35);
+}
+
+.badge-meta {
+  font-size: 0.72rem;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.badge-meta.tema {
+  background: rgba(97, 218, 251, 0.12);
+  color: #61dafb;
+}
+
+.badge-meta.cat {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e4e4e7;
+}

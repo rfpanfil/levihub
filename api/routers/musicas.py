@@ -287,9 +287,23 @@ async def get_custom_musicas(
         result = await client.execute(
             """
             SELECT bb.id, bb.nome_musica, bb.artista, bb.tags, bb.link,
-                   GROUP_CONCAT(cr.nome) as categorias_str,
+                   COALESCE(NULLIF(GROUP_CONCAT(cr.nome), ''), bb.categoria) as categorias_str,
                    bb.codigo, bb.primeira_linha, bb.tom, bb.primeira_nota, bb.versao_vocal,
-                   bb.compasso, bb.bpm, bb.cifra, bb.versao_parecida, bb.tema_central
+                   bb.compasso, bb.bpm, bb.cifra, bb.versao_parecida, bb.tema_central,
+                   (
+                       SELECT MAX(pm.adicionado_em)
+                       FROM planejamento_musicas pm
+                       INNER JOIN planejamento_periodos pp ON pm.periodo_id = pp.id
+                       WHERE pm.musica_id = bb.id AND pp.usuario_id = bb.usuario_id
+                   ) as ultimo_planejamento_em,
+                   (
+                       SELECT pp.nome
+                       FROM planejamento_musicas pm
+                       INNER JOIN planejamento_periodos pp ON pm.periodo_id = pp.id
+                       WHERE pm.musica_id = bb.id AND pp.usuario_id = bb.usuario_id
+                       ORDER BY pm.adicionado_em DESC, pp.id DESC
+                       LIMIT 1
+                   ) as ultimo_periodo_nome
             FROM biblioteca_busca bb
             LEFT JOIN musica_categorias mc ON bb.id = mc.musica_id
             LEFT JOIN categorias_repertorio cr ON mc.categoria_id = cr.id
@@ -304,9 +318,9 @@ async def get_custom_musicas(
                 "id": r[0],
                 "nome_musica": r[1],
                 "artista": r[2] or "",
-                "tags": r[3],
+                "tags": r[3] or "",
                 "link": r[4] or "",
-                "categorias": r[5].split(",") if r[5] else [],
+                "categorias": [c.strip() for c in r[5].split(",") if c.strip()] if r[5] else [],
                 "codigo": r[6] or "",
                 "primeira_linha": r[7] or "",
                 "tom": r[8] or "",
@@ -316,7 +330,9 @@ async def get_custom_musicas(
                 "bpm": r[12] or "",
                 "cifra": r[13] or "",
                 "versao_parecida": r[14] or "",
-                "tema_central": r[15] or ""
+                "tema_central": r[15] or "",
+                "ultimo_planejamento_em": r[16] or None,
+                "ultimo_periodo_nome": r[17] or None,
             }
             for r in result.rows
         ]
