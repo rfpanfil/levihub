@@ -256,7 +256,8 @@ async def run_migrations() -> None:
         CREATE TABLE IF NOT EXISTS planejamento_periodos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario_id INTEGER NOT NULL,
-            nome TEXT NOT NULL
+            nome TEXT NOT NULL,
+            programacao_cultos TEXT DEFAULT '[]'
         )
     """)
 
@@ -300,6 +301,7 @@ async def run_migrations() -> None:
         "ALTER TABLE biblioteca_busca ADD COLUMN versao_parecida TEXT DEFAULT ''",
         "ALTER TABLE biblioteca_busca ADD COLUMN tema_central TEXT DEFAULT ''",
         "ALTER TABLE planejamento_musicas ADD COLUMN adicionado_em TEXT",
+        "ALTER TABLE planejamento_periodos ADD COLUMN programacao_cultos TEXT",
     ]
     for sql in _alter_migrations:
         try:

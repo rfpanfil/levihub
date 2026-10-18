@@ -1,7 +1,8 @@
 # arquivo: api/routers/planejamento.py
+import json
 from fastapi import APIRouter, Depends
 import libsql_client
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 
 from api.database import get_db
@@ -9,6 +10,15 @@ from api.security import get_current_user
 from api.models import PeriodoCreateRequest, PeriodoUpdateRequest, PeriodoAdicionarMusicaRequest
 
 router = APIRouter(prefix="/planejamento", tags=["Planejamento"])
+
+
+class PeriodoSyncMusicasRequest(BaseModel):
+    musica_ids: List[int]
+
+
+class PeriodoCultosUpdateRequest(BaseModel):
+    cultos: List[Dict[str, Any]]
+
 
 @router.get("/")
 async def listar_periodos(
@@ -25,6 +35,7 @@ async def listar_periodos(
     except Exception as e:
         return {"error": str(e)}
 
+
 @router.post("/")
 async def criar_periodo(
     req: PeriodoCreateRequest,
@@ -33,12 +44,13 @@ async def criar_periodo(
 ):
     try:
         res = await client.execute(
-            "INSERT INTO planejamento_periodos (usuario_id, nome) VALUES (?, ?)",
+            "INSERT INTO planejamento_periodos (usuario_id, nome, programacao_cultos) VALUES (?, ?, '[]')",
             [current_user["id"], req.nome]
         )
         return {"message": "Período criado com sucesso!", "id": res.last_insert_rowid}
     except Exception as e:
         return {"error": str(e)}
+
 
 @router.put("/{periodo_id}")
 async def editar_periodo(
@@ -56,6 +68,7 @@ async def editar_periodo(
     except Exception as e:
         return {"error": str(e)}
 
+
 @router.delete("/{periodo_id}")
 async def deletar_periodo(
     periodo_id: int,
@@ -63,7 +76,6 @@ async def deletar_periodo(
     client: libsql_client.Client = Depends(get_db)
 ):
     try:
-        # Verifica se pertence ao usuário
         res = await client.execute(
             "SELECT id FROM planejamento_periodos WHERE id = ? AND usuario_id = ?",
             [periodo_id, current_user["id"]]
@@ -71,12 +83,10 @@ async def deletar_periodo(
         if not res.rows:
             return {"error": "Período não encontrado ou não pertence a você."}
         
-        # Apaga as músicas primeiro
         await client.execute(
             "DELETE FROM planejamento_musicas WHERE periodo_id = ?",
             [periodo_id]
         )
-        # Apaga o período
         await client.execute(
             "DELETE FROM planejamento_periodos WHERE id = ?",
             [periodo_id]
@@ -85,6 +95,7 @@ async def deletar_periodo(
     except Exception as e:
         return {"error": str(e)}
 
+
 @router.get("/{periodo_id}/musicas")
 async def listar_musicas_do_periodo(
     periodo_id: int,
@@ -92,14 +103,19 @@ async def listar_musicas_do_periodo(
     client: libsql_client.Client = Depends(get_db)
 ):
     try:
-        # Verifica dono
         res = await client.execute(
-            "SELECT id FROM planejamento_periodos WHERE id = ? AND usuario_id = ?",
+            "SELECT id, programacao_cultos FROM planejamento_periodos WHERE id = ? AND usuario_id = ?",
             [periodo_id, current_user["id"]]
         )
         if not res.rows:
             return {"error": "Período não encontrado."}
             
+        raw_cultos = res.rows[0][1]
+        try:
+            programacao_cultos = json.loads(raw_cultos) if raw_cultos else []
+        except Exception:
+            programacao_cultos = []
+
         sql = """
         SELECT pm.musica_id, pm.ordem, 
                b.nome_musica, b.artista, b.tags, b.link, b.codigo, 
@@ -139,9 +155,88 @@ async def listar_musicas_do_periodo(
                 "tema_central": r[16] or ""
             })
             
-        return {"musicas": lista}
+        return {"musicas": lista, "programacao_cultos": programacao_cultos}
     except Exception as e:
         return {"error": str(e)}
+
+
+@router.put("/{periodo_id}/musicas")
+async def salvar_musicas_do_periodo(
+    periodo_id: int,
+    req: PeriodoSyncMusicasRequest,
+    current_user: dict = Depends(get_current_user),
+    client: libsql_client.Client = Depends(get_db)
+):
+    """
+    Sincroniza (Salva) a lista completa de músicas do período de uma só vez.
+    Preserva a data 'adicionado_em' das músicas que já estavam salvas no período
+    e registra datetime('now') apenas para as novas músicas adicionadas.
+    """
+    try:
+        res = await client.execute(
+            "SELECT id FROM planejamento_periodos WHERE id = ? AND usuario_id = ?",
+            [periodo_id, current_user["id"]]
+        )
+        if not res.rows:
+            return {"error": "Período não encontrado."}
+
+        existing_res = await client.execute(
+            "SELECT musica_id, adicionado_em FROM planejamento_musicas WHERE periodo_id = ?",
+            [periodo_id]
+        )
+        existing_map = {r[0]: r[1] for r in existing_res.rows}
+
+        await client.execute(
+            "DELETE FROM planejamento_musicas WHERE periodo_id = ?",
+            [periodo_id]
+        )
+
+        seen = set()
+        for idx, m_id in enumerate(req.musica_ids):
+            if m_id in seen:
+                continue
+            seen.add(m_id)
+            prev_ts = existing_map.get(m_id)
+            if prev_ts:
+                await client.execute(
+                    "INSERT INTO planejamento_musicas (periodo_id, musica_id, ordem, adicionado_em) VALUES (?, ?, ?, ?)",
+                    [periodo_id, m_id, idx, prev_ts]
+                )
+            else:
+                await client.execute(
+                    "INSERT INTO planejamento_musicas (periodo_id, musica_id, ordem, adicionado_em) VALUES (?, ?, ?, datetime('now'))",
+                    [periodo_id, m_id, idx]
+                )
+
+        return {"message": "Planejamento salvo com sucesso!"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.put("/{periodo_id}/cultos")
+async def salvar_cultos_do_periodo(
+    periodo_id: int,
+    req: PeriodoCultosUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+    client: libsql_client.Client = Depends(get_db)
+):
+    """Salva a programação de domingos/cultos do período."""
+    try:
+        res = await client.execute(
+            "SELECT id FROM planejamento_periodos WHERE id = ? AND usuario_id = ?",
+            [periodo_id, current_user["id"]]
+        )
+        if not res.rows:
+            return {"error": "Período não encontrado."}
+
+        await client.execute(
+            "UPDATE planejamento_periodos SET programacao_cultos = ? WHERE id = ? AND usuario_id = ?",
+            [json.dumps(req.cultos, ensure_ascii=False), periodo_id, current_user["id"]]
+        )
+        return {"message": "Programação de cultos salva com sucesso!"}
+    except Exception as e:
+        return {"error": str(e)}
+
 
 @router.post("/{periodo_id}/musicas")
 async def adicionar_musica_ao_periodo(
@@ -167,6 +262,7 @@ async def adicionar_musica_ao_periodo(
         if "UNIQUE constraint failed" in str(e):
             return {"error": "Música já está neste período."}
         return {"error": str(e)}
+
 
 @router.delete("/{periodo_id}/musicas/{musica_id}")
 async def remover_musica_do_periodo(
