@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../services/api';
 import ExcelImportModal from '../components/ExcelImportModal';
+import BulkEditModal from '../components/BulkEditModal';
 
 
 function GerenciarRepertorio() {
@@ -20,6 +21,7 @@ function GerenciarRepertorio() {
   // Controle de Modais
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
   
@@ -281,11 +283,20 @@ function GerenciarRepertorio() {
         onClose={() => setIsExcelModalOpen(false)} 
         onImportSuccess={carregarDados} 
       />
+      <BulkEditModal
+        isOpen={isBulkEditModalOpen}
+        onClose={() => setIsBulkEditModalOpen(false)}
+        musicas={musicasCustom}
+        onSuccess={carregarDados}
+      />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
         <h2>🎵 O Meu Repertório Pessoal</h2>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button onClick={() => setIsCategoriasModalOpen(true)} style={{ padding: '12px 20px', backgroundColor: 'transparent', border: '2px solid #f39c12', color: '#f39c12', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
             ⚙️ Gerenciar Categorias
+          </button>
+          <button onClick={() => setIsBulkEditModalOpen(true)} style={{ padding: '12px 20px', backgroundColor: 'transparent', border: '2px solid #61dafb', color: '#61dafb', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+            📝 Editar em Massa
           </button>
           <button onClick={() => setIsExcelModalOpen(true)} style={{ padding: '12px 20px', backgroundColor: 'transparent', border: '2px solid #2ecc71', color: '#2ecc71', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
             📥 Importar do Excel
