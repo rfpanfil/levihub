@@ -20,6 +20,11 @@ class PeriodoCultosUpdateRequest(BaseModel):
     cultos: List[Dict[str, Any]]
 
 
+class PreferenciasPlanejamentoRequest(BaseModel):
+    whats_opts: Optional[Dict[str, bool]] = None
+    visible_cols: Optional[List[str]] = None
+
+
 @router.get("/")
 async def listar_periodos(
     current_user: dict = Depends(get_current_user),
@@ -31,7 +36,51 @@ async def listar_periodos(
             [current_user["id"]]
         )
         periodos = [{"id": r[0], "nome": r[1]} for r in res.rows]
-        return {"periodos": periodos}
+
+        pref_res = await client.execute(
+            "SELECT preferencias_planejamento FROM usuarios WHERE id = ?",
+            [current_user["id"]]
+        )
+        preferencias = {}
+        if pref_res.rows and pref_res.rows[0][0]:
+            try:
+                preferencias = json.loads(pref_res.rows[0][0])
+            except Exception:
+                preferencias = {}
+
+        return {"periodos": periodos, "preferencias": preferencias}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.put("/preferencias")
+async def salvar_preferencias_planejamento(
+    req: PreferenciasPlanejamentoRequest,
+    current_user: dict = Depends(get_current_user),
+    client: libsql_client.Client = Depends(get_db)
+):
+    try:
+        pref_res = await client.execute(
+            "SELECT preferencias_planejamento FROM usuarios WHERE id = ?",
+            [current_user["id"]]
+        )
+        atual = {}
+        if pref_res.rows and pref_res.rows[0][0]:
+            try:
+                atual = json.loads(pref_res.rows[0][0])
+            except Exception:
+                atual = {}
+
+        if req.whats_opts is not None:
+            atual["whats_opts"] = req.whats_opts
+        if req.visible_cols is not None:
+            atual["visible_cols"] = req.visible_cols
+
+        await client.execute(
+            "UPDATE usuarios SET preferencias_planejamento = ? WHERE id = ?",
+            [json.dumps(atual, ensure_ascii=False), current_user["id"]]
+        )
+        return {"message": "Preferências salvas!", "preferencias": atual}
     except Exception as e:
         return {"error": str(e)}
 

@@ -145,6 +145,14 @@ export default function Planejamento() {
       if (res.ok) {
         const data = await res.json();
         setPeriodos(data.periodos || []);
+        if (data.preferencias) {
+          if (data.preferencias.whats_opts) {
+            setWhatsOpts(prev => ({ ...prev, ...data.preferencias.whats_opts }));
+          }
+          if (Array.isArray(data.preferencias.visible_cols)) {
+            setVisibleCols(data.preferencias.visible_cols);
+          }
+        }
       } else {
         setError('Erro ao carregar períodos.');
       }
@@ -544,12 +552,33 @@ export default function Planejamento() {
     setTimeout(() => setCopiedId(null), 2500);
   };
 
-  const toggleCol = (key) => {
-    if (visibleCols.includes(key)) {
-      setVisibleCols(visibleCols.filter(c => c !== key));
-    } else {
-      setVisibleCols([...visibleCols, key]);
+  const salvarPreferenciasNoBanco = async (novosWhatsOpts, novasVisibleCols) => {
+    try {
+      await apiFetch('/planejamento/preferencias', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          whats_opts: novosWhatsOpts,
+          visible_cols: novasVisibleCols,
+        })
+      });
+    } catch (e) {
+      console.error('Erro ao salvar preferências do usuário:', e);
     }
+  };
+
+  const toggleWhatsOpt = (chave) => {
+    const atualizado = { ...whatsOpts, [chave]: !whatsOpts[chave] };
+    setWhatsOpts(atualizado);
+    salvarPreferenciasNoBanco(atualizado, visibleCols);
+  };
+
+  const toggleCol = (key) => {
+    const novas = visibleCols.includes(key)
+      ? visibleCols.filter(c => c !== key)
+      : [...visibleCols, key];
+    setVisibleCols(novas);
+    salvarPreferenciasNoBanco(whatsOpts, novas);
   };
 
   if (selectedPeriod) {
@@ -737,9 +766,9 @@ export default function Planejamento() {
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <input
                           type="month"
+                          className="month-picker-input"
                           value={mesGerador}
                           onChange={(e) => setMesGerador(e.target.value)}
-                          style={{ background: 'rgba(0,0,0,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '12px', padding: '10px 14px', flex: 1 }}
                         />
                         <button type="button" onClick={handleGerarDomingosMes} className="secondary-btn" style={{ whiteSpace: 'nowrap' }}>
                           <Calendar size={16} /> Gerar Domingos do Mês
@@ -753,19 +782,19 @@ export default function Planejamento() {
                     <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.88rem', color: '#cbd5e1', fontWeight: '600' }}>📲 Incluir ao copiar p/ WhatsApp:</span>
                       <label className="col-label">
-                        <input type="checkbox" checked={whatsOpts.artista} onChange={() => setWhatsOpts({ ...whatsOpts, artista: !whatsOpts.artista })} />
+                        <input type="checkbox" checked={whatsOpts.artista} onChange={() => toggleWhatsOpt('artista')} />
                         Artista
                       </label>
                       <label className="col-label">
-                        <input type="checkbox" checked={whatsOpts.tom} onChange={() => setWhatsOpts({ ...whatsOpts, tom: !whatsOpts.tom })} />
+                        <input type="checkbox" checked={whatsOpts.tom} onChange={() => toggleWhatsOpt('tom')} />
                         Tom
                       </label>
                       <label className="col-label">
-                        <input type="checkbox" checked={whatsOpts.link} onChange={() => setWhatsOpts({ ...whatsOpts, link: !whatsOpts.link })} />
+                        <input type="checkbox" checked={whatsOpts.link} onChange={() => toggleWhatsOpt('link')} />
                         Link da Música
                       </label>
                       <label className="col-label">
-                        <input type="checkbox" checked={whatsOpts.primeira_linha} onChange={() => setWhatsOpts({ ...whatsOpts, primeira_linha: !whatsOpts.primeira_linha })} />
+                        <input type="checkbox" checked={whatsOpts.primeira_linha} onChange={() => toggleWhatsOpt('primeira_linha')} />
                         Primeira Linha
                       </label>
                     </div>

@@ -302,6 +302,7 @@ async def run_migrations() -> None:
         "ALTER TABLE biblioteca_busca ADD COLUMN tema_central TEXT DEFAULT ''",
         "ALTER TABLE planejamento_musicas ADD COLUMN adicionado_em TEXT",
         "ALTER TABLE planejamento_periodos ADD COLUMN programacao_cultos TEXT",
+        "ALTER TABLE usuarios ADD COLUMN preferencias_planejamento TEXT",
     ]
     for sql in _alter_migrations:
         try:

@@ -1,6 +1,7 @@
 // arquivo: frontend/src/pages/GerenciarPerfil.jsx
 
 import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 import { apiFetch } from '../services/api';
 
@@ -14,6 +15,7 @@ function GerenciarPerfil() {
   const [isEditingCredentials, setIsEditingCredentials] = useState(false);
   const [novoEmail, setNovoEmail] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
+  const [showNovaSenha, setShowNovaSenha] = useState(false);
 
   const carregarDados = async () => {
     try {
@@ -64,6 +66,7 @@ function GerenciarPerfil() {
         setIsEditingCredentials(false);
         setNovoEmail('');
         setNovaSenha('');
+        setShowNovaSenha(false);
       } else {
         mostrarMensagem(`Erro: ${data.detail || 'Falha ao atualizar'}`, "erro");
       }
@@ -99,17 +102,28 @@ function GerenciarPerfil() {
                 
                 <div style={{ marginBottom: '10px' }}>
                   <label>Novo E-mail</label>
-                  <input type="email" value={novoEmail} onChange={e => setNovoEmail(e.target.value)} placeholder={perfil.email} style={{ width: '100%', padding: '10px', borderRadius: '5px', backgroundColor: '#1e2229', color: 'white', border: '1px solid #4a505c', marginTop: '5px' }} />
+                  <input type="email" value={novoEmail} onChange={e => setNovoEmail(e.target.value)} placeholder={perfil.email} style={{ width: '100%', padding: '10px', borderRadius: '5px', backgroundColor: '#1e2229', color: 'white', border: '1px solid #4a505c', marginTop: '5px', boxSizing: 'border-box' }} />
                 </div>
                 
                 <div style={{ marginBottom: '15px' }}>
                   <label>Nova Senha</label>
-                  <input type="password" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} placeholder="Deixe em branco para não alterar" minLength="6" style={{ width: '100%', padding: '10px', borderRadius: '5px', backgroundColor: '#1e2229', color: 'white', border: '1px solid #4a505c', marginTop: '5px' }} />
+                  <div style={{ position: 'relative', marginTop: '5px' }}>
+                    <input type={showNovaSenha ? 'text' : 'password'} value={novaSenha} onChange={e => setNovaSenha(e.target.value)} placeholder="Deixe em branco para não alterar" minLength="6" style={{ width: '100%', padding: '10px 42px 10px 10px', borderRadius: '5px', backgroundColor: '#1e2229', color: 'white', border: '1px solid #4a505c', boxSizing: 'border-box' }} />
+                    <button
+                      type="button"
+                      onClick={() => setShowNovaSenha(!showNovaSenha)}
+                      tabIndex={-1}
+                      title={showNovaSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ab', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+                    >
+                      {showNovaSenha ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button type="submit" className="main-button" style={{ margin: 0 }}>💾 Salvar Alterações</button>
-                  <button type="button" onClick={() => { setIsEditingCredentials(false); setNovoEmail(''); setNovaSenha(''); }} style={{ padding: '10px 20px', backgroundColor: 'transparent', border: '1px solid #ff4b4b', color: '#ff4b4b', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
+                  <button type="button" onClick={() => { setIsEditingCredentials(false); setNovoEmail(''); setNovaSenha(''); setShowNovaSenha(false); }} style={{ padding: '10px 20px', backgroundColor: 'transparent', border: '1px solid #ff4b4b', color: '#ff4b4b', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
                 </div>
               </form>
             )}

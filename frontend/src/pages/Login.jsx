@@ -1,5 +1,6 @@
 //arquivo: frontend/src/pages/Login.jsx
 import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 import { apiFetch } from '../services/api';
 
@@ -9,6 +10,8 @@ function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -29,6 +32,8 @@ function Login({ onLogin }) {
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setVerificationCode('');
     setVerifyingEmail('');
   };
@@ -211,11 +216,46 @@ function Login({ onLogin }) {
                 </div>
                 <div className="input-group">
                   <label>Nova Senha</label>
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength="6" />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength="6"
+                      style={{ width: '100%', paddingRight: '42px', boxSizing: 'border-box' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                      title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ab', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
                 <div className="input-group">
                   <label>Confirmar Nova Senha</label>
-                  <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      style={{ width: '100%', paddingRight: '42px', boxSizing: 'border-box' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      tabIndex={-1}
+                      title={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ab', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
               </>
             )}
@@ -279,14 +319,26 @@ function Login({ onLogin }) {
 
               <div className="input-group">
                 <label>Senha</label>
-                <input 
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  required 
-                  placeholder={isRegistering ? "Mínimo de 6 caracteres" : "Sua senha"}
-                  minLength={isRegistering ? "6" : undefined}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type={showPassword ? 'text' : 'password'} 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    required 
+                    placeholder={isRegistering ? "Mínimo de 6 caracteres" : "Sua senha"}
+                    minLength={isRegistering ? "6" : undefined}
+                    style={{ width: '100%', paddingRight: '42px', boxSizing: 'border-box' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                    title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ab', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
               {/* Link de Esqueci Senha */}
@@ -303,14 +355,26 @@ function Login({ onLogin }) {
               {isRegistering && (
                 <div className="input-group">
                   <label>Confirmar Senha</label>
-                  <input 
-                    type="password" 
-                    value={confirmPassword} 
-                    onChange={(e) => setConfirmPassword(e.target.value)} 
-                    required 
-                    placeholder="Digite a senha novamente"
-                    minLength="6"
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type={showConfirmPassword ? 'text' : 'password'} 
+                      value={confirmPassword} 
+                      onChange={(e) => setConfirmPassword(e.target.value)} 
+                      required 
+                      placeholder="Digite a senha novamente"
+                      minLength="6"
+                      style={{ width: '100%', paddingRight: '42px', boxSizing: 'border-box' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      tabIndex={-1}
+                      title={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ab', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
               )}
 
