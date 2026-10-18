@@ -931,15 +931,15 @@ export default function Planejamento() {
 
         {showAddModal && (
           <div className="modal-overlay">
-            <div className="modal-content" style={{ maxWidth: '760px', width: '94%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #4a505c', paddingBottom: '10px' }}>
-                <h3 style={{ margin: 0, color: '#61dafb' }}>➕ Selecionar Músicas da Biblioteca</h3>
-                <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: '#9ab', fontSize: '1.5em', cursor: 'pointer' }}>&times;</button>
+            <div className="modal-content add-musica-modal">
+              <div className="add-modal-header">
+                <h3 style={{ margin: 0, color: '#61dafb', fontSize: '1.15rem' }}>➕ Selecionar Músicas da Biblioteca</h3>
+                <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: '#9ab', fontSize: '1.5em', cursor: 'pointer', lineHeight: 1 }}>&times;</button>
               </div>
               
               {/* Busca exclusiva por Nome da Música ou Artista */}
               <div className="search-box">
-                <Search size={18} color="#9ab" />
+                <Search size={17} color="#9ab" style={{ flexShrink: 0 }} />
                 <input 
                   type="text" 
                   placeholder="Buscar por nome da música ou artista..." 
@@ -950,8 +950,8 @@ export default function Planejamento() {
 
               {/* Barra de Ordenação de Tempo + Toggle de Filtros */}
               <div className="filter-toolbar">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '240px' }}>
-                  <Clock size={16} color="#f39c12" />
+                <div className="sort-select-group">
+                  <Clock size={16} color="#f39c12" style={{ flexShrink: 0 }} />
                   <select 
                     value={sortTempoMode} 
                     onChange={(e) => setSortTempoMode(e.target.value)}
@@ -964,7 +964,7 @@ export default function Planejamento() {
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div className="filter-actions-group">
                   {totalFiltrosAtivos > 0 && (
                     <button type="button" onClick={limparFiltros} className="clear-filters-btn">
                       Limpar ({totalFiltrosAtivos})
@@ -1068,7 +1068,7 @@ export default function Planejamento() {
                 </div>
               )}
 
-              <div style={{ fontSize: '0.82rem', color: '#9ab', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+              <div className="search-summary-bar">
                 <span>Mostrando <b>{searchResults.length}</b> de {todasMusicas.length} músicas</span>
                 <span>Selecionadas neste período: <b>{musicasPeriodo.length}</b></span>
               </div>
@@ -1086,12 +1086,12 @@ export default function Planejamento() {
                   return (
                     <div key={res.id} className="search-item" style={jaAdicionada ? { borderLeftColor: '#2ecc71', background: 'rgba(46, 204, 113, 0.08)' } : {}}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <strong style={{ color: '#fff', fontSize: '1rem' }}>{res.nome_musica}</strong>
+                        <div className="search-item-title-row">
+                          <strong className="search-item-title">{res.nome_musica}</strong>
                           {res.artista && <span className="search-artista"> - {res.artista}</span>}
                         </div>
 
-                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px', alignItems: 'center' }}>
+                        <div className="search-item-badges">
                           {nuncaPlanejada ? (
                             <span className="badge-tempo nunca">✨ Nunca planejada</span>
                           ) : (
@@ -1115,19 +1115,19 @@ export default function Planejamento() {
                         onClick={() => handleToggleMusicaRascunho(res)}
                         style={jaAdicionada ? { background: 'rgba(46, 204, 113, 0.2)', border: '1px solid #2ecc71', boxShadow: 'none', color: '#4ade80' } : {}}
                       >
-                        {jaAdicionada ? '✓ Selecionada (Remover)' : '+ Selecionar'}
+                        {jaAdicionada ? '✓ Selecionada' : '+ Selecionar'}
                       </button>
                     </div>
                   );
                 })}
               </div>
 
-              <div className="modal-actions" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.82rem', color: '#9ab' }}>
+              <div className="modal-actions add-modal-footer">
+                <span className="add-modal-hint">
                   💡 Após concluir a seleção, clique em <b>"Salvar Planejamento"</b> na tela principal para gravar no banco.
                 </span>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button className="primary-btn" onClick={() => setShowAddModal(false)}>
+                <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                  <button className="primary-btn add-modal-done-btn" onClick={() => setShowAddModal(false)}>
                     Concluir Seleção
                   </button>
                 </div>
