@@ -79,26 +79,26 @@ CHORD_BODY_PATTERN = (
 )
 
 SINGLE_CHORD_TOKEN_RE = re.compile(
-    r"^\(?" + CHORD_BODY_PATTERN + r"\)?(?:\d+ª|\d+º|\d+x)?\)?$"
+    r"^(?:\d+[ªºxX]+)?[\(\[]*" + CHORD_BODY_PATTERN + r"[\)\]]*(?:\d+[ªºxX]+)?[\)\]]*$"
 )
 
 PADRAO_ACORDE_RE = re.compile(
-    r"(^|[\s(\-|:.])(" + CHORD_BODY_PATTERN + r")(?=\s|$|[()\-,.;:|]|\d+ª|\d+º|\d+x)"
+    r"(^|[\s(\[\-|:.])(" + CHORD_BODY_PATTERN + r")(?=\s|$|[()\[\]\-,.;:|]|\d+ª|\d+º|\d+x)"
 )
 
 
 def _is_valid_chord_token(word: str) -> bool:
     if SINGLE_CHORD_TOKEN_RE.match(word):
         return True
-    # Acordes colados com variação entre parênteses, ex: D#(Fm2ª) ou G(C2ª)
-    if "(" in word and ")" in word:
-        subparts = [p for p in re.split(r"[()]", word) if p]
-        if len(subparts) >= 2 and all(SINGLE_CHORD_TOKEN_RE.match(p) for p in subparts):
+    # Acordes colados com variação entre parênteses/colchetes, ex: D#(Fm2ª), G(C2ª), 1ª(A9
+    if "(" in word or ")" in word or "[" in word or "]" in word:
+        subparts = [p for p in re.split(r"[()\[\]]", word) if p and not _is_marker_word(p)]
+        if len(subparts) >= 1 and all(SINGLE_CHORD_TOKEN_RE.match(p) for p in subparts):
             return True
-    # Progressões ou durações conectadas por hífen, ex: Bm7-A/C#, (Am-G-Am), F-4
+    # Progressões ou durações conectadas por hífen, ex: Bm7-A/C#, (Am-G-Am), (Bm-A-E)2ª, (Bm-A-----E)2ª, F-4
     if "-" in word:
-        stripped = word.strip("()")
-        parts = [p for p in re.split(r"-(?![^()]*\))", stripped) if p]
+        stripped = re.sub(r"(?:\d+[ªºxX]+)+$", "", word).strip("()[]")
+        parts = [p for p in re.split(r"-+(?![^()]*\))", stripped) if p]
         if len(parts) >= 2 and SINGLE_CHORD_TOKEN_RE.match(parts[0]):
             if all(SINGLE_CHORD_TOKEN_RE.match(p) or p.isdigit() for p in parts[1:]):
                 return True
@@ -106,14 +106,15 @@ def _is_valid_chord_token(word: str) -> bool:
 
 
 def _is_marker_word(w: str) -> bool:
-    wl = w.lower().strip("().:=")
+    wl = re.sub(r"->", "", w.lower()).strip("()[]{}.:=-/\\")
     if wl in {
         "intro", "tom", "final", "refrão", "refrao", "ponte", "solo", "coro",
-        "instrumental", "interlúdio", "interludio", "fim", "vez", "na",
-        "", "-", "|", "/", ":/", "/:"
+        "instrumental", "interlúdio", "interludio", "fim", "vez", "na", "no",
+        "só", "so", "baixo", "contra", "para", "volta", "batera", "bateria",
+        "ª", "º", "", "|", ":", ";", "="
     }:
         return True
-    if re.match(r"^\d+[xXªº]?$", wl):
+    if re.match(r"^\d+[xXªº°]*$", wl):
         return True
     return False
 
@@ -299,13 +300,14 @@ async def transpose_file_endpoint(
         try:
             doc = docx.Document(io.BytesIO(content))
             
+            from docx.text.run import Run
             for paragraph in doc.paragraphs:
                 if not paragraph.text.strip():
                     continue
                     
-                # Fusão (Merge) de runs idênticos para evitar que palavras sejam fatiadas no meio 
-                # por corretores ortográficos invisíveis do Word (ex: "Em" -> "E" + "m").
-                runs = paragraph.runs
+                # Fusão (Merge) de runs idênticos (incluindo runs dentro de hyperlinks, ex: "Tom: D")
+                # para evitar que palavras sejam fatiadas no meio por corretores ortográficos do Word.
+                runs = [Run(r_el, paragraph) for r_el in paragraph._p.xpath('.//w:r')]
                 if not runs:
                     continue
                     
