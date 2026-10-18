@@ -68,6 +68,56 @@ def normalizar_nota(nota_str: str, explicacoes_set=None) -> str:
     return nota_str
 
 
+# Expressão regular central de corpo de acorde (suporta 7M, 7+, m7M, 4/7, 6/9, 9/5b, 7sus4, add9, tensões entre parênteses e baixo invertido /[A-G])
+CHORD_BODY_PATTERN = (
+    r"[A-G](?:##|bb|#|b)?"
+    r"(?:m|M|maj|min|dim|aug|sus|add|º|°|\+)?"
+    r"(?:(?:2|3|4|5|6|7|9|11|13)(?!ª|º|x|X)(?:M|maj|\+|-(?![A-G0-9])|b|#)?(?:sus(?:2|4)?|add(?:2|4|9|11|13)?|dim|aug|º|°|(?:b|#)(?:5|9|11|13))?)?"
+    r"(?:/(?:2|4|5|6|7|9|11|13)+(?:b|#|\+|-|M)?)?"
+    r"(?:\((?:[0-9mM#/+,\-\s]|b(?=[0-9])|add|sus|maj)+\))*"
+    r"(?:/[A-G](?:##|bb|#|b)?)?"
+)
+
+SINGLE_CHORD_TOKEN_RE = re.compile(
+    r"^\(?" + CHORD_BODY_PATTERN + r"\)?(?:\d+ª|\d+º|\d+x)?\)?$"
+)
+
+PADRAO_ACORDE_RE = re.compile(
+    r"(^|[\s(\-|:.])(" + CHORD_BODY_PATTERN + r")(?=\s|$|[()\-,.;:|]|\d+ª|\d+º|\d+x)"
+)
+
+
+def _is_valid_chord_token(word: str) -> bool:
+    if SINGLE_CHORD_TOKEN_RE.match(word):
+        return True
+    # Acordes colados com variação entre parênteses, ex: D#(Fm2ª) ou G(C2ª)
+    if "(" in word and ")" in word:
+        subparts = [p for p in re.split(r"[()]", word) if p]
+        if len(subparts) >= 2 and all(SINGLE_CHORD_TOKEN_RE.match(p) for p in subparts):
+            return True
+    # Progressões ou durações conectadas por hífen, ex: Bm7-A/C#, (Am-G-Am), F-4
+    if "-" in word:
+        stripped = word.strip("()")
+        parts = [p for p in re.split(r"-(?![^()]*\))", stripped) if p]
+        if len(parts) >= 2 and SINGLE_CHORD_TOKEN_RE.match(parts[0]):
+            if all(SINGLE_CHORD_TOKEN_RE.match(p) or p.isdigit() for p in parts[1:]):
+                return True
+    return False
+
+
+def _is_marker_word(w: str) -> bool:
+    wl = w.lower().strip("().:=")
+    if wl in {
+        "intro", "tom", "final", "refrão", "refrao", "ponte", "solo", "coro",
+        "instrumental", "interlúdio", "interludio", "fim", "vez", "na",
+        "", "-", "|", "/", ":/", "/:"
+    }:
+        return True
+    if re.match(r"^\d+[xXªº]?$", wl):
+        return True
+    return False
+
+
 def transpor_acordes_sequencia(acordes_originais, acao, intervalo):
     semitons = int(intervalo * 2) * (1 if acao == "Aumentar" else -1)
     acordes_transpostos = []
@@ -92,11 +142,13 @@ def transpor_acordes_sequencia(acordes_originais, acao, intervalo):
         nova_fundamental = transpor_nota_individual(nota_fundamental, semitons)
 
         if "/" in resto:
-            partes = resto.split("/")
-            qualidade = partes[0]
-            baixo_norm = normalizar_nota(partes[1], explicacoes_entrada)
-            novo_baixo = transpor_nota_individual(baixo_norm, semitons)
-            acorde_final = f"{nova_fundamental}{qualidade}/{novo_baixo}"
+            qualidade, possivel_baixo = resto.rsplit("/", 1)
+            if re.match(r"^[A-G](?:##|bb|#|b)?$", possivel_baixo, re.IGNORECASE):
+                baixo_norm = normalizar_nota(possivel_baixo, explicacoes_entrada)
+                novo_baixo = transpor_nota_individual(baixo_norm, semitons)
+                acorde_final = f"{nova_fundamental}{qualidade}/{novo_baixo}"
+            else:
+                acorde_final = f"{nova_fundamental}{resto}"
         else:
             acorde_final = f"{nova_fundamental}{resto}"
 
@@ -109,9 +161,6 @@ def is_chord_line(line: str) -> bool:
     line = line.strip()
     if not line:
         return False
-    chord_pattern = re.compile(
-        r"^\(?[A-G](?:##|bb|#|b)?(?:m|M|dim|aug|sus|add|maj|º|°)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]+\))?(?:/[A-G](?:##|bb|#|b)?)?\)?$"
-    )
     # Removemos pontuações grudadas, mas não apagamos parênteses para não estragar (11)
     clean_line = re.sub(r'[,.]', '', line.strip())
     words = clean_line.split()
@@ -119,19 +168,17 @@ def is_chord_line(line: str) -> bool:
     if not words:
         return False
         
-    markers = {"1ª:", "2ª:", "3ª:", "1x", "2x", "3x", "4x", "intro:", "tom:", "final:", "refrão", "refrão:", "ponte", "ponte:", ":/", "/:", "-", "|"}
-    valid_words = [w for w in words if w.lower() not in markers]
+    valid_words = [w for w in words if not _is_marker_word(w)]
     
     if not valid_words:
         return False
         
-    chord_count = sum(1 for word in valid_words if chord_pattern.match(word))
+    chord_count = sum(1 for word in valid_words if _is_valid_chord_token(word))
     return (chord_count / len(valid_words)) > 0.5
 
 
 def processar_cifra(texto_cifra: str, acao: str, intervalo: float) -> str:
     semitons = int(intervalo * 2) * (1 if acao == "Aumentar" else -1)
-    padrao_acorde = r"(^|[\s(])([A-G](?:##|bb|#|b)?(?:m|M|dim|aug|sus|add|maj|º|°)?(?:2|4|5|6|7|9|11|13)?(?:\([^)]+\))?(?:/[A-G](?:##|bb|#|b)?)?)(?=\s|$|\)|,)"
 
     def replacer(match):
         prefixo, acorde = match.groups()
@@ -146,7 +193,7 @@ def processar_cifra(texto_cifra: str, acao: str, intervalo: float) -> str:
             return part
 
         if "/" in acorde:
-            base, baixo = acorde.split("/", 1)
+            base, baixo = acorde.rsplit("/", 1)
             novo_acorde = f"{transpose_part(base)}/{transpose_part(baixo)}"
         else:
             novo_acorde = transpose_part(acorde)
@@ -158,7 +205,7 @@ def processar_cifra(texto_cifra: str, acao: str, intervalo: float) -> str:
         partes = re.split(r'(\s{3,}|\t+)', linha)
         if len(partes) == 1:
             # Avalia a linha toda normalmente
-            return re.sub(padrao_acorde, replacer, linha) if is_chord_line(linha) else linha
+            return PADRAO_ACORDE_RE.sub(replacer, linha) if is_chord_line(linha) else linha
         
         # Avalia cada bloco fatiado individualmente
         nova_linha = []
@@ -166,7 +213,7 @@ def processar_cifra(texto_cifra: str, acao: str, intervalo: float) -> str:
             if p.isspace():
                 nova_linha.append(p)
             elif is_chord_line(p):
-                nova_linha.append(re.sub(padrao_acorde, replacer, p))
+                nova_linha.append(PADRAO_ACORDE_RE.sub(replacer, p))
             else:
                 nova_linha.append(p)
         return "".join(nova_linha)
