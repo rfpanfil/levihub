@@ -47,7 +47,7 @@ function formatarTempoSemPlanejar(isoStr) {
   return `Há ${anos}a e ${mesesResto}m`;
 }
 
-const BulkEditModal = ({ isOpen, onClose, musicas = [], onSuccess }) => {
+const BulkEditModal = ({ isOpen, onClose, musicas = [], onSuccess, escopo = 'pessoal' }) => {
   const [activeTab, setActiveTab] = useState('export'); // 'export' | 'import'
 
   // Seleção de campos para editar em massa (Tema Central marcado por padrão)
@@ -242,7 +242,7 @@ const BulkEditModal = ({ isOpen, onClose, musicas = [], onSuccess }) => {
 
     setIsExporting(true);
     try {
-      const res = await apiFetch('/excel/bulk-export', {
+      const res = await apiFetch(`/excel/bulk-export?escopo=${encodeURIComponent(escopo)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -260,7 +260,7 @@ const BulkEditModal = ({ isOpen, onClose, musicas = [], onSuccess }) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'Edicao_Em_Massa_LeviHub.xlsx';
+      a.download = escopo === 'global' ? 'Edicao_Em_Massa_Global_LeviHub.xlsx' : 'Edicao_Em_Massa_LeviHub.xlsx';
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -296,7 +296,7 @@ const BulkEditModal = ({ isOpen, onClose, musicas = [], onSuccess }) => {
     formData.append('file', file);
 
     try {
-      const res = await apiFetch('/excel/bulk-preview', {
+      const res = await apiFetch(`/excel/bulk-preview?escopo=${encodeURIComponent(escopo)}`, {
         method: 'POST',
         body: formData,
       });
@@ -334,7 +334,7 @@ const BulkEditModal = ({ isOpen, onClose, musicas = [], onSuccess }) => {
     setIsCommitting(true);
 
     try {
-      const res = await apiFetch('/excel/bulk-commit', {
+      const res = await apiFetch(`/excel/bulk-commit?escopo=${encodeURIComponent(escopo)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: itemsToCommit }),

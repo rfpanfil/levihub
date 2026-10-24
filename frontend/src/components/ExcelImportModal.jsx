@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { apiFetch } from '../services/api';
 
-const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
+const ExcelImportModal = ({ isOpen, onClose, onImportSuccess, escopo = 'pessoal' }) => {
   const [step, setStep] = useState(1);
   const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -62,7 +62,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
     formData.append("file", file);
     
     try {
-      const res = await apiFetch("/excel/preview", {
+      const res = await apiFetch(`/excel/preview?escopo=${encodeURIComponent(escopo)}`, {
         method: "POST",
         body: formData,
       });
@@ -108,7 +108,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
     const itemsToCommit = selectedItems.map(idx => previewData[idx]);
     
     try {
-      const res = await apiFetch("/excel/commit", {
+      const res = await apiFetch(`/excel/commit?escopo=${encodeURIComponent(escopo)}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -155,7 +155,9 @@ const ExcelImportModal = ({ isOpen, onClose, onImportSuccess }) => {
       <div className="modal-content" style={{ backgroundColor: '#1e222d', padding: '20px', borderRadius: '10px', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0, color: '#f39c12' }}>Importar Repertório via Excel</h2>
+          <h2 style={{ margin: 0, color: '#f39c12' }}>
+            {escopo === 'global' ? '🌍 Importar Repertório Global via Excel' : 'Importar Repertório via Excel'}
+          </h2>
           <button onClick={cancelAndClose} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
         </div>
 

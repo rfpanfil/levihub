@@ -10,10 +10,28 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 import libsql_client
 
-from api.database import get_db
+from api.database import get_db, find_or_create_categoria
 from api.security import get_current_user
 
-router = APIRouter(prefix="/excel", tags=["Excel Import"])
+router = APIRouter(
+    prefix="/excel",
+    tags=["Excel Import"],
+    dependencies=[Depends(get_current_user)],
+)
+
+
+def _resolve_target_user_id(current_user: dict, escopo: str = "pessoal") -> Optional[int]:
+    """
+    Retorna user_id para escopo='pessoal', ou None para escopo='global' (exige admin).
+    """
+    if (escopo or "pessoal").strip().lower() == "global":
+        if current_user.get("role") != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Acesso negado. Apenas administradores podem gerenciar o repertório global.",
+            )
+        return None
+    return current_user["id"]
 
 # Definições de payloads
 class ExcelImportCommitRequest(BaseModel):
@@ -59,6 +77,7 @@ def parse_categorias(val: str) -> List[str]:
 @router.post("/preview")
 async def preview_excel(
     file: UploadFile = File(...),
+    escopo: str = "pessoal",
     current_user: dict = Depends(get_current_user),
     client: libsql_client.Client = Depends(get_db)
 ):
@@ -109,16 +128,25 @@ async def preview_excel(
     if not col_map["nome_musica"]:
         raise HTTPException(status_code=400, detail="Coluna 'Nome da Música' ou 'Título' não encontrada na planilha.")
 
-    # Busca músicas existentes do usuário
-    user_id = current_user["id"]
-    existing_musics = await client.execute(
-        """
-        SELECT id, nome_musica, artista, codigo, primeira_linha, tom, primeira_nota, 
-               versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, link, tags, categoria
-        FROM biblioteca_busca WHERE usuario_id = ?
-        """,
-        [user_id]
-    )
+    # Busca músicas existentes do escopo selecionado (pessoal ou global)
+    target_user_id = _resolve_target_user_id(current_user, escopo)
+    if target_user_id is None:
+        existing_musics = await client.execute(
+            """
+            SELECT id, nome_musica, artista, codigo, primeira_linha, tom, primeira_nota, 
+                   versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, link, tags, categoria
+            FROM biblioteca_busca WHERE usuario_id IS NULL
+            """
+        )
+    else:
+        existing_musics = await client.execute(
+            """
+            SELECT id, nome_musica, artista, codigo, primeira_linha, tom, primeira_nota, 
+                   versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, link, tags, categoria
+            FROM biblioteca_busca WHERE usuario_id = ?
+            """,
+            [target_user_id]
+        )
     
     # Busca categorias das músicas existentes
     db_musics_dict = {}
@@ -240,10 +268,11 @@ async def preview_excel(
 @router.post("/commit")
 async def commit_excel(
     payload: ExcelImportCommitRequest,
+    escopo: str = "pessoal",
     current_user: dict = Depends(get_current_user),
     client: libsql_client.Client = Depends(get_db)
 ):
-    user_id = current_user["id"]
+    target_user_id = _resolve_target_user_id(current_user, escopo)
     inserted = 0
     updated = 0
     
@@ -295,18 +324,32 @@ async def commit_excel(
         try:
             if status == "update" and db:
                 # Faz update preservando tags, categoria e demais campos conforme fonte da verdade
-                await client.execute(
-                    """
-                    UPDATE biblioteca_busca SET
-                        nome_musica = ?, artista = ?, tags = ?, link = ?, categoria = ?, codigo = ?, primeira_linha = ?,
-                        tom = ?, primeira_nota = ?, versao_vocal = ?, compasso = ?, bpm = ?,
-                        cifra = ?, versao_parecida = ?, tema_central = ?
-                    WHERE id = ? AND usuario_id = ?
-                    """,
-                    [final_data["nome_musica"], final_data["artista"], tags_str, final_data["link"], categoria_str, final_data["codigo"], final_data["primeira_linha"],
-                     final_data["tom"], final_data["primeira_nota"], final_data["versao_vocal"], final_data["compasso"], final_data["bpm"],
-                     final_data["cifra"], final_data["versao_parecida"], final_data["tema_central"], db["id"], user_id]
-                )
+                if target_user_id is None:
+                    await client.execute(
+                        """
+                        UPDATE biblioteca_busca SET
+                            nome_musica = ?, artista = ?, tags = ?, link = ?, categoria = ?, codigo = ?, primeira_linha = ?,
+                            tom = ?, primeira_nota = ?, versao_vocal = ?, compasso = ?, bpm = ?,
+                            cifra = ?, versao_parecida = ?, tema_central = ?
+                        WHERE id = ? AND usuario_id IS NULL
+                        """,
+                        [final_data["nome_musica"], final_data["artista"], tags_str, final_data["link"], categoria_str, final_data["codigo"], final_data["primeira_linha"],
+                         final_data["tom"], final_data["primeira_nota"], final_data["versao_vocal"], final_data["compasso"], final_data["bpm"],
+                         final_data["cifra"], final_data["versao_parecida"], final_data["tema_central"], db["id"]]
+                    )
+                else:
+                    await client.execute(
+                        """
+                        UPDATE biblioteca_busca SET
+                            nome_musica = ?, artista = ?, tags = ?, link = ?, categoria = ?, codigo = ?, primeira_linha = ?,
+                            tom = ?, primeira_nota = ?, versao_vocal = ?, compasso = ?, bpm = ?,
+                            cifra = ?, versao_parecida = ?, tema_central = ?
+                        WHERE id = ? AND usuario_id = ?
+                        """,
+                        [final_data["nome_musica"], final_data["artista"], tags_str, final_data["link"], categoria_str, final_data["codigo"], final_data["primeira_linha"],
+                         final_data["tom"], final_data["primeira_nota"], final_data["versao_vocal"], final_data["compasso"], final_data["bpm"],
+                         final_data["cifra"], final_data["versao_parecida"], final_data["tema_central"], db["id"], target_user_id]
+                    )
                 musica_id = db["id"]
                 updated += 1
                 
@@ -324,7 +367,7 @@ async def commit_excel(
                     """,
                     [final_data["nome_musica"], final_data["artista"], tags_str, final_data["link"], categoria_str, final_data["codigo"], final_data["primeira_linha"],
                      final_data["tom"], final_data["primeira_nota"], final_data["versao_vocal"], final_data["compasso"], final_data["bpm"],
-                     final_data["cifra"], final_data["versao_parecida"], final_data["tema_central"], user_id]
+                     final_data["cifra"], final_data["versao_parecida"], final_data["tema_central"], target_user_id]
                 )
                 musica_id = res.last_insert_rowid
                 inserted += 1
@@ -334,19 +377,7 @@ async def commit_excel(
                 cat_nome_clean = cat_nome.strip()
                 if not cat_nome_clean:
                     continue
-                cat_res = await client.execute(
-                    "SELECT id FROM categorias_repertorio WHERE LOWER(nome) = ? AND (usuario_id = ? OR usuario_id IS NULL)",
-                    [cat_nome_clean.lower(), user_id]
-                )
-                if not cat_res.rows:
-                    new_cat = await client.execute(
-                        "INSERT INTO categorias_repertorio (nome, cor, usuario_id) VALUES (?, ?, ?)",
-                        [cat_nome_clean, "#808080", user_id]
-                    )
-                    cat_id = new_cat.last_insert_rowid
-                else:
-                    cat_id = cat_res.rows[0][0]
-                    
+                cat_id = await find_or_create_categoria(client, cat_nome_clean, target_user_id)
                 await client.execute(
                     "INSERT OR IGNORE INTO musica_categorias (musica_id, categoria_id) VALUES (?, ?)",
                     [musica_id, cat_id]
@@ -363,25 +394,43 @@ async def commit_excel(
 # EDIÇÃO EM MASSA VIA EXCEL (EXPORTAÇÃO PROTEGIDA, PREVIEW DE DIFERENÇAS E COMMIT)
 # ==============================================================================
 
-async def _fetch_user_musics_map(client: libsql_client.Client, user_id: int) -> Dict[int, Dict[str, Any]]:
-    res = await client.execute(
-        """
-        SELECT id, nome_musica, artista, codigo, primeira_linha, tom, primeira_nota, 
-               versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, link, tags, categoria
-        FROM biblioteca_busca WHERE usuario_id = ?
-        """,
-        [user_id]
-    )
-    cats_all = await client.execute(
-        """
-        SELECT mc.musica_id, cr.nome
-        FROM musica_categorias mc
-        JOIN categorias_repertorio cr ON mc.categoria_id = cr.id
-        JOIN biblioteca_busca bb ON mc.musica_id = bb.id
-        WHERE bb.usuario_id = ?
-        """,
-        [user_id]
-    )
+async def _fetch_user_musics_map(client: libsql_client.Client, user_id: Optional[int]) -> Dict[int, Dict[str, Any]]:
+    if user_id is None:
+        res = await client.execute(
+            """
+            SELECT id, nome_musica, artista, codigo, primeira_linha, tom, primeira_nota, 
+                   versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, link, tags, categoria
+            FROM biblioteca_busca WHERE usuario_id IS NULL
+            """
+        )
+        cats_all = await client.execute(
+            """
+            SELECT mc.musica_id, cr.nome
+            FROM musica_categorias mc
+            JOIN categorias_repertorio cr ON mc.categoria_id = cr.id
+            JOIN biblioteca_busca bb ON mc.musica_id = bb.id
+            WHERE bb.usuario_id IS NULL
+            """
+        )
+    else:
+        res = await client.execute(
+            """
+            SELECT id, nome_musica, artista, codigo, primeira_linha, tom, primeira_nota, 
+                   versao_vocal, compasso, bpm, cifra, versao_parecida, tema_central, link, tags, categoria
+            FROM biblioteca_busca WHERE usuario_id = ?
+            """,
+            [user_id]
+        )
+        cats_all = await client.execute(
+            """
+            SELECT mc.musica_id, cr.nome
+            FROM musica_categorias mc
+            JOIN categorias_repertorio cr ON mc.categoria_id = cr.id
+            JOIN biblioteca_busca bb ON mc.musica_id = bb.id
+            WHERE bb.usuario_id = ?
+            """,
+            [user_id]
+        )
     cats_by_music: Dict[int, List[str]] = {}
     for row in cats_all.rows:
         mid = row[0]
@@ -418,6 +467,7 @@ async def _fetch_user_musics_map(client: libsql_client.Client, user_id: int) -> 
 @router.post("/bulk-export")
 async def bulk_export_excel(
     payload: BulkExportRequest,
+    escopo: str = "pessoal",
     current_user: dict = Depends(get_current_user),
     client: libsql_client.Client = Depends(get_db)
 ):
@@ -427,10 +477,10 @@ async def bulk_export_excel(
     if not valid_campos:
         raise HTTPException(status_code=400, detail="Selecione pelo menos um campo válido para editar em massa.")
 
-    user_id = current_user["id"]
-    db_map = await _fetch_user_musics_map(client, user_id)
+    target_user_id = _resolve_target_user_id(current_user, escopo)
+    db_map = await _fetch_user_musics_map(client, target_user_id)
 
-    # Preserva a ordem enviada pelo frontend (ou filtra apenas IDs pertencentes ao usuário)
+    # Preserva a ordem enviada pelo frontend (ou filtra apenas IDs pertencentes ao escopo)
     selected_songs = [db_map[mid] for mid in payload.musica_ids if mid in db_map]
     if not selected_songs:
         raise HTTPException(status_code=404, detail="Nenhuma das músicas selecionadas foi encontrada.")
@@ -567,6 +617,7 @@ async def bulk_export_excel(
 @router.post("/bulk-preview")
 async def bulk_preview_excel(
     file: UploadFile = File(...),
+    escopo: str = "pessoal",
     current_user: dict = Depends(get_current_user),
     client: libsql_client.Client = Depends(get_db)
 ):
@@ -608,8 +659,8 @@ async def bulk_preview_excel(
     id_col = next((c for c in df.columns if c == "ID"), None)
     nome_ref_col = next((c for c in df.columns if "MÚSICA" in c or "NOME DA MÚSICA" in c), None)
 
-    user_id = current_user["id"]
-    db_map = await _fetch_user_musics_map(client, user_id)
+    target_user_id = _resolve_target_user_id(current_user, escopo)
+    db_map = await _fetch_user_musics_map(client, target_user_id)
     db_by_name = {m["nome_musica"].strip().lower(): m for m in db_map.values()}
 
     changed_items = []
@@ -698,13 +749,14 @@ async def bulk_preview_excel(
 @router.post("/bulk-commit")
 async def bulk_commit_excel(
     payload: BulkCommitRequest,
+    escopo: str = "pessoal",
     current_user: dict = Depends(get_current_user),
     client: libsql_client.Client = Depends(get_db)
 ):
     if not payload.items:
         raise HTTPException(status_code=400, detail="Nenhuma alteração selecionada para aplicar.")
 
-    user_id = current_user["id"]
+    target_user_id = _resolve_target_user_id(current_user, escopo)
     updated_songs = 0
     total_changes = 0
 
@@ -720,11 +772,17 @@ async def bulk_commit_excel(
         if not musica_id or not changes:
             continue
 
-        # Verifica se a música pertence ao usuário
-        check = await client.execute(
-            "SELECT id FROM biblioteca_busca WHERE id = ? AND usuario_id = ?",
-            [musica_id, user_id]
-        )
+        # Verifica se a música pertence ao escopo selecionado
+        if target_user_id is None:
+            check = await client.execute(
+                "SELECT id FROM biblioteca_busca WHERE id = ? AND usuario_id IS NULL",
+                [musica_id]
+            )
+        else:
+            check = await client.execute(
+                "SELECT id FROM biblioteca_busca WHERE id = ? AND usuario_id = ?",
+                [musica_id, target_user_id]
+            )
         if not check.rows:
             continue
 
@@ -748,8 +806,12 @@ async def bulk_commit_excel(
 
         try:
             if set_clauses:
-                sql = f"UPDATE biblioteca_busca SET {', '.join(set_clauses)} WHERE id = ? AND usuario_id = ?"
-                await client.execute(sql, set_values + [musica_id, user_id])
+                if target_user_id is None:
+                    sql = f"UPDATE biblioteca_busca SET {', '.join(set_clauses)} WHERE id = ? AND usuario_id IS NULL"
+                    await client.execute(sql, set_values + [musica_id])
+                else:
+                    sql = f"UPDATE biblioteca_busca SET {', '.join(set_clauses)} WHERE id = ? AND usuario_id = ?"
+                    await client.execute(sql, set_values + [musica_id, target_user_id])
 
             if new_cats_list:
                 await client.execute("DELETE FROM musica_categorias WHERE musica_id = ?", [musica_id])
@@ -757,19 +819,7 @@ async def bulk_commit_excel(
                     cat_clean = cat_nome.strip()
                     if not cat_clean:
                         continue
-                    cat_res = await client.execute(
-                        "SELECT id FROM categorias_repertorio WHERE LOWER(nome) = ? AND (usuario_id = ? OR usuario_id IS NULL)",
-                        [cat_clean.lower(), user_id]
-                    )
-                    if not cat_res.rows:
-                        new_cat = await client.execute(
-                            "INSERT INTO categorias_repertorio (nome, cor, usuario_id) VALUES (?, ?, ?)",
-                            [cat_clean, "#808080", user_id]
-                        )
-                        cat_id = new_cat.last_insert_rowid
-                    else:
-                        cat_id = cat_res.rows[0][0]
-
+                    cat_id = await find_or_create_categoria(client, cat_clean, target_user_id)
                     await client.execute(
                         "INSERT OR IGNORE INTO musica_categorias (musica_id, categoria_id) VALUES (?, ?)",
                         [musica_id, cat_id]

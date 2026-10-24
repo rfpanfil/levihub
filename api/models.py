@@ -137,6 +137,7 @@ class AdminUpdateUser(BaseModel):
     email: Optional[str] = None
     senha: Optional[str] = None
     role: Optional[str] = None
+    is_verified: Optional[bool] = None
 
 
 # =============================================================================
