@@ -23,6 +23,7 @@ class PeriodoCultosUpdateRequest(BaseModel):
 class PreferenciasPlanejamentoRequest(BaseModel):
     whats_opts: Optional[Dict[str, bool]] = None
     visible_cols: Optional[List[str]] = None
+    domingos_agrupamento: Optional[str] = None
 
 
 @router.get("/")
@@ -75,6 +76,8 @@ async def salvar_preferencias_planejamento(
             atual["whats_opts"] = req.whats_opts
         if req.visible_cols is not None:
             atual["visible_cols"] = req.visible_cols
+        if req.domingos_agrupamento is not None:
+            atual["domingos_agrupamento"] = req.domingos_agrupamento
 
         await client.execute(
             "UPDATE usuarios SET preferencias_planejamento = ? WHERE id = ?",

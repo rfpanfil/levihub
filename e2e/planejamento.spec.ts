@@ -82,6 +82,17 @@ test.describe('Planejador de Repertório e Escala de Domingos (WhatsApp)', () =>
   });
 
   test('deve criar período, filtrar e salvar músicas no planejamento e escalar domingo p/ WhatsApp', async ({ page }) => {
+    let musicasNoPeriodo: any[] = [];
+
+    await page.route('**/planejamento/preferencias', async route => {
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Preferências salvas!' })
+      });
+    });
+
     await page.route('**/planejamento/1/musicas', async route => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
@@ -89,11 +100,21 @@ test.describe('Planejador de Repertório e Escala de Domingos (WhatsApp)', () =>
           headers: corsHeaders,
           contentType: 'application/json',
           body: JSON.stringify({
-            musicas: [],
+            musicas: musicasNoPeriodo,
             programacao_cultos: []
           })
         });
       } else if (route.request().method() === 'PUT') {
+        musicasNoPeriodo = [
+          {
+            id: 501,
+            nome_musica: 'Bondade de Deus',
+            artista: 'Isaías Saad',
+            tom: 'G',
+            categoria: 'lentas1',
+            tema_central: 'Fidelidade e Bondade de Deus'
+          }
+        ];
         await route.fulfill({
           status: 200,
           headers: corsHeaders,
@@ -128,8 +149,14 @@ test.describe('Planejador de Repertório e Escala de Domingos (WhatsApp)', () =>
       });
     });
 
-    // Abre o período existente
+    // Abre o período existente (aba principal à esquerda é "📲 Escalar p/ Próximo Domingo ou Mês (WhatsApp)")
     await page.getByText('2º Semestre 2026').click();
+    const subtabs = page.locator('.planejamento-subtabs .subtab-btn');
+    await expect(subtabs.first()).toContainText('Escalar p/ Próximo Domingo ou Mês');
+    await expect(subtabs.first()).toHaveClass(/active/);
+
+    // Navega para a aba de músicas do planejamento
+    await subtabs.nth(1).click();
     await expect(page.getByRole('button', { name: /Adicionar Música/i })).toBeVisible();
 
     // Abre modal de seleção com filtros múltiplos (painel já inicia expandido)
@@ -143,5 +170,15 @@ test.describe('Planejador de Repertório e Escala de Domingos (WhatsApp)', () =>
     // Efetiva o salvamento no banco
     await page.getByRole('button', { name: /Salvar Planejamento/i }).first().click();
     await expect(page.getByText('Salvo ✓')).toBeVisible();
+
+    // Volta para a aba principal de Domingos e testa o agrupamento por Categorias e Tema Central
+    await subtabs.first().click();
+    await page.getByRole('button', { name: /Criar Dia/i }).click();
+
+    await page.getByRole('button', { name: /📁 Categorias/i }).click();
+    await expect(page.locator('.culto-group-header.cat')).toContainText('lentas1');
+
+    await page.getByRole('button', { name: /🎯 Tema Central/i }).click();
+    await expect(page.locator('.culto-group-header.tema')).toContainText('Fidelidade e Bondade de Deus');
   });
 });

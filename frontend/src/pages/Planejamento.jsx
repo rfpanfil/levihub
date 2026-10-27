@@ -44,7 +44,7 @@ export default function Planejamento() {
   const [error, setError] = useState('');
   
   const [selectedPeriod, setSelectedPeriod] = useState(null);
-  const [innerTab, setInnerTab] = useState('repertorio'); // 'repertorio' | 'domingos'
+  const [innerTab, setInnerTab] = useState('domingos'); // 'domingos' | 'repertorio'
   
   const [showModal, setShowModal] = useState(false);
   const [editingPeriodId, setEditingPeriodId] = useState(null);
@@ -67,6 +67,12 @@ export default function Planejamento() {
     return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
   });
   const [copiedId, setCopiedId] = useState(null);
+  const [agrupamentoDomingos, setAgrupamentoDomingos] = useState(() => {
+    const saved = localStorage.getItem('planejamento_domingos_agrupamento');
+    if (saved && ['alfabetica', 'categoria', 'tema_central'].includes(saved)) return saved;
+    return 'alfabetica';
+  });
+  const [collapsedGroups, setCollapsedGroups] = useState({});
 
   // Opções de formatação do texto para WhatsApp
   const [whatsOpts, setWhatsOpts] = useState({
@@ -117,6 +123,10 @@ export default function Planejamento() {
   }, [visibleCols]);
 
   useEffect(() => {
+    localStorage.setItem('planejamento_domingos_agrupamento', agrupamentoDomingos);
+  }, [agrupamentoDomingos]);
+
+  useEffect(() => {
     carregarPeriodos();
   }, []);
 
@@ -151,6 +161,12 @@ export default function Planejamento() {
           }
           if (Array.isArray(data.preferencias.visible_cols)) {
             setVisibleCols(data.preferencias.visible_cols);
+          }
+          if (
+            data.preferencias.domingos_agrupamento &&
+            ['alfabetica', 'categoria', 'tema_central'].includes(data.preferencias.domingos_agrupamento)
+          ) {
+            setAgrupamentoDomingos(data.preferencias.domingos_agrupamento);
           }
         }
       } else {
@@ -227,7 +243,8 @@ export default function Planejamento() {
 
   const abrirPeriodo = (periodo) => {
     setSelectedPeriod(periodo);
-    setInnerTab('repertorio');
+    setInnerTab('domingos');
+    setCollapsedGroups({});
     carregarMusicasDoPeriodo(periodo.id);
   };
 
@@ -552,7 +569,7 @@ export default function Planejamento() {
     setTimeout(() => setCopiedId(null), 2500);
   };
 
-  const salvarPreferenciasNoBanco = async (novosWhatsOpts, novasVisibleCols) => {
+  const salvarPreferenciasNoBanco = async (novosWhatsOpts, novasVisibleCols, novoAgrupamento = agrupamentoDomingos) => {
     try {
       await apiFetch('/planejamento/preferencias', {
         method: 'PUT',
@@ -560,6 +577,7 @@ export default function Planejamento() {
         body: JSON.stringify({
           whats_opts: novosWhatsOpts,
           visible_cols: novasVisibleCols,
+          domingos_agrupamento: novoAgrupamento,
         })
       });
     } catch (e) {
@@ -570,7 +588,7 @@ export default function Planejamento() {
   const toggleWhatsOpt = (chave) => {
     const atualizado = { ...whatsOpts, [chave]: !whatsOpts[chave] };
     setWhatsOpts(atualizado);
-    salvarPreferenciasNoBanco(atualizado, visibleCols);
+    salvarPreferenciasNoBanco(atualizado, visibleCols, agrupamentoDomingos);
   };
 
   const toggleCol = (key) => {
@@ -578,8 +596,89 @@ export default function Planejamento() {
       ? visibleCols.filter(c => c !== key)
       : [...visibleCols, key];
     setVisibleCols(novas);
-    salvarPreferenciasNoBanco(whatsOpts, novas);
+    salvarPreferenciasNoBanco(whatsOpts, novas, agrupamentoDomingos);
   };
+
+  const alterarAgrupamentoDomingos = (novoModo) => {
+    setAgrupamentoDomingos(novoModo);
+    salvarPreferenciasNoBanco(whatsOpts, visibleCols, novoModo);
+  };
+
+  const toggleCollapseGrupo = (cultoId, grupoKey) => {
+    const chave = `${cultoId}::${grupoKey}`;
+    setCollapsedGroups(prev => ({ ...prev, [chave]: !prev[chave] }));
+  };
+
+  // Agrupa e ordena alfabeticamente as músicas exibidas dentro de cada cartão de domingo
+  const gruposMusicasDomingos = useMemo(() => {
+    const ordenadasAZ = [...musicasPeriodo].sort((a, b) =>
+      (a.nome_musica || '').localeCompare(b.nome_musica || '', 'pt-BR', { sensitivity: 'base' })
+    );
+
+    if (agrupamentoDomingos === 'categoria') {
+      const mapa = new Map();
+      ordenadasAZ.forEach(m => {
+        const rawCats = Array.isArray(m.categorias) && m.categorias.length > 0
+          ? m.categorias
+          : String(m.categoria || '').split(',');
+        const catsLimpos = Array.from(
+          new Set(rawCats.map(c => c.trim()).filter(Boolean))
+        );
+        const listaCats = catsLimpos.length > 0 ? catsLimpos : ['Sem Categoria'];
+        listaCats.forEach(cat => {
+          if (!mapa.has(cat)) mapa.set(cat, []);
+          mapa.get(cat).push(m);
+        });
+      });
+
+      const chavesOrdenadas = Array.from(mapa.keys()).sort((a, b) => {
+        if (a === 'Sem Categoria') return 1;
+        if (b === 'Sem Categoria') return -1;
+        return a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
+      });
+
+      return chavesOrdenadas.map(cat => ({
+        key: `cat:${cat}`,
+        titulo: cat,
+        icone: '📁',
+        tipo: 'categoria',
+        musicas: mapa.get(cat),
+      }));
+    }
+
+    if (agrupamentoDomingos === 'tema_central') {
+      const mapa = new Map();
+      ordenadasAZ.forEach(m => {
+        const tema = String(m.tema_central || '').trim() || 'Sem Tema Central';
+        if (!mapa.has(tema)) mapa.set(tema, []);
+        mapa.get(tema).push(m);
+      });
+
+      const chavesOrdenadas = Array.from(mapa.keys()).sort((a, b) => {
+        if (a === 'Sem Tema Central') return 1;
+        if (b === 'Sem Tema Central') return -1;
+        return a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
+      });
+
+      return chavesOrdenadas.map(tema => ({
+        key: `tema:${tema}`,
+        titulo: tema,
+        icone: '🎯',
+        tipo: 'tema_central',
+        musicas: mapa.get(tema),
+      }));
+    }
+
+    return [
+      {
+        key: '__all__',
+        titulo: null,
+        icone: null,
+        tipo: 'alfabetica',
+        musicas: ordenadasAZ,
+      },
+    ];
+  }, [musicasPeriodo, agrupamentoDomingos]);
 
   if (selectedPeriod) {
     return (
@@ -612,19 +711,19 @@ export default function Planejamento() {
           )}
         </div>
 
-        {/* Abas Internas: 1. Músicas do Planejamento | 2. Montar Louvor Domingo/Mês (WhatsApp) */}
+        {/* Abas Internas: 1. Escalar p/ Próximo Domingo ou Mês (Principal) | 2. Músicas deste Planejamento */}
         <div className="planejamento-subtabs">
-          <button
-            className={`subtab-btn ${innerTab === 'repertorio' ? 'active' : ''}`}
-            onClick={() => setInnerTab('repertorio')}
-          >
-            🎵 Músicas deste Planejamento ({musicasPeriodo.length})
-          </button>
           <button
             className={`subtab-btn ${innerTab === 'domingos' ? 'active' : ''}`}
             onClick={() => setInnerTab('domingos')}
           >
             📲 Escalar p/ Próximo Domingo ou Mês (WhatsApp) ({cultos.length})
+          </button>
+          <button
+            className={`subtab-btn ${innerTab === 'repertorio' ? 'active' : ''}`}
+            onClick={() => setInnerTab('repertorio')}
+          >
+            🎵 Músicas deste Planejamento ({musicasPeriodo.length})
           </button>
         </div>
 
@@ -732,12 +831,24 @@ export default function Planejamento() {
           </>
         )}
 
-        {/* ABA 2: ESCALAR MÚSICAS PARA O PRÓXIMO DOMINGO OU MÊS INTEIRO + WHATSAPP */}
+        {/* ABA PRINCIPAL: ESCALAR MÚSICAS PARA O PRÓXIMO DOMINGO OU MÊS INTEIRO + WHATSAPP */}
         {innerTab === 'domingos' && (
           <div className="domingos-wrapper">
-            {musicasPeriodo.length === 0 ? (
+            {loadingMusicas ? (
+              <div className="input-area" style={{ padding: '24px', textAlign: 'center', color: '#9ab' }}>
+                Carregando planejamento...
+              </div>
+            ) : musicasPeriodo.length === 0 ? (
               <div className="empty-state">
                 <p>Adicione primeiro as músicas na aba <b>"🎵 Músicas deste Planejamento"</b> para poder escalá-las nos domingos ou no mês!</p>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  style={{ marginTop: '12px' }}
+                  onClick={() => setInnerTab('repertorio')}
+                >
+                  🎵 Ir para Músicas deste Planejamento
+                </button>
               </div>
             ) : (
               <>
@@ -774,6 +885,36 @@ export default function Planejamento() {
                           <Calendar size={16} /> Gerar Domingos do Mês
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Opção memorizada de agrupamento das músicas dentro de cada domingo */}
+                  <div className="domingos-groupby-bar">
+                    <span style={{ fontSize: '0.88rem', color: '#cbd5e1', fontWeight: '600' }}>
+                      🗂️ Organizar músicas nos domingos:
+                    </span>
+                    <div className="domingos-groupby-pills">
+                      <button
+                        type="button"
+                        className={`groupby-pill ${agrupamentoDomingos === 'alfabetica' ? 'active' : ''}`}
+                        onClick={() => alterarAgrupamentoDomingos('alfabetica')}
+                      >
+                        🔤 Ordem A–Z
+                      </button>
+                      <button
+                        type="button"
+                        className={`groupby-pill ${agrupamentoDomingos === 'categoria' ? 'active' : ''}`}
+                        onClick={() => alterarAgrupamentoDomingos('categoria')}
+                      >
+                        📁 Categorias
+                      </button>
+                      <button
+                        type="button"
+                        className={`groupby-pill ${agrupamentoDomingos === 'tema_central' ? 'active' : ''}`}
+                        onClick={() => alterarAgrupamentoDomingos('tema_central')}
+                      >
+                        🎯 Tema Central
+                      </button>
                     </div>
                   </div>
 
@@ -866,38 +1007,74 @@ export default function Planejamento() {
                           </p>
 
                           <div className="culto-musicas-list">
-                            {musicasPeriodo.map(m => {
-                              const selecionada = (culto.musica_ids || []).includes(m.id);
-                              const vezesNoMes = contagemUsoNoMes[m.id] || 0;
+                            {gruposMusicasDomingos.map(grupo => {
+                              const collapseKey = `${culto.id}::${grupo.key}`;
+                              const isCollapsed = !!collapsedGroups[collapseKey];
+                              const selecionadasNoGrupo = grupo.musicas.filter(m =>
+                                (culto.musica_ids || []).includes(m.id)
+                              ).length;
+
                               return (
-                                <label
-                                  key={m.id}
-                                  className={`culto-musica-item ${selecionada ? 'selected' : ''}`}
-                                >
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                    <input
-                                      type="checkbox"
-                                      checked={selecionada}
-                                      onChange={() => handleToggleMusicaNoCulto(culto.id, m.id)}
-                                    />
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div style={{ fontWeight: '600', color: '#fff', fontSize: '0.92rem' }}>
-                                        {m.nome_musica}
-                                        {m.artista && <span style={{ color: '#f39c12', fontWeight: 'normal', fontSize: '0.82rem' }}> - {m.artista}</span>}
-                                      </div>
-                                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '3px' }}>
-                                        {m.tom && <span className="badge-meta tema">Tom: {m.tom}</span>}
-                                        {m.categoria && <span className="badge-meta cat">{m.categoria}</span>}
-                                        {m.tema_central && <span className="badge-meta tema">🎯 {m.tema_central}</span>}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {vezesNoMes > 0 && (
-                                    <span className="uso-mes-badge" title="Quantas vezes foi escalada neste planejamento">
-                                      {vezesNoMes}x no período
-                                    </span>
+                                <div key={grupo.key} className="culto-group-block">
+                                  {grupo.titulo && (
+                                    <button
+                                      type="button"
+                                      className={`culto-group-header ${grupo.tipo === 'categoria' ? 'cat' : 'tema'}`}
+                                      onClick={() => toggleCollapseGrupo(culto.id, grupo.key)}
+                                      title={isCollapsed ? 'Clique para expandir este grupo' : 'Clique para recolher este grupo'}
+                                    >
+                                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '6px' }}>
+                                        {isCollapsed ? '▸' : '▾'} {grupo.icone} {grupo.titulo}
+                                      </span>
+                                      <span className={`culto-group-count ${selecionadasNoGrupo > 0 ? 'has-selected' : ''}`}>
+                                        {selecionadasNoGrupo > 0
+                                          ? `${selecionadasNoGrupo}/${grupo.musicas.length}`
+                                          : grupo.musicas.length}
+                                      </span>
+                                    </button>
                                   )}
-                                </label>
+
+                                  {!isCollapsed && grupo.musicas.map(m => {
+                                    const selecionada = (culto.musica_ids || []).includes(m.id);
+                                    const vezesNoMes = contagemUsoNoMes[m.id] || 0;
+                                    const exibirCat = agrupamentoDomingos !== 'categoria' && !!m.categoria;
+                                    const exibirTema = agrupamentoDomingos !== 'tema_central' && !!m.tema_central;
+                                    const temBadges = !!m.tom || exibirCat || exibirTema;
+
+                                    return (
+                                      <label
+                                        key={`${grupo.key}-${m.id}`}
+                                        className={`culto-musica-item ${selecionada ? 'selected' : ''}`}
+                                      >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                          <input
+                                            type="checkbox"
+                                            checked={selecionada}
+                                            onChange={() => handleToggleMusicaNoCulto(culto.id, m.id)}
+                                          />
+                                          <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontWeight: '600', color: '#fff', fontSize: '0.9rem' }}>
+                                              {m.nome_musica}
+                                              {m.artista && <span style={{ color: '#f39c12', fontWeight: 'normal', fontSize: '0.8rem' }}> - {m.artista}</span>}
+                                            </div>
+                                            {temBadges && (
+                                              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '3px' }}>
+                                                {m.tom && <span className="badge-meta tema">Tom: {m.tom}</span>}
+                                                {exibirCat && <span className="badge-meta cat">{m.categoria}</span>}
+                                                {exibirTema && <span className="badge-meta tema">🎯 {m.tema_central}</span>}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                        {vezesNoMes > 0 && (
+                                          <span className="uso-mes-badge" title="Quantas vezes foi escalada neste planejamento">
+                                            {vezesNoMes}x no período
+                                          </span>
+                                        )}
+                                      </label>
+                                    );
+                                  })}
+                                </div>
                               );
                             })}
                           </div>
