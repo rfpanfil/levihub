@@ -72,7 +72,7 @@ export default function Planejamento() {
     if (saved && ['alfabetica', 'categoria', 'tema_central'].includes(saved)) return saved;
     return 'alfabetica';
   });
-  const [collapsedGroups, setCollapsedGroups] = useState({});
+  const [expandedGroups, setExpandedGroups] = useState({});
 
   // Opções de formatação do texto para WhatsApp
   const [whatsOpts, setWhatsOpts] = useState({
@@ -244,7 +244,7 @@ export default function Planejamento() {
   const abrirPeriodo = (periodo) => {
     setSelectedPeriod(periodo);
     setInnerTab('domingos');
-    setCollapsedGroups({});
+    setExpandedGroups({});
     carregarMusicasDoPeriodo(periodo.id);
   };
 
@@ -601,12 +601,13 @@ export default function Planejamento() {
 
   const alterarAgrupamentoDomingos = (novoModo) => {
     setAgrupamentoDomingos(novoModo);
+    setExpandedGroups({});
     salvarPreferenciasNoBanco(whatsOpts, visibleCols, novoModo);
   };
 
-  const toggleCollapseGrupo = (cultoId, grupoKey) => {
+  const toggleExpandGrupo = (cultoId, grupoKey) => {
     const chave = `${cultoId}::${grupoKey}`;
-    setCollapsedGroups(prev => ({ ...prev, [chave]: !prev[chave] }));
+    setExpandedGroups(prev => ({ ...prev, [chave]: !prev[chave] }));
   };
 
   // Agrupa e ordena alfabeticamente as músicas exibidas dentro de cada cartão de domingo
@@ -1009,7 +1010,7 @@ export default function Planejamento() {
                           <div className="culto-musicas-list">
                             {gruposMusicasDomingos.map(grupo => {
                               const collapseKey = `${culto.id}::${grupo.key}`;
-                              const isCollapsed = !!collapsedGroups[collapseKey];
+                              const isCollapsed = Boolean(grupo.titulo) && !expandedGroups[collapseKey];
                               const selecionadasNoGrupo = grupo.musicas.filter(m =>
                                 (culto.musica_ids || []).includes(m.id)
                               ).length;
@@ -1020,7 +1021,7 @@ export default function Planejamento() {
                                     <button
                                       type="button"
                                       className={`culto-group-header ${grupo.tipo === 'categoria' ? 'cat' : 'tema'}`}
-                                      onClick={() => toggleCollapseGrupo(culto.id, grupo.key)}
+                                      onClick={() => toggleExpandGrupo(culto.id, grupo.key)}
                                       title={isCollapsed ? 'Clique para expandir este grupo' : 'Clique para recolher este grupo'}
                                     >
                                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '6px' }}>

@@ -835,10 +835,6 @@
   gap: 5px;
 }
 
-.culto-group-block + .culto-group-block {
-  margin-top: 4px;
-}
-
 .culto-group-header {
   display: flex;
   justify-content: space-between;

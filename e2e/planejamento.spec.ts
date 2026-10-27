@@ -171,14 +171,22 @@ test.describe('Planejador de Repertório e Escala de Domingos (WhatsApp)', () =>
     await page.getByRole('button', { name: /Salvar Planejamento/i }).first().click();
     await expect(page.getByText('Salvo ✓')).toBeVisible();
 
-    // Volta para a aba principal de Domingos e testa o agrupamento por Categorias e Tema Central
+    // Volta para a aba principal de Domingos e testa o agrupamento por Categorias e Tema Central (iniciando recolhidos)
     await subtabs.first().click();
     await page.getByRole('button', { name: /Criar Dia/i }).click();
 
     await page.getByRole('button', { name: /📁 Categorias/i }).click();
-    await expect(page.locator('.culto-group-header.cat')).toContainText('lentas1');
+    const catHeader = page.locator('.culto-group-header.cat');
+    await expect(catHeader).toContainText('lentas1');
+    await expect(page.locator('.culto-musica-item')).toHaveCount(0);
+    await catHeader.click();
+    await expect(page.locator('.culto-musica-item')).toHaveCount(1);
 
     await page.getByRole('button', { name: /🎯 Tema Central/i }).click();
-    await expect(page.locator('.culto-group-header.tema')).toContainText('Fidelidade e Bondade de Deus');
+    const temaHeader = page.locator('.culto-group-header.tema');
+    await expect(temaHeader).toContainText('Fidelidade e Bondade de Deus');
+    await expect(page.locator('.culto-musica-item')).toHaveCount(0);
+    await temaHeader.click();
+    await expect(page.locator('.culto-musica-item')).toHaveCount(1);
   });
 });
