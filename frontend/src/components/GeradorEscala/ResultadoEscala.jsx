@@ -14,6 +14,45 @@ export default function ResultadoEscala() {
   } = useScale();
 
   const [isExportando, setIsExportando] = React.useState(false);
+  const [isTouchDragging, setIsTouchDragging] = React.useState(false);
+
+  React.useEffect(() => {
+    if (draggedRow === null) return;
+    const preventScroll = (ev) => {
+      if (ev.cancelable) ev.preventDefault();
+    };
+    const finalizarTouchDrag = () => {
+      setIsTouchDragging(false);
+      handleDragEndRow();
+    };
+    document.addEventListener('touchmove', preventScroll, { passive: false });
+    window.addEventListener('touchend', finalizarTouchDrag);
+    window.addEventListener('touchcancel', finalizarTouchDrag);
+    return () => {
+      document.removeEventListener('touchmove', preventScroll);
+      window.removeEventListener('touchend', finalizarTouchDrag);
+      window.removeEventListener('touchcancel', finalizarTouchDrag);
+    };
+  }, [draggedRow, handleDragEndRow]);
+
+  const handleTouchMoveRow = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    if (touch.clientY < 85) {
+      window.scrollBy(0, -10);
+    } else if (touch.clientY > window.innerHeight - 95) {
+      window.scrollBy(0, 10);
+    }
+    const elementos = document.elementsFromPoint
+      ? document.elementsFromPoint(touch.clientX, touch.clientY)
+      : [document.elementFromPoint(touch.clientX, touch.clientY)];
+    const linhaAlvo = elementos.map((el) => el?.closest?.('tr[data-row-index]')).find(Boolean);
+    if (!linhaAlvo) return;
+    const targetIndex = Number(linhaAlvo.getAttribute('data-row-index'));
+    if (!Number.isNaN(targetIndex)) {
+      handleDragEnterRow(targetIndex);
+    }
+  };
 
   const handleImprimir = async () => {
     const elemento = document.getElementById('escala-resultado-matriz');
@@ -138,6 +177,9 @@ export default function ResultadoEscala() {
 
       <div id="escala-resultado-matriz" className="w-full overflow-x-auto" style={{ padding: '20px', backgroundColor: '#282c34', borderRadius: '8px', WebkitOverflowScrolling: 'touch' }}>
         <h3 style={{ textAlign: 'center', color: 'white', marginTop: 0 }}>Escala de Louvor - {mesesNomes[mes]} / {ano}</h3>
+        <p data-html2canvas-ignore="true" style={{ textAlign: 'center', color: '#8b9bb0', fontSize: '0.8em', margin: '-6px 0 12px 0' }}>
+          ↕️ Segure e arraste <strong style={{ color: '#61dafb' }}>☰</strong> para mudar a ordem das funções • ↔️ Deslize a tabela para os lados para ver mais datas
+        </p>
         <table className="escala-matrix w-full">
           <thead>
             <tr>
@@ -147,16 +189,61 @@ export default function ResultadoEscala() {
           </thead>
           <tbody>
             {ordemMatriz.map((vagaCatalogo, index) => (
-              <tr key={vagaCatalogo.id} draggable
+              <tr
+                key={vagaCatalogo.id}
+                data-row-index={index}
+                draggable={!isTouchDragging}
                 onDragStart={(e) => { handleDragStartRow(index); e.dataTransfer.effectAllowed = 'move'; }}
                 onDragEnter={() => handleDragEnterRow(index)}
-                onDragEnd={handleDragEndRow}
+                onDragEnd={() => { setIsTouchDragging(false); handleDragEndRow(); }}
                 onDragOver={(e) => e.preventDefault()}
-                style={{ transition: 'background-color 0.2s', backgroundColor: draggedRow === index ? 'rgba(97, 218, 251, 0.1)' : 'transparent' }}
+                style={{
+                  transition: 'background-color 0.15s',
+                  backgroundColor: draggedRow === index ? 'rgba(97, 218, 251, 0.22)' : 'transparent',
+                  outline: draggedRow === index ? '2px solid #61dafb' : 'none',
+                }}
               >
-                <td className="min-w-[150px]" style={{ backgroundColor: '#3c414d', fontWeight: 'bold', color: '#61dafb', cursor: 'grab' }}>
+                <td className="min-w-[150px]" style={{ backgroundColor: draggedRow === index ? '#2b4758' : '#3c414d', fontWeight: 'bold', color: '#61dafb', cursor: 'grab' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ color: '#9ab', cursor: 'grab', fontSize: '1.2em' }} data-html2canvas-ignore="true">☰</span>
+                    <span
+                      data-html2canvas-ignore="true"
+                      role="button"
+                      aria-label={`Arrastar função ${vagaCatalogo.label} para cima ou para baixo`}
+                      title="Arraste para cima ou para baixo para mudar a ordem das funções"
+                      onContextMenu={(e) => e.preventDefault()}
+                      onTouchStart={(e) => {
+                        const tr = e.currentTarget.closest('tr');
+                        if (tr) tr.draggable = false;
+                        setIsTouchDragging(true);
+                        handleDragStartRow(index);
+                      }}
+                      onTouchMove={handleTouchMoveRow}
+                      onTouchEnd={() => {
+                        setIsTouchDragging(false);
+                        handleDragEndRow();
+                      }}
+                      onTouchCancel={() => {
+                        setIsTouchDragging(false);
+                        handleDragEndRow();
+                      }}
+                      style={{
+                        color: draggedRow === index ? '#61dafb' : '#9ab',
+                        cursor: 'grab',
+                        fontSize: '1.25em',
+                        lineHeight: 1,
+                        padding: '8px 10px',
+                        margin: '-8px -6px',
+                        touchAction: 'none',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        WebkitTouchCallout: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      ☰
+                    </span>
                     {vagaCatalogo.label}
                   </div>
                 </td>

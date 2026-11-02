@@ -1,5 +1,5 @@
 // arquivo: frontend/src/pages/GestaoMembros.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { apiFetch } from '../services/api';
 
@@ -44,25 +44,46 @@ function GestaoMembros() {
   const [funcoesPadrao, setFuncoesPadrao] = useState([]);
   const [isReordering, setIsReordering] = useState(() => JSON.parse(localStorage.getItem('isReordering')) || false);
   const [draggedItemIndex, setDraggedItemIndex] = useState(null);
+  const [isTouchDraggingFuncao, setIsTouchDraggingFuncao] = useState(false);
+  const draggedItemRef = useRef(null);
+  const funcoesPadraoRef = useRef([]);
+
+  useEffect(() => {
+    funcoesPadraoRef.current = funcoesPadrao;
+  }, [funcoesPadrao]);
 
   useEffect(() => {
     localStorage.setItem('isReordering', JSON.stringify(isReordering));
   }, [isReordering]);
 
-  const handleDragStart = (index) => setDraggedItemIndex(index);
+  const handleDragStart = (index) => {
+    draggedItemRef.current = index;
+    setDraggedItemIndex(index);
+  };
   
   const handleDragEnter = (index) => {
-    if (draggedItemIndex === null || draggedItemIndex === index) return;
-    const newOrder = [...funcoesPadrao];
-    const item = newOrder.splice(draggedItemIndex, 1)[0];
-    newOrder.splice(index, 0, item);
+    const currentIndex = draggedItemRef.current;
+    if (currentIndex === null || currentIndex === index) return;
+    draggedItemRef.current = index;
     setDraggedItemIndex(index);
-    setFuncoesPadrao(newOrder);
+    setFuncoesPadrao((prev) => {
+      if (currentIndex < 0 || currentIndex >= prev.length || index < 0 || index >= prev.length) {
+        return prev;
+      }
+      const newOrder = [...prev];
+      const [item] = newOrder.splice(currentIndex, 1);
+      newOrder.splice(index, 0, item);
+      funcoesPadraoRef.current = newOrder;
+      return newOrder;
+    });
   };
   
   const handleDragEnd = async () => {
+    if (draggedItemRef.current === null && draggedItemIndex === null) return;
+    draggedItemRef.current = null;
     setDraggedItemIndex(null);
-    const stringPadrao = funcoesPadrao.join(',');
+    setIsTouchDraggingFuncao(false);
+    const stringPadrao = funcoesPadraoRef.current.join(',');
     try {
       await apiFetch('/usuario/config', {
         method: 'PUT',
@@ -70,6 +91,29 @@ function GestaoMembros() {
         body: JSON.stringify({ funcoes_padrao: stringPadrao })
       });
     } catch (error) {}
+  };
+
+  useEffect(() => {
+    if (draggedItemIndex === null) return;
+    const preventScroll = (ev) => {
+      if (ev.cancelable) ev.preventDefault();
+    };
+    document.addEventListener('touchmove', preventScroll, { passive: false });
+    return () => document.removeEventListener('touchmove', preventScroll);
+  }, [draggedItemIndex]);
+
+  const handleTouchMoveFuncao = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    const elementos = document.elementsFromPoint
+      ? document.elementsFromPoint(touch.clientX, touch.clientY)
+      : [document.elementFromPoint(touch.clientX, touch.clientY)];
+    const itemAlvo = elementos.map((el) => el?.closest?.('[data-func-index]')).find(Boolean);
+    if (!itemAlvo) return;
+    const targetIndex = Number(itemAlvo.getAttribute('data-func-index'));
+    if (!Number.isNaN(targetIndex)) {
+      handleDragEnter(targetIndex);
+    }
   };
 
   const handleToggleFuncaoPadrao = async (funcaoNome) => {
@@ -348,19 +392,48 @@ function GestaoMembros() {
               <>
                 {funcoesPadrao.map((f, idx) => (
                   <label 
-                      key={`drag-${idx}`} 
-                      draggable
+                      key={`drag-${f}`}
+                      data-func-index={idx}
+                      draggable={!isTouchDraggingFuncao}
                       onDragStart={(e) => { handleDragStart(idx); e.dataTransfer.effectAllowed = "move"; }}
                       onDragEnter={() => handleDragEnter(idx)}
                       onDragEnd={handleDragEnd}
                       onDragOver={(e) => e.preventDefault()}
                       style={{ 
                           display: 'flex', alignItems: 'center', cursor: 'grab', 
-                          backgroundColor: 'rgba(243, 156, 18, 0.2)', 
-                          border: '1px dashed #f39c12', color: '#f39c12',
+                          backgroundColor: draggedItemIndex === idx ? 'rgba(97, 218, 251, 0.25)' : 'rgba(243, 156, 18, 0.2)', 
+                          border: draggedItemIndex === idx ? '1px solid #61dafb' : '1px dashed #f39c12',
+                          color: '#f39c12',
                           padding: '8px 12px', borderRadius: '15px', fontSize: '0.95em', fontWeight: 'bold', transition: 'all 0.2s ease'
                       }}>
-                      <span style={{ marginRight: '10px', cursor: 'grab', color: '#9ab', fontSize: '1.2em' }}>☰</span>
+                      <span
+                        role="button"
+                        aria-label={`Arrastar função ${f}`}
+                        onContextMenu={(e) => e.preventDefault()}
+                        onTouchStart={(e) => {
+                          const lbl = e.currentTarget.closest('label');
+                          if (lbl) lbl.draggable = false;
+                          setIsTouchDraggingFuncao(true);
+                          handleDragStart(idx);
+                        }}
+                        onTouchMove={handleTouchMoveFuncao}
+                        onTouchEnd={handleDragEnd}
+                        onTouchCancel={handleDragEnd}
+                        style={{
+                          marginRight: '10px',
+                          cursor: 'grab',
+                          color: draggedItemIndex === idx ? '#61dafb' : '#9ab',
+                          fontSize: '1.2em',
+                          padding: '4px 6px',
+                          margin: '-4px 6px -4px -4px',
+                          touchAction: 'none',
+                          userSelect: 'none',
+                          WebkitUserSelect: 'none',
+                          WebkitTouchCallout: 'none',
+                        }}
+                      >
+                        ☰
+                      </span>
                       <input type="checkbox" checked={true} onChange={() => handleToggleFuncaoPadrao(f)} style={{ marginRight: '8px', cursor: 'pointer' }} />
                       {f}
                   </label>

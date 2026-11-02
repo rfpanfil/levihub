@@ -38,6 +38,7 @@ export const ScaleProvider = ({ children }) => {
   const [isGerando, setIsGerando] = useState(false);
   const [ordemMatriz, setOrdemMatriz] = useState([]);
   const [draggedRow, setDraggedRow] = useState(null);
+  const draggedRowRef = useRef(null);
   const [swapMessage, setSwapMessage] = useState('');
   const msgTimerRef = useRef(null);
 
@@ -172,6 +173,7 @@ export const ScaleProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    if (draggedRow !== null) return;
     if (escalasGeradas.length > 0) {
         apiFetch('/escala/matriz', {
             method: 'POST',
@@ -193,7 +195,7 @@ export const ScaleProvider = ({ children }) => {
         })
         .catch(err => alert('[Escala] Falha na requisição ao salvar matriz: ' + err.message));
     }
-  }, [escalasGeradas, ordemMatriz, escalaAtualIndex, mes, ano]);
+  }, [escalasGeradas, ordemMatriz, escalaAtualIndex, mes, ano, draggedRow]);
 
   const salvarDisponibilidades = (novasIndisponibilidades) => {
     apiFetch('/escala/disponibilidades', {
@@ -436,16 +438,29 @@ export const ScaleProvider = ({ children }) => {
   // HANDLERS DE RESULTADO / DRAG-AND-DROP
   // =========================================================================
 
-  const handleDragStartRow = (index) => setDraggedRow(index);
-  const handleDragEnterRow = (index) => {
-    if (draggedRow === null || draggedRow === index) return;
-    const newOrdem = [...ordemMatriz];
-    const item = newOrdem.splice(draggedRow, 1)[0];
-    newOrdem.splice(index, 0, item);
+  const handleDragStartRow = (index) => {
+    draggedRowRef.current = index;
     setDraggedRow(index);
-    setOrdemMatriz(newOrdem);
   };
-  const handleDragEndRow = () => setDraggedRow(null);
+  const handleDragEnterRow = (index) => {
+    const currentIndex = draggedRowRef.current;
+    if (currentIndex === null || currentIndex === index) return;
+    draggedRowRef.current = index;
+    setDraggedRow(index);
+    setOrdemMatriz((prev) => {
+      if (currentIndex < 0 || currentIndex >= prev.length || index < 0 || index >= prev.length) {
+        return prev;
+      }
+      const newOrdem = [...prev];
+      const [item] = newOrdem.splice(currentIndex, 1);
+      newOrdem.splice(index, 0, item);
+      return newOrdem;
+    });
+  };
+  const handleDragEndRow = () => {
+    draggedRowRef.current = null;
+    setDraggedRow(null);
+  };
 
   const handleGerarEscala = async () => {
     setIsGerando(true);

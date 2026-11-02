@@ -270,4 +270,153 @@ test.describe('Gerador de Escalas', () => {
     await expect(matriz).toContainText('LucasOtimizado');
     await expect(matriz).toContainText('RafaelOtimizado');
   });
+
+  test('no mobile deve permitir reordenar funções verticalmente arrastando pelo ícone ☰ com toque', async ({ browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    const page = await context.newPage();
+
+    const funcoesNomes = ['Voz e violão', 'Mídia', 'Baixo', 'Bateria', 'Som'];
+    const ordemMatriz = funcoesNomes.map((nome, idx) => ({
+      id: String(idx + 1),
+      label: nome,
+      aceita: [nome],
+    }));
+
+    const hoje = new Date();
+    const mes = hoje.getMonth();
+    const ano = hoje.getFullYear();
+    const diasKeys: string[] = [];
+    const cursor = new Date(ano, mes, 1);
+    while (cursor.getMonth() === mes) {
+      if (cursor.getDay() === 0) {
+        diasKeys.push(`${cursor.getDate()}-${cursor.getMonth()}-${cursor.getFullYear()}`);
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const escalaObj: Record<string, any[]> = {};
+    diasKeys.forEach((dk) => {
+      escalaObj[dk] = ordemMatriz.map((v, idx) => ({
+        vaga: v,
+        membro: { id: idx + 1, nome: idx % 2 === 0 ? 'Lucas' : 'Rafael' },
+      }));
+    });
+
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': 'https://levihub.vercel.app',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    let ultimaOrdemSalva: string[] = [];
+
+    await page.route('**/*', async (route) => {
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({ status: 200, headers: corsHeaders });
+      } else {
+        await route.fallback();
+      }
+    });
+
+    await page.route('**/usuario/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 1, email: 'me@levihub.com', role: 'admin', funcoes_padrao: funcoesNomes.join(',') }),
+      });
+    });
+
+    await page.route('**/equipe', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          equipe: [
+            { id: 1, nome: 'Lucas', funcoes: funcoesNomes },
+            { id: 2, nome: 'Rafael', funcoes: funcoesNomes },
+          ],
+        }),
+      });
+    });
+
+    await page.route('**/funcoes', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          funcoes: funcoesNomes.map((n, i) => ({ id: i + 1, nome: n, permitidas_acumular: [], obrigatorias_acumular: [] })),
+        }),
+      });
+    });
+
+    await page.route('**/escala/vagas**', async (route) => {
+      await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ vagas_por_dia: {} }) });
+    });
+    await page.route('**/escala/disponibilidades**', async (route) => {
+      await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ indisponibilidades: {} }) });
+    });
+    await page.route('**/escala/regras**', async (route) => {
+      await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ regras: [] }) });
+    });
+    await page.route('**/escala/matriz**', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          headers: corsHeaders,
+          contentType: 'application/json',
+          body: JSON.stringify({ escalas_geradas: [escalaObj], ordem_matriz: ordemMatriz, escala_atual_index: 0 }),
+        });
+      } else {
+        const payload = JSON.parse(route.request().postData() || '{}');
+        ultimaOrdemSalva = (payload.ordem_matriz || []).map((v: any) => v.label);
+        await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+      }
+    });
+
+    await page.goto('/');
+    await page.locator('button.nav-item').filter({ hasText: /Escalas/i }).first().click();
+    await expect(page.locator('#escala-resultado-matriz')).toBeVisible();
+    await page.locator('#escala-resultado-matriz').scrollIntoViewIfNeeded();
+
+    const somHandle = page.getByRole('button', { name: 'Arrastar função Som para cima ou para baixo' });
+    const midiaRow = page.locator('#escala-resultado-matriz tbody tr').nth(1);
+    const startBox = await somHandle.boundingBox();
+    const targetBox = await midiaRow.boundingBox();
+    expect(startBox).toBeTruthy();
+    expect(targetBox).toBeTruthy();
+
+    const cdp = await context.newCDPSession(page);
+    const x = Math.round(startBox!.x + startBox!.width / 2);
+    const startY = Math.round(startBox!.y + startBox!.height / 2);
+    const endY = Math.round(targetBox!.y + targetBox!.height / 2);
+
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x, y: startY, radiusX: 5, radiusY: 5, id: 1 }],
+    });
+    for (let step = 1; step <= 6; step++) {
+      const curY = Math.round(startY + ((endY - startY) * step) / 6);
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x, y: curY, radiusX: 5, radiusY: 5, id: 1 }],
+      });
+      await page.waitForTimeout(25);
+    }
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+
+    await expect(page.locator('#escala-resultado-matriz tbody tr').nth(1).locator('td').first()).toContainText('Som');
+    await expect.poll(() => ultimaOrdemSalva[1]).toBe('Som');
+    await context.close();
+  });
 });
