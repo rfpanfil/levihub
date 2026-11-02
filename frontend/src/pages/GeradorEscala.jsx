@@ -1,6 +1,5 @@
 // arquivo: frontend/src/pages/GeradorEscala.jsx
 import React from 'react';
-import html2canvas from 'html2canvas';
 
 import { ScaleProvider, useScale } from '../context/ScaleContext';
 
@@ -12,30 +11,8 @@ import ResultadoEscala from '../components/GeradorEscala/ResultadoEscala';
 
 function GeradorEscalaContent() {
   const {
-    mesesNomes, equipa, catalogoVagas,
-    isLoading, mes, ano, datasEscala, vagasPorDia,
-    indisponibilidades, regras, escalasGeradas, escalaAtualIndex, isGerando,
-    ordemMatriz, draggedRow, swapMessage,
-    setEscalaAtualIndex, toggleIndisponibilidade, marcarTodosIndisponiveis,
-    marcarMembroIndisponivel, desmarcarMembroIndisponivel, marcarTodosDisponiveis,
-    handleAdicionarRegra, removerRegra, getDiasDisponiveisMembro,
-    handleDragStartRow, handleDragEnterRow, handleDragEndRow,
-    handleGerarEscala, handleTrocarMembro
+    isLoading, isGerando, swapMessage, handleGerarEscala
   } = useScale();
-
-  const handleImprimir = async () => {
-    const elemento = document.getElementById('escala-resultado-matriz');
-    if (!elemento) return;
-    const canvas = await html2canvas(elemento, { backgroundColor: '#282c34', scale: 2 });
-    const link = document.createElement('a');
-    link.download = `escala_${mesesNomes[mes]}_${ano}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  };
-
-  const handleWhatsApp = () => {
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Escala do mês ${mesesNomes[mes]}`)}`, '_blank');
-  };
 
   return (
     <div className="gerador-escala-container" style={{ position: 'relative' }}>

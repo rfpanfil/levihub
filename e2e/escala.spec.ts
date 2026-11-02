@@ -1,31 +1,156 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
 
 test.describe('Gerador de Escalas', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.route('**/*', async route => {
+  test('no mobile (360px) deve baixar a imagem da escala inteira sem corte horizontal', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 800 });
+
+    const funcoesNomes = [
+      'Voz e violão',
+      'Crianças - Voz e violão',
+      'Mídia',
+      'Voz 1',
+      'Voz 2',
+      'Voz 3',
+      'Guitarra',
+      'Baixo',
+      'Bateria',
+    ];
+    const ordemMatriz = funcoesNomes.map((nome, idx) => ({
+      id: String(idx + 1),
+      label: nome,
+      aceita: [nome],
+    }));
+
+    const hoje = new Date();
+    const mes = hoje.getMonth();
+    const ano = hoje.getFullYear();
+    const diasKeys: string[] = [];
+    const cursor = new Date(ano, mes, 1);
+    while (cursor.getMonth() === mes) {
+      if (cursor.getDay() === 0) {
+        diasKeys.push(`${cursor.getDate()}-${cursor.getMonth()}-${cursor.getFullYear()}`);
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const escalaObj: Record<string, any[]> = {};
+    diasKeys.forEach((dk) => {
+      escalaObj[dk] = ordemMatriz.map((v, idx) => ({
+        vaga: v,
+        membro: { id: idx + 1, nome: idx % 3 === 0 ? 'Lucas' : 'Rafael' },
+      }));
+    });
+
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': 'https://levihub.vercel.app',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    await page.route('**/*', async (route) => {
       if (route.request().method() === 'OPTIONS') {
-        await route.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
+        await route.fulfill({ status: 200, headers: corsHeaders });
       } else {
         await route.fallback();
       }
     });
 
-    await page.route('**/usuario/me', async route => {
+    await page.route('**/usuario/me', async (route) => {
       await route.fulfill({
         status: 200,
-        headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Credentials': 'true' },
+        headers: corsHeaders,
         contentType: 'application/json',
-        body: JSON.stringify({ id: 1, email: 'me@levihub.com', role: 'admin' })
+        body: JSON.stringify({
+          id: 1,
+          email: 'me@levihub.com',
+          role: 'admin',
+          funcoes_padrao: funcoesNomes.join(','),
+        }),
       });
     });
 
-    await page.goto('/');
-    
-    // Bypass CORS na rotação de painéis, pois não vamos clicar agora
-  });
+    await page.route('**/equipe', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          equipe: [
+            { id: 1, nome: 'Lucas', funcoes: funcoesNomes },
+            { id: 2, nome: 'Rafael', funcoes: funcoesNomes },
+          ],
+        }),
+      });
+    });
 
-  test('deve renderizar a interface', async ({ page }) => {
-    // This is just a placeholder to let playwright pass
-    expect(true).toBe(true);
+    await page.route('**/funcoes', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          funcoes: funcoesNomes.map((n, i) => ({
+            id: i + 1,
+            nome: n,
+            permitidas_acumular: [],
+            obrigatorias_acumular: [],
+          })),
+        }),
+      });
+    });
+
+    await page.route('**/escala/vagas**', async (route) => {
+      await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ vagas_por_dia: {} }) });
+    });
+
+    await page.route('**/escala/disponibilidades**', async (route) => {
+      await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ indisponibilidades: {} }) });
+    });
+
+    await page.route('**/escala/regras**', async (route) => {
+      await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ regras: [] }) });
+    });
+
+    await page.route('**/escala/matriz**', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          headers: corsHeaders,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            escalas_geradas: [escalaObj],
+            ordem_matriz: ordemMatriz,
+            escala_atual_index: 0,
+          }),
+        });
+      } else {
+        await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+      }
+    });
+
+    await page.goto('/');
+    await page.locator('button.nav-item').filter({ hasText: /Escalas/i }).click();
+    await expect(page.locator('#escala-resultado-matriz')).toBeVisible();
+
+    // Simula scroll horizontal no container mobile e scroll vertical até o botão
+    await page.locator('#escala-resultado-matriz').evaluate((el) => {
+      el.scrollLeft = 240;
+    });
+
+    const btnImprimir = page.getByRole('button', { name: /Imprimir \/ Baixar Imagem/i });
+    await btnImprimir.scrollIntoViewIfNeeded();
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      btnImprimir.click(),
+    ]);
+
+    const filePath = await download.path();
+    expect(filePath).toBeTruthy();
+    const buf = fs.readFileSync(filePath!);
+    const pngWidth = buf.readUInt32BE(16);
+    expect(pngWidth).toBeGreaterThan(1100);
   });
 });

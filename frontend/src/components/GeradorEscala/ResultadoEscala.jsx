@@ -13,14 +13,110 @@ export default function ResultadoEscala() {
     handleTrocarMembro
   } = useScale();
 
+  const [isExportando, setIsExportando] = React.useState(false);
+
   const handleImprimir = async () => {
     const elemento = document.getElementById('escala-resultado-matriz');
-    if (!elemento) return;
-    const canvas = await html2canvas(elemento, { backgroundColor: '#282c34', scale: 2 });
-    const link = document.createElement('a');
-    link.download = `escala_${mesesNomes[mes]}_${ano}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    if (!elemento || isExportando) return;
+
+    setIsExportando(true);
+    try {
+      const tabelaOriginal = elemento.querySelector('table');
+      const larguraJanelaClone = Math.max(
+        window.innerWidth,
+        elemento.scrollWidth + 160,
+        (tabelaOriginal?.scrollWidth || 0) + 160,
+        1400
+      );
+      const alturaJanelaClone = Math.max(
+        window.innerHeight,
+        elemento.scrollHeight + 160,
+        (tabelaOriginal?.scrollHeight || 0) + 160,
+        1000
+      );
+
+      const canvas = await html2canvas(elemento, {
+        backgroundColor: '#282c34',
+        scale: 2,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: larguraJanelaClone,
+        windowHeight: alturaJanelaClone,
+        onclone: (clonedDoc, clonedEl) => {
+          clonedDoc.documentElement.style.margin = '0';
+          clonedDoc.documentElement.style.padding = '0';
+          clonedDoc.documentElement.style.width = 'max-content';
+          clonedDoc.documentElement.style.overflow = 'visible';
+
+          clonedDoc.body.style.margin = '0';
+          clonedDoc.body.style.padding = '0';
+          clonedDoc.body.style.width = 'max-content';
+          clonedDoc.body.style.overflow = 'visible';
+          clonedDoc.body.style.background = '#282c34';
+
+          // Isola o elemento da matriz diretamente no body do clone para eliminar
+          // qualquer corte/largura mobile ou scroll horizontal dos containers pais
+          Array.from(clonedDoc.body.children).forEach((child) => {
+            if (child !== clonedEl) child.remove();
+          });
+          clonedDoc.body.appendChild(clonedEl);
+
+          clonedEl.scrollLeft = 0;
+          clonedEl.scrollTop = 0;
+          clonedEl.style.overflow = 'visible';
+          clonedEl.style.overflowX = 'visible';
+          clonedEl.style.overflowY = 'visible';
+          clonedEl.style.width = 'max-content';
+          clonedEl.style.minWidth = '0';
+          clonedEl.style.maxWidth = 'none';
+          clonedEl.style.margin = '0';
+          clonedEl.style.boxSizing = 'border-box';
+
+          const tabelaClone = clonedEl.querySelector('table');
+          if (tabelaClone) {
+            tabelaClone.style.width = 'max-content';
+            tabelaClone.style.minWidth = '100%';
+            tabelaClone.style.maxWidth = 'none';
+          }
+        },
+      });
+
+      const nomeArquivo = `escala_${mesesNomes[mes]}_${ano}.png`;
+      await new Promise((resolve) => {
+        if (canvas.toBlob) {
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.download = nomeArquivo;
+              link.href = url;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              setTimeout(() => URL.revokeObjectURL(url), 5000);
+              resolve();
+              return;
+            }
+            const link = document.createElement('a');
+            link.download = nomeArquivo;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            resolve();
+          }, 'image/png');
+        } else {
+          const link = document.createElement('a');
+          link.download = nomeArquivo;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          resolve();
+        }
+      });
+    } catch (err) {
+      console.error('Erro ao gerar imagem da escala:', err);
+      alert('Não foi possível gerar a imagem da escala. Tente novamente.');
+    } finally {
+      setIsExportando(false);
+    }
   };
 
   const handleWhatsApp = () => {
@@ -111,8 +207,14 @@ export default function ResultadoEscala() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '15px', marginTop: '25px', justifyContent: 'center' }}>
-        <button onClick={handleImprimir} style={{ padding: '12px 25px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1.1em' }}>📸 Imprimir / Baixar Imagem</button>
+      <div style={{ display: 'flex', gap: '15px', marginTop: '25px', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <button
+          onClick={handleImprimir}
+          disabled={isExportando}
+          style={{ padding: '12px 25px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: isExportando ? 'wait' : 'pointer', fontSize: '1.1em', opacity: isExportando ? 0.75 : 1 }}
+        >
+          {isExportando ? '⏳ Gerando imagem...' : '📸 Imprimir / Baixar Imagem'}
+        </button>
         <button onClick={handleWhatsApp} style={{ padding: '12px 25px', backgroundColor: '#25D366', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1.1em' }}>💬 Enviar via WhatsApp</button>
       </div>
     </div>
