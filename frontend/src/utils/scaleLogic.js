@@ -232,3 +232,168 @@ const validarRegrasDoDia = (alocadosNesteDia, dataKey, regras, equipa) => {
   }
   return true;
 };
+
+/**
+ * Escolhe o melhor membro elegível para preencher APENAS uma nova vaga (diaKey + vaga)
+ * sem alterar nenhuma alocação já existente na escala otimizada do usuário.
+ */
+export const escolherMelhorCandidatoParaSlot = (
+  vaga,
+  diaKey,
+  escalaDoMes = {},
+  equipa = [],
+  indisponibilidades = {},
+  regras = []
+) => {
+  const alocadosNesteDia = escalaDoMes[diaKey] || [];
+  const idsAlocadosHoje = new Set(
+    alocadosNesteDia
+      .filter((a) => a.membro && a.membro.id !== null && a.membro.id !== undefined)
+      .map((a) => String(a.membro.id))
+  );
+
+  const contarParticipacoesNoMes = (membroId) => {
+    let count = 0;
+    for (const d of Object.keys(escalaDoMes)) {
+      if ((escalaDoMes[d] || []).some((a) => a.membro && a.membro.id === membroId)) {
+        count++;
+      }
+    }
+    return count;
+  };
+
+  const contarVezesNaFuncao = (membroId, funcaoLabel) => {
+    let count = 0;
+    for (const d of Object.keys(escalaDoMes)) {
+      if (
+        (escalaDoMes[d] || []).some(
+          (a) => a.membro && a.membro.id === membroId && a.vaga?.label === funcaoLabel
+        )
+      ) {
+        count++;
+      }
+    }
+    return count;
+  };
+
+  const ehCandidatoElegivel = (membro) => {
+    if (!membro || !membro.funcoes) return false;
+    if (indisponibilidades[`${membro.id}_${diaKey}`]) return false;
+
+    const funcoesMembro = (
+      Array.isArray(membro.funcoes) ? membro.funcoes : String(membro.funcoes).split(',')
+    )
+      .map((f) => f.trim().toLowerCase())
+      .filter(Boolean);
+
+    const aceitaLista = Array.isArray(vaga.aceita) && vaga.aceita.length > 0 ? vaga.aceita : [vaga.label];
+    const temFuncao = aceitaLista.some((f) => funcoesMembro.includes(String(f).trim().toLowerCase()));
+    if (!temFuncao) return false;
+
+    // Respeita teto de regra de frequência para esta função, se houver
+    const regraFreq = regras.find(
+      (r) =>
+        r.tipo === 'frequencia' &&
+        String(r.membro1) === String(membro.id) &&
+        r.funcao === vaga.label
+    );
+    if (regraFreq) {
+      const jaTocou = contarVezesNaFuncao(membro.id, vaga.label);
+      if (jaTocou >= parseInt(regraFreq.quantidade, 10)) return false;
+    }
+
+    // Limite máximo de 2 funções por dia e permissão de acúmulo (dobra)
+    const alocacoesHoje = alocadosNesteDia.filter((a) => a.membro && a.membro.id === membro.id);
+    if (alocacoesHoje.length >= 2) return false;
+
+    if (alocacoesHoje.length === 1) {
+      const vagaExistente = alocacoesHoje[0].vaga || {};
+      const permitidasAtual = vaga.permitidas_acumular || [];
+      const obrigatoriasAtual = vaga.obrigatorias_acumular || [];
+      const permitidasExistente = vagaExistente.permitidas_acumular || [];
+      const obrigatoriasExistente = vagaExistente.obrigatorias_acumular || [];
+
+      const ehObrigatorio =
+        obrigatoriasAtual.includes(vagaExistente.label) ||
+        obrigatoriasExistente.includes(vaga.label);
+      const ehPermitido =
+        permitidasAtual.includes(vagaExistente.label) ||
+        permitidasExistente.includes(vaga.label);
+
+      if (!ehObrigatorio && !ehPermitido) return false;
+    }
+
+    return true;
+  };
+
+  const candidatos = equipa.filter(ehCandidatoElegivel);
+  if (candidatos.length === 0) {
+    return { id: null, nome: '---' };
+  }
+
+  const pontuarAfinidadeRegras = (membro) => {
+    const mStr = String(membro.id);
+    let score = 0;
+    for (const regra of regras) {
+      if (regra.tipo === 'dia_especifico' && regra.alvo === diaKey && String(regra.membro1) === mStr) {
+        score += 2;
+      }
+      if (regra.tipo === 'tocar_com' || (regra.tipo === 'tocar_com_no_dia' && regra.alvoData === diaKey)) {
+        if (String(regra.membro1) === mStr) {
+          score += idsAlocadosHoje.has(String(regra.alvo)) ? 2 : -2;
+        } else if (String(regra.alvo) === mStr) {
+          score += idsAlocadosHoje.has(String(regra.membro1)) ? 2 : -2;
+        }
+      }
+    }
+    return score;
+  };
+
+  candidatos.sort((a, b) => {
+    // 1. Quem ainda precisa cumprir meta de frequência nesta função
+    const faltaFreq = (m) => {
+      const regra = regras.find(
+        (r) => r.tipo === 'frequencia' && String(r.membro1) === String(m.id) && r.funcao === vaga.label
+      );
+      if (!regra) return 0;
+      return Math.max(0, parseInt(regra.quantidade, 10) - contarVezesNaFuncao(m.id, vaga.label));
+    };
+    const faltaA = faltaFreq(a);
+    const faltaB = faltaFreq(b);
+    if (faltaA !== faltaB) return faltaB - faltaA;
+
+    // 2. Dobra obrigatória com função que já está fazendo hoje
+    const alocA = alocadosNesteDia.find((aloc) => aloc.membro && aloc.membro.id === a.id);
+    const alocB = alocadosNesteDia.find((aloc) => aloc.membro && aloc.membro.id === b.id);
+    const obrigA = Boolean(
+      alocA &&
+        ((vaga.obrigatorias_acumular || []).includes(alocA.vaga?.label) ||
+          (alocA.vaga?.obrigatorias_acumular || []).includes(vaga.label))
+    );
+    const obrigB = Boolean(
+      alocB &&
+        ((vaga.obrigatorias_acumular || []).includes(alocB.vaga?.label) ||
+          (alocB.vaga?.obrigatorias_acumular || []).includes(vaga.label))
+    );
+    if (obrigA !== obrigB) return obrigA ? -1 : 1;
+
+    // 3. Regras de parceria / dia específico
+    const regraScoreA = pontuarAfinidadeRegras(a);
+    const regraScoreB = pontuarAfinidadeRegras(b);
+    if (regraScoreA !== regraScoreB) return regraScoreB - regraScoreA;
+
+    // 4. Dobra permitida no mesmo dia
+    const dobraA = Boolean(alocA);
+    const dobraB = Boolean(alocB);
+    if (dobraA !== dobraB) return dobraA ? -1 : 1;
+
+    // 5. Equilíbrio mensal: quem tocou menos vezes no mês ganha preferência
+    const usoA = contarParticipacoesNoMes(a.id);
+    const usoB = contarParticipacoesNoMes(b.id);
+    if (usoA !== usoB) return usoA - usoB;
+
+    return (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+  });
+
+  return candidatos[0];
+};

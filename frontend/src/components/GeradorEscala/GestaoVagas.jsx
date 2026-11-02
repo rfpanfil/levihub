@@ -10,14 +10,101 @@ export default function GestaoVagas() {
     catalogoVagas,
     funcoesPadraoUsuario,
     diasSemanaNomes,
+    escalasGeradas,
     adicionarVaga,
+    adicionarVagaTodosOsDias,
     removerVaga,
   } = useScale();
+
+  // Lista de funções que ainda faltam em pelo menos 1 dia do mês
+  const funcoesDisponiveisNoMes = catalogoVagas.filter((cat) =>
+    datasEscala.some((d) => {
+      const atuais = vagasPorDia[formatDataKey(d)] || [];
+      return !atuais.some((va) => String(va.id) === String(cat.id) || va.label === cat.label);
+    })
+  );
 
   return (
     <div className="input-area" style={{ overflowX: 'auto' }}>
       <h2>⚙️ Vagas e Funções por Dia</h2>
       <p className="tab-description">Adicione ou remova instrumentos específicos para cada dia do mês.</p>
+
+      {escalasGeradas && escalasGeradas.length > 0 && (
+        <div
+          style={{
+            marginTop: '10px',
+            padding: '10px 14px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(46, 204, 113, 0.12)',
+            border: '1px solid rgba(46, 204, 113, 0.35)',
+            color: '#a7f3d0',
+            fontSize: '0.9em',
+          }}
+        >
+          💡 <strong>Escala ativa protegida:</strong> Ao adicionar ou remover um instrumento abaixo, ele entra (ou sai) automaticamente na escala já gerada — <strong>sem perder os ajustes que você já otimizou</strong>!
+        </div>
+      )}
+
+      {datasEscala.length > 1 && funcoesDisponiveisNoMes.length > 0 && (
+        <div
+          style={{
+            marginTop: '14px',
+            padding: '12px 15px',
+            borderRadius: '8px',
+            backgroundColor: '#1e2229',
+            border: '1px dashed rgba(97, 218, 251, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ color: '#61dafb', fontWeight: 600, fontSize: '0.92em' }}>
+            📅 Esqueceu um instrumento no mês todo?
+          </span>
+          <select
+            id="select_todos_os_dias"
+            style={{
+              flex: 1,
+              minWidth: '200px',
+              padding: '8px',
+              borderRadius: '5px',
+              backgroundColor: '#3c414d',
+              color: 'white',
+              border: '1px solid #4a505c',
+            }}
+          >
+            <option value="">➕ Escolher função para incluir em todos os dias...</option>
+            {funcoesDisponiveisNoMes.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => {
+              const select = document.getElementById('select_todos_os_dias');
+              if (select && select.value) {
+                adicionarVagaTodosOsDias(select.value);
+                select.value = '';
+              }
+            }}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#2ecc71',
+              color: '#111827',
+              border: 'none',
+              borderRadius: '5px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Incluir em Todos os Dias
+          </button>
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '15px' }}>
         {datasEscala.map(d => {

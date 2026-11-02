@@ -153,4 +153,121 @@ test.describe('Gerador de Escalas', () => {
     const pngWidth = buf.readUInt32BE(16);
     expect(pngWidth).toBeGreaterThan(1100);
   });
+
+  test('deve adicionar instrumento esquecido em um dia ou no mês todo sem alterar a escala já otimizada', async ({ page }) => {
+    const hoje = new Date();
+    const mes = hoje.getMonth();
+    const ano = hoje.getFullYear();
+    const diasKeys: string[] = [];
+    const cursor = new Date(ano, mes, 1);
+    while (cursor.getMonth() === mes) {
+      if (cursor.getDay() === 0) {
+        diasKeys.push(`${cursor.getDate()}-${cursor.getMonth()}-${cursor.getFullYear()}`);
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const vagaVozViolao = { id: '1', label: 'Voz e violão', aceita: ['Voz e violão'] };
+    const escalaOtimizada: Record<string, any[]> = {};
+    diasKeys.forEach((dk, idx) => {
+      escalaOtimizada[dk] = [
+        { vaga: vagaVozViolao, membro: { id: idx === 0 ? 1 : 2, nome: idx === 0 ? 'LucasOtimizado' : 'RafaelOtimizado' } },
+      ];
+    });
+
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': 'https://levihub.vercel.app',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    await page.route('**/*', async (route) => {
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({ status: 200, headers: corsHeaders });
+      } else {
+        await route.fallback();
+      }
+    });
+
+    await page.route('**/usuario/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 1, email: 'me@levihub.com', role: 'admin', funcoes_padrao: 'Voz e violão' }),
+      });
+    });
+
+    await page.route('**/equipe', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          equipe: [
+            { id: 1, nome: 'LucasOtimizado', funcoes: ['Voz e violão'] },
+            { id: 2, nome: 'RafaelOtimizado', funcoes: ['Voz e violão'] },
+            { id: 3, nome: 'EsterViolino', funcoes: ['Violino'] },
+          ],
+        }),
+      });
+    });
+
+    await page.route('**/funcoes', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          funcoes: [
+            { id: 1, nome: 'Voz e violão', permitidas_acumular: [], obrigatorias_acumular: [] },
+            { id: 99, nome: 'Violino', permitidas_acumular: [], obrigatorias_acumular: [] },
+          ],
+        }),
+      });
+    });
+
+    await page.route('**/escala/vagas**', async (route) => {
+      await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ vagas_por_dia: {} }) });
+    });
+    await page.route('**/escala/disponibilidades**', async (route) => {
+      await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ indisponibilidades: {} }) });
+    });
+    await page.route('**/escala/regras**', async (route) => {
+      await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ regras: [] }) });
+    });
+    await page.route('**/escala/matriz**', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          headers: corsHeaders,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            escalas_geradas: [escalaOtimizada],
+            ordem_matriz: [vagaVozViolao],
+            escala_atual_index: 0,
+          }),
+        });
+      } else {
+        await route.fulfill({ status: 200, headers: corsHeaders, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+      }
+    });
+
+    await page.goto('/');
+    await page.locator('button.nav-item').filter({ hasText: /Escalas/i }).click();
+    await expect(page.locator('#escala-resultado-matriz')).toContainText('LucasOtimizado');
+
+    // Adiciona "Violino" apenas no 1º domingo sem clicar em Gerar Escala Automática
+    const primeiroDiaKey = diasKeys[0];
+    await page.locator(`#select_${primeiroDiaKey}`).selectOption('99');
+    await page.locator(`#select_${primeiroDiaKey}`).locator('..').getByRole('button', { name: 'Adicionar' }).click();
+
+    // Verifica que Violino + EsterViolino entraram na matriz e que LucasOtimizado / RafaelOtimizado permaneceram intactos!
+    const matriz = page.locator('#escala-resultado-matriz');
+    await expect(matriz).toContainText('Violino');
+    await expect(matriz).toContainText('EsterViolino');
+    await expect(matriz).toContainText('LucasOtimizado');
+    await expect(matriz).toContainText('RafaelOtimizado');
+  });
 });

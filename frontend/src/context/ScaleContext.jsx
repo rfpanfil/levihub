@@ -1,8 +1,8 @@
 // arquivo: frontend/src/context/ScaleContext.jsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../services/api';
-import { formatDataKey } from '../utils/escalaHelpers';
-import { gerarEscalas } from '../utils/scaleLogic';
+import { formatDataKey, formatDataDDMM } from '../utils/escalaHelpers';
+import { gerarEscalas, escolherMelhorCandidatoParaSlot } from '../utils/scaleLogic';
 
 const ScaleContext = createContext();
 
@@ -39,6 +39,13 @@ export const ScaleProvider = ({ children }) => {
   const [ordemMatriz, setOrdemMatriz] = useState([]);
   const [draggedRow, setDraggedRow] = useState(null);
   const [swapMessage, setSwapMessage] = useState('');
+  const msgTimerRef = useRef(null);
+
+  const mostrarMensagem = (msg, duracao = 3800) => {
+    if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+    setSwapMessage(msg);
+    msgTimerRef.current = setTimeout(() => setSwapMessage(''), duracao);
+  };
 
   // =========================================================================
   // EFEITOS
@@ -209,21 +216,144 @@ export const ScaleProvider = ({ children }) => {
   // =========================================================================
 
   const adicionarVaga = (diaKey, vagaId) => {
-    const vaga = catalogoVagas.find(v => v.id === vagaId);
+    const vaga = catalogoVagas.find(v => String(v.id) === String(vagaId));
+    if (!vaga) return;
+
     setVagasPorDia(prev => {
-      if (prev[diaKey].some(v => v.id === vagaId)) return prev;
-      const novas = { ...prev, [diaKey]: [...prev[diaKey], vaga] };
+      const atuais = prev[diaKey] || [];
+      if (atuais.some(v => String(v.id) === String(vaga.id) || v.label === vaga.label)) return prev;
+      const novas = { ...prev, [diaKey]: [...atuais, vaga] };
       salvarVagas(novas);
       return novas;
     });
+
+    // Se já existe uma escala gerada/otimizada, injeta APENAS esta nova vaga neste dia
+    // sem mexer em nenhuma outra pessoa ou função já escalada!
+    if (escalasGeradas && escalasGeradas.length > 0) {
+      setOrdemMatriz(prevOrdem => {
+        if (prevOrdem.some(v => v.label === vaga.label)) return prevOrdem;
+        return [...prevOrdem, vaga];
+      });
+
+      const escalaRef = escalasGeradas[escalaAtualIndex] || escalasGeradas[0] || {};
+      const jaTinhaNaEscala = (escalaRef[diaKey] || []).some(a => a.vaga?.label === vaga.label);
+      const membroPreview = jaTinhaNaEscala
+        ? null
+        : escolherMelhorCandidatoParaSlot(vaga, diaKey, escalaRef, equipa, indisponibilidades, regras);
+
+      setEscalasGeradas(prevEscalas =>
+        prevEscalas.map(escala => {
+          const alocadosDia = escala[diaKey] || [];
+          if (alocadosDia.some(a => a.vaga?.label === vaga.label)) return escala;
+          const melhorMembro = escolherMelhorCandidatoParaSlot(
+            vaga,
+            diaKey,
+            escala,
+            equipa,
+            indisponibilidades,
+            regras
+          );
+          return {
+            ...escala,
+            [diaKey]: [...alocadosDia, { vaga, membro: melhorMembro }],
+          };
+        })
+      );
+
+      if (membroPreview) {
+        const dataObj = datasEscala.find(d => formatDataKey(d) === diaKey);
+        const dataLabel = dataObj ? formatDataDDMM(dataObj) : diaKey;
+        const quem = membroPreview.nome === '---' ? 'sem candidato disponível (---)' : membroPreview.nome;
+        mostrarMensagem(`✅ "${vaga.label}" adicionada em ${dataLabel} (${quem}) sem alterar sua escala!`);
+      }
+    }
+  };
+
+  const adicionarVagaTodosOsDias = (vagaId) => {
+    const vaga = catalogoVagas.find(v => String(v.id) === String(vagaId));
+    if (!vaga || datasEscala.length === 0) return;
+
+    let diasAdicionados = 0;
+    setVagasPorDia(prev => {
+      const novas = { ...prev };
+      datasEscala.forEach(d => {
+        const dk = formatDataKey(d);
+        const atuais = novas[dk] || [];
+        if (!atuais.some(v => String(v.id) === String(vaga.id) || v.label === vaga.label)) {
+          novas[dk] = [...atuais, vaga];
+          diasAdicionados++;
+        }
+      });
+      salvarVagas(novas);
+      return novas;
+    });
+
+    if (escalasGeradas && escalasGeradas.length > 0) {
+      setOrdemMatriz(prevOrdem => {
+        if (prevOrdem.some(v => v.label === vaga.label)) return prevOrdem;
+        return [...prevOrdem, vaga];
+      });
+
+      setEscalasGeradas(prevEscalas =>
+        prevEscalas.map(escala => {
+          const escalaAtualizada = { ...escala };
+          datasEscala.forEach(d => {
+            const dk = formatDataKey(d);
+            const alocadosDia = escalaAtualizada[dk] || [];
+            if (!alocadosDia.some(a => a.vaga?.label === vaga.label)) {
+              const melhorMembro = escolherMelhorCandidatoParaSlot(
+                vaga,
+                dk,
+                escalaAtualizada,
+                equipa,
+                indisponibilidades,
+                regras
+              );
+              escalaAtualizada[dk] = [...alocadosDia, { vaga, membro: melhorMembro }];
+            }
+          });
+          return escalaAtualizada;
+        })
+      );
+
+      mostrarMensagem(`✅ "${vaga.label}" incluída em todos os dias do mês sem alterar sua escala atual!`);
+    } else if (diasAdicionados > 0) {
+      mostrarMensagem(`✅ "${vaga.label}" adicionada aos dias do mês!`);
+    }
   };
 
   const removerVaga = (diaKey, vagaId) => {
-    setVagasPorDia(prev => {
-      const novas = { ...prev, [diaKey]: prev[diaKey].filter(v => v.id !== vagaId) };
-      salvarVagas(novas);
-      return novas;
-    });
+    const vagaAlvo =
+      catalogoVagas.find(v => String(v.id) === String(vagaId)) ||
+      (vagasPorDia[diaKey] || []).find(v => String(v.id) === String(vagaId));
+
+    const novasVagasPorDia = {
+      ...vagasPorDia,
+      [diaKey]: (vagasPorDia[diaKey] || []).filter(v => String(v.id) !== String(vagaId)),
+    };
+    setVagasPorDia(novasVagasPorDia);
+    salvarVagas(novasVagasPorDia);
+
+    if (escalasGeradas && escalasGeradas.length > 0 && vagaAlvo) {
+      const aindaExisteEmAlgumDia = Object.values(novasVagasPorDia)
+        .flat()
+        .some(v => v && v.label === vagaAlvo.label);
+
+      setEscalasGeradas(prevEscalas =>
+        prevEscalas.map(escala => ({
+          ...escala,
+          [diaKey]: (escala[diaKey] || []).filter(a => a.vaga?.label !== vagaAlvo.label),
+        }))
+      );
+
+      if (!aindaExisteEmAlgumDia) {
+        setOrdemMatriz(prevOrdem => prevOrdem.filter(v => v.label !== vagaAlvo.label));
+      }
+
+      const dataObj = datasEscala.find(d => formatDataKey(d) === diaKey);
+      const dataLabel = dataObj ? formatDataDDMM(dataObj) : diaKey;
+      mostrarMensagem(`✅ "${vagaAlvo.label}" removida de ${dataLabel} sem alterar o restante da escala!`);
+    }
   };
 
   // =========================================================================
@@ -368,24 +498,26 @@ export const ScaleProvider = ({ children }) => {
       }
     }
 
+    const vagaAtualCat = catalogoVagas.find(c => c.label === alocacaoAtual.vaga.label) || alocacaoAtual.vaga;
+
     const candidatos = equipa.filter(m => {
       if (m.id === membroAtualId) return true;
       const isUnavailable = indisponibilidades[`${m.id}_${diaKey}`];
-      if (isUnavailable || !isCandidatoValido(m, alocacaoAtual.vaga)) return false;
+      if (isUnavailable || !isCandidatoValido(m, vagaAtualCat)) return false;
       
       const alocacoesDoMembroHoje = alocadosNesteDia.filter(a => a.membro && a.membro.id === m.id);
       if (alocacoesDoMembroHoje.length >= 2) return false;
       if (alocacoesDoMembroHoje.length === 1) {
-        const vagaExistente = alocacoesDoMembroHoje[0].vaga;
-        const vagaAtual = alocacaoAtual.vaga;
+        const vagaExistenteRaw = alocacoesDoMembroHoje[0].vaga;
+        const vagaExistente = catalogoVagas.find(c => c.label === vagaExistenteRaw.label) || vagaExistenteRaw;
         
-        const permitidasAtual = vagaAtual.permitidas_acumular || [];
-        const obrigatoriasAtual = vagaAtual.obrigatorias_acumular || [];
+        const permitidasAtual = vagaAtualCat.permitidas_acumular || [];
+        const obrigatoriasAtual = vagaAtualCat.obrigatorias_acumular || [];
         const permitidasExistente = vagaExistente.permitidas_acumular || [];
         const obrigatoriasExistente = vagaExistente.obrigatorias_acumular || [];
 
-        const ehObrigatorio = obrigatoriasAtual.includes(vagaExistente.label) || obrigatoriasExistente.includes(vagaAtual.label);
-        const ehPermitido = permitidasAtual.includes(vagaExistente.label) || permitidasExistente.includes(vagaAtual.label);
+        const ehObrigatorio = obrigatoriasAtual.includes(vagaExistente.label) || obrigatoriasExistente.includes(vagaAtualCat.label);
+        const ehPermitido = permitidasAtual.includes(vagaExistente.label) || permitidasExistente.includes(vagaAtualCat.label);
 
         if (!ehObrigatorio && !ehPermitido) {
           return false;
@@ -398,8 +530,7 @@ export const ScaleProvider = ({ children }) => {
     const proximoMembro = candidatos[(currentIndex + 1) % candidatos.length];
 
     if (candidatos.length <= 2 && membroAtualId !== null && proximoMembro.id === null) {
-      setSwapMessage(`Apenas ${alocacaoAtual.membro.nome} está disponível para ${vagaLabel} neste dia.`);
-      setTimeout(() => setSwapMessage(''), 3000);
+      mostrarMensagem(`Apenas ${alocacaoAtual.membro.nome} está disponível para ${vagaLabel} neste dia.`, 3000);
     }
 
     const novasEscalas = [...escalasGeradas];
@@ -431,6 +562,7 @@ export const ScaleProvider = ({ children }) => {
     draggedRow, setDraggedRow,
     swapMessage, setSwapMessage,
     adicionarVaga,
+    adicionarVagaTodosOsDias,
     removerVaga,
     toggleIndisponibilidade,
     marcarTodosIndisponiveis,

@@ -10,7 +10,7 @@ export default function ResultadoEscala() {
     escalasGeradas, escalaAtualIndex, setEscalaAtualIndex,
     ordemMatriz, datasEscala, mes, ano, mesesNomes,
     draggedRow, handleDragStartRow, handleDragEnterRow, handleDragEndRow,
-    handleTrocarMembro
+    handleTrocarMembro, adicionarVaga
   } = useScale();
 
   const [isExportando, setIsExportando] = React.useState(false);
@@ -163,7 +163,24 @@ export default function ResultadoEscala() {
                 {datasEscala.map((d, colIndex) => {
                   const diaKey = formatDataKey(d);
                   const alocacao = escalaAtual[diaKey]?.find(a => a.vaga.label === vagaCatalogo.label);
-                  if (!alocacao) return <td key={colIndex} className="min-w-[100px]" style={{ backgroundColor: '#2c3038', color: '#666', textAlign: 'center' }}>-</td>;
+                  if (!alocacao) {
+                    return (
+                      <td key={colIndex} className="min-w-[100px]" style={{ backgroundColor: '#2c3038', color: '#666', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
+                          <span>-</span>
+                          <button
+                            type="button"
+                            onClick={() => adicionarVaga(diaKey, vagaCatalogo.id)}
+                            title={`Incluir ${vagaCatalogo.label} em ${formatDataDDMM(d)} sem refazer a escala`}
+                            data-html2canvas-ignore="true"
+                            style={{ background: 'rgba(97, 218, 251, 0.12)', border: '1px solid rgba(97, 218, 251, 0.3)', color: '#61dafb', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75em', lineHeight: 1, padding: '2px 5px', opacity: 0.75 }}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                    );
+                  }
                   const pessoa = alocacao.membro.nome;
                   return (
                     <td key={colIndex} className="min-w-[100px]" style={{ textAlign: 'center', color: pessoa === '---' ? '#ff4b4b' : 'white', fontWeight: pessoa !== '---' ? 'bold' : 'normal' }}>
